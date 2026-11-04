@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <rect width="390" height="110" x="5" y="5" rx="16" fill="#003B73"/>
+  <text x="200" y="80" font-family="'Impact', 'Arial Black', sans-serif" font-size="64" font-weight="900" font-style="italic" text-anchor="middle" fill="#FFFFFF" letter-spacing="6">
+    BLP
+  </text>
+  <text x="200" y="100" font-family="'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#00A8E8" letter-spacing="3">
+    AUTOMOTIVE SOLUTIONS
+  </text>
+</svg>

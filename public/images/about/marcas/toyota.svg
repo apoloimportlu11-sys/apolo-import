@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <g fill="#EB0A1E">
+    <!-- Toyota Oval Logo -->
+    <path d="M70,60 C70,42 90,26 115,26 C140,26 160,42 160,60 C160,78 140,94 115,94 C90,94 70,78 70,60 Z" fill="none" stroke="#EB0A1E" stroke-width="7"/>
+    <ellipse cx="115" cy="50" rx="30" ry="12" fill="none" stroke="#EB0A1E" stroke-width="6"/>
+    <ellipse cx="115" cy="62" rx="10" ry="24" fill="none" stroke="#EB0A1E" stroke-width="6"/>
+  </g>
+  <!-- Toyota Wordmark -->
+  <text x="280" y="75" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="46" font-weight="900" text-anchor="middle" fill="#EB0A1E" letter-spacing="4">
+    TOYOTA
+  </text>
+</svg>

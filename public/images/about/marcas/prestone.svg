@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="prestoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFDD00"/>
+      <stop offset="100%" stop-color="#F2B705"/>
+    </linearGradient>
+  </defs>
+  <rect width="390" height="110" x="5" y="5" rx="20" fill="url(#prestoneGrad)" stroke="#111" stroke-width="4"/>
+  <text x="200" y="78" font-family="'Impact', 'Arial Black', sans-serif" font-size="58" font-style="italic" font-weight="900" text-anchor="middle" fill="#0A0A0A" letter-spacing="1">
+    Prestone
+  </text>
+</svg>
