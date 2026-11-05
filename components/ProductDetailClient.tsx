@@ -201,36 +201,6 @@ export function ProductDetailClient({
       }
     } catch (e) {}
 
-    // 1b. Si no está en Supabase, intentar en el backend MySQL (cPanel)
-    if (!dbData) {
-      try {
-        const res = await fetch(`/api/mysql-products/${productId}`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.product && (json.product.is_active === false || json.product.is_active === 0)) {
-            setIsProductDeleted(true);
-            return;
-          }
-          if (json.product) {
-            dbData = json.product;
-            merged = {
-              ...merged,
-              name: dbData.name || merged.name,
-              image: dbData.image_url !== undefined ? (dbData.image_url || "") : merged.image,
-              presentation: dbData.presentation !== undefined ? dbData.presentation : merged.presentation,
-              description: dbData.description !== undefined ? dbData.description : merged.description,
-              brand: dbData.brand || merged.brand,
-              line: dbData.short_description !== undefined ? dbData.short_description : merged.line,
-              viscosity: dbData.viscosity !== undefined ? (dbData.viscosity || "") : merged.viscosity,
-              type: dbData.type !== undefined ? (dbData.type || "") : merged.type,
-              subcategoryId: dbData.subcategory_id || dbData.subcategoryId || merged.subcategoryId,
-              subcategory: dbData.subcategory !== undefined ? dbData.subcategory : merged.subcategory,
-            };
-          }
-        }
-      } catch (e) {}
-    }
-
     // 2. Apply Local Admin Cache (HIGHEST PRIORITY - ALWAYS WINS)
     if (typeof window !== "undefined") {
       try {

@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { products, type Product } from "@/lib/products-data";
 import { ProductDetailClient } from "@/components/ProductDetailClient";
 import { createClient } from "@supabase/supabase-js";
-import { getMysqlPool } from "@/lib/mysql-client";
 
 interface ProductPageProps {
   params: Promise<{
@@ -103,45 +102,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     );
   }
 
-  // 2. Si no está en Supabase, buscar en el backend MySQL (cPanel)
-  try {
-    const pool = getMysqlPool();
-    const [rows] = await pool.query(
-      "SELECT * FROM products WHERE (id = ? OR slug = ?) AND is_active = TRUE",
-      [id, id]
-    );
-    const mysqlProduct = Array.isArray(rows) ? (rows[0] as any) : null;
-
-    if (mysqlProduct) {
-      const initialProduct: Product = {
-        id: String(mysqlProduct.id),
-        name: String(mysqlProduct.name || "Producto"),
-        line: String(mysqlProduct.short_description || (mysqlProduct.brand === "Overts" ? "Overts Premium" : "Apolo Premium")),
-        code: String(mysqlProduct.slug || mysqlProduct.id),
-        brand: String(mysqlProduct.brand || "Apolo"),
-        viscosity: mysqlProduct.viscosity != null ? String(mysqlProduct.viscosity) : "",
-        type: mysqlProduct.type != null ? String(mysqlProduct.type) : "",
-        presentation: String(mysqlProduct.presentation || ""),
-        description: String(mysqlProduct.description || mysqlProduct.short_description || ""),
-        image: String(mysqlProduct.image_url || "/placeholder.svg"),
-        image_url: String(mysqlProduct.image_url || "/placeholder.svg"),
-        categoryId: String(mysqlProduct.category_id || "automovil"),
-        subcategoryId: String(mysqlProduct.subcategory_id || ""),
-        subcategory: String(mysqlProduct.subcategory || ""),
-        stock: Number(mysqlProduct.stock) || 1,
-        is_featured: Boolean(mysqlProduct.is_featured),
-        is_active: true,
-      };
-
-      return (
-        <ProductDetailClient initialProduct={initialProduct} productId={id} />
-      );
-    }
-  } catch (err) {
-    console.warn("MySQL fetch in ProductPage error:", err);
-  }
-
-  // 3. Si no se encontró ni en Supabase ni en MySQL, buscar en el catálogo base estático
+  // 2. Si no está en Supabase, buscar en el catálogo base estático
   const product =
     products.find((p) => p.id === id) ||
     products.find((p) => p.code?.toLowerCase() === id.toLowerCase()) ||

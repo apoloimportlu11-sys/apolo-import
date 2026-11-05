@@ -173,21 +173,7 @@ export function Products() {
       }
     }
 
-    // Productos guardados en el backend MySQL (cPanel), elegidos por el admin.
-    // El endpoint ya solo devuelve filas activas, así que no necesitan tratamiento
-    // adicional de "inactivos" como las de Supabase.
-    let mysqlProducts: Product[] = [];
-    try {
-      const res = await fetch("/api/mysql-products");
-      if (res.ok) {
-        const json = await res.json();
-        mysqlProducts = Array.isArray(json.products) ? json.products.map(mapRowToProduct) : [];
-      }
-    } catch (e) {
-      console.warn("Error fetching MySQL products:", e);
-    }
-
-    setDbProducts([...lastGoodSupabaseProducts.current, ...mysqlProducts]);
+    setDbProducts([...lastGoodSupabaseProducts.current]);
   };
 
   useEffect(() => {
@@ -237,13 +223,6 @@ export function Products() {
       console.warn("Supabase Realtime public catalog error:", err);
     }
 
-    // 4. MySQL (cPanel) no tiene push en tiempo real como Supabase Realtime,
-    // así que se refresca por sondeo periódico para reflejar cambios hechos
-    // desde otro dispositivo/admin sin necesitar recargar la página.
-    const mysqlPollInterval = setInterval(() => {
-      fetchDbProducts();
-    }, 60000);
-
     return () => {
       if (unsubProducts) unsubProducts();
       if (unsubBrands) unsubBrands();
@@ -255,7 +234,6 @@ export function Products() {
           supabase.removeChannel(channel);
         } catch {}
       }
-      clearInterval(mysqlPollInterval);
     };
   }, [supabase]);
 

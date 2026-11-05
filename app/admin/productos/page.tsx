@@ -77,7 +77,6 @@ export interface ProductItem {
   image_url?: string | null;
   created_at: string;
   updated_at?: string;
-  storage_backend?: "supabase" | "mysql";
   sort_order?: number;
   line_group_id?: string | null;
 }
@@ -160,7 +159,6 @@ interface SortableProductRowProps {
   onToggleFeatured: (id: string, current: boolean) => void;
   onToggleActive: (id: string, current: boolean) => void;
   onDuplicate: (prod: ProductItem) => void;
-  onMoveBackend: (prod: ProductItem, target: "supabase" | "mysql") => void;
   onEdit: (prod: ProductItem) => void;
   onDelete: (id: string, name: string) => void;
 }
@@ -176,7 +174,6 @@ function SortableProductRow({
   onToggleFeatured,
   onToggleActive,
   onDuplicate,
-  onMoveBackend,
   onEdit,
   onDelete,
 }: SortableProductRowProps) {
@@ -259,12 +256,6 @@ function SortableProductRow({
           <div className="min-w-0">
             <p className="font-bold text-white truncate max-w-xs">{prod.name}</p>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
-              {prod.storage_backend === "mysql" && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                  <FolderSync className="w-2.5 h-2.5" />
-                  MySQL
-                </span>
-              )}
               {prod.presentation && (
                 <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/10 text-amber-300 border border-white/10">
                   {prod.presentation}
@@ -400,25 +391,6 @@ function SortableProductRow({
             <Copy className="w-4 h-4" />
           </button>
 
-          {/* Move Backend Action */}
-          <button
-            type="button"
-            onClick={() =>
-              onMoveBackend(
-                prod,
-                (prod.storage_backend || "supabase") === "supabase" ? "mysql" : "supabase"
-              )
-            }
-            className="p-2 text-zinc-400 hover:text-[#C7940A] hover:bg-[#C7940A]/10 rounded-lg transition-colors cursor-pointer"
-            title={
-              (prod.storage_backend || "supabase") === "supabase"
-                ? "Mover a MySQL (cPanel)"
-                : "Mover a Supabase"
-            }
-          >
-            <FolderSync className="w-4 h-4" />
-          </button>
-
           {/* Edit Full Product Action */}
           <button
             type="button"
@@ -510,7 +482,6 @@ export default function ProductosPage() {
     is_featured: false,
     is_active: true,
     image_url: "",
-    storage_backend: "supabase",
   });
 
   const availableSubcategories = useMemo(() => {
@@ -752,9 +723,6 @@ export default function ProductosPage() {
             ? dbMatch.sort_order
             : (baseP.sort_order || 0);
 
-        const chosenStorageBackend =
-          localMatch?.storage_backend || dbMatch?.storage_backend || baseP.storage_backend || "supabase";
-
         const chosenLineGroupId =
           localMatch?.line_group_id !== undefined
             ? localMatch.line_group_id
@@ -782,7 +750,6 @@ export default function ProductosPage() {
           category_id: chosenCategory,
           image_url: chosenImageUrl,
           sort_order: chosenSortOrder,
-          storage_backend: chosenStorageBackend,
           line_group_id: chosenLineGroupId,
           created_at: localMatch?.created_at || dbMatch?.created_at || baseP.created_at,
           updated_at: localMatch?.updated_at || dbMatch?.updated_at,
@@ -1155,7 +1122,6 @@ export default function ProductosPage() {
       category_id: "automovil",
       line_group_id: CATEGORY_DEFAULT_LINE_GROUP["automovil"],
       image_url: "",
-      storage_backend: "supabase",
     });
     setShowModal(true);
   }
@@ -1180,7 +1146,6 @@ export default function ProductosPage() {
       subcategory_id: currentSubcatId,
       subcategory: currentSubcat,
       presentation: prod.presentation || "",
-      storage_backend: prod.storage_backend || "supabase",
     });
     setShowModal(true);
   }
@@ -1205,7 +1170,6 @@ export default function ProductosPage() {
       is_active: true,
       category_id: prod.category_id || "automovil",
       image_url: prod.image_url || "",
-      storage_backend: "supabase",
     });
     setShowModal(true);
     toast.info(`Nueva presentación de "${prod.name}". Ingresa la cantidad/presentación.`);
@@ -1337,61 +1301,31 @@ export default function ProductosPage() {
       isEditing ? "Actualizando producto en tiempo real..." : "Guardando nuevo producto..."
     );
 
-    const backend: "supabase" | "mysql" = currentProduct.storage_backend || "supabase";
     let savedData: any = null;
 
-    if (backend === "supabase") {
-      try {
-        // Upsert into Supabase by unique ID
-        const { data, error } = await supabase
-          .from("products")
-          .upsert([payload], { onConflict: "id" })
-          .select()
-          .single();
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .upsert([payload], { onConflict: "id" })
+        .select()
+        .single();
 
-        if (error) {
-          console.warn("Supabase upsert error on id, trying unique slug:", error);
-          if (error.code === "23505") {
-            payload.slug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
-            const retry = await supabase
-              .from("products")
-              .upsert([payload], { onConflict: "id" })
-              .select()
-              .single();
-            if (!retry.error) savedData = retry.data;
-          }
-        } else {
-          savedData = data;
+      if (error) {
+        console.warn("Supabase upsert error on id, trying unique slug:", error);
+        if (error.code === "23505") {
+          payload.slug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
+          const retry = await supabase
+            .from("products")
+            .upsert([payload], { onConflict: "id" })
+            .select()
+            .single();
+          if (!retry.error) savedData = retry.data;
         }
-      } catch (err: any) {
-        console.warn("Supabase upsert note:", err?.message);
+      } else {
+        savedData = data;
       }
-    } else {
-      // Backend MySQL (cPanel): la escritura pasa por una ruta de servidor propia,
-      // protegida por sesión de admin (ver lib/require-admin.ts).
-      try {
-        const endpoint = isEditing ? `/api/mysql-products/${finalId}` : "/api/mysql-products";
-        const method = isEditing ? "PATCH" : "POST";
-        const res = await fetch(endpoint, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, id: finalId }),
-        });
-        const json = await res.json();
-
-        if (!res.ok) {
-          toast.error(json?.message || "No se pudo guardar el producto en MySQL", { id: toastId });
-          setSaving(false);
-          return;
-        }
-
-        savedData = json.product;
-      } catch (err: any) {
-        console.warn("MySQL save error:", err?.message);
-        toast.error("No se pudo conectar con la base de datos MySQL", { id: toastId });
-        setSaving(false);
-        return;
-      }
+    } catch (err: any) {
+      console.warn("Supabase upsert note:", err?.message);
     }
 
     const savedItem: ProductItem = {
@@ -1399,7 +1333,6 @@ export default function ProductosPage() {
       ...payload,
       id: (savedData && savedData.id) || finalId,
       created_at: (savedData && savedData.created_at) || currentProduct.created_at || new Date().toISOString(),
-      storage_backend: backend,
     };
 
     // Save to state and localStorage strictly by id
@@ -1447,18 +1380,14 @@ export default function ProductosPage() {
       }
 
       // 2. Mark as inactive and unfeature so public catalog and featured carousel exclude it across all devices
-      if (targetProduct?.storage_backend === "mysql") {
-        await fetch(`/api/mysql-products/${id}`, { method: "DELETE" });
-      } else {
-        await supabase.from("products").upsert({
-          id: id,
-          slug: targetSlug || id,
-          name: name,
-          is_active: false,
-          is_featured: false,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "id" });
-      }
+      await supabase.from("products").upsert({
+        id: id,
+        slug: targetSlug || id,
+        name: name,
+        is_active: false,
+        is_featured: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" });
 
       // 3. Remove from state and cache
       persistProductsState((prev) =>
@@ -1478,77 +1407,8 @@ export default function ProductosPage() {
     }
   }
 
-  // Mueve un producto de un backend a otro (Supabase <-> MySQL/cPanel), conservando el mismo id.
-  async function handleMoveProductBackend(prod: ProductItem, targetBackend: "supabase" | "mysql") {
-    const currentBackend: "supabase" | "mysql" = prod.storage_backend || "supabase";
-    if (currentBackend === targetBackend) return;
-
-    const targetLabel = targetBackend === "supabase" ? "Supabase" : "MySQL (cPanel)";
-    if (!confirm(`¿Mover "${prod.name}" a ${targetLabel}?`)) return;
-
-    const toastId = toast.loading(`Moviendo "${prod.name}" a ${targetLabel}...`);
-
-    const payload = {
-      id: prod.id,
-      name: prod.name,
-      slug: prod.slug,
-      brand: prod.brand || "Apolo",
-      short_description: prod.short_description,
-      presentation: prod.presentation,
-      viscosity: prod.viscosity,
-      type: prod.type,
-      subcategory_id: prod.subcategory_id,
-      subcategory: prod.subcategory,
-      description: prod.description,
-      stock: prod.stock,
-      is_featured: prod.is_featured,
-      is_active: true,
-      category_id: prod.category_id,
-      image_url: prod.image_url || null,
-      updated_at: new Date().toISOString(),
-    };
-
-    try {
-      // 1. Crear/actualizar la fila en el backend destino
-      if (targetBackend === "supabase") {
-        const { error } = await supabase.from("products").upsert([payload], { onConflict: "id" });
-        if (error) throw error;
-      } else {
-        const res = await fetch("/api/mysql-products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Error al insertar en MySQL");
-      }
-
-      // 2. Retirar la fila del backend de origen.
-      //    En Supabase debe ser un borrado real (no soft-delete): el mismo id seguirá
-      //    activo en el backend destino, y si quedara "is_active=false" en Supabase
-      //    contaminaría la lista de IDs inactivos que products.tsx usa para ocultar
-      //    productos en TODAS las fuentes (haría desaparecer el producto recién movido).
-      //    En MySQL el soft-delete es seguro porque el catálogo público solo lee
-      //    filas activas de esa tabla (no arma una lista de "inactivos" compartida).
-      if (currentBackend === "supabase") {
-        await supabase.from("products").delete().eq("id", prod.id);
-      } else {
-        await fetch(`/api/mysql-products/${prod.id}`, { method: "DELETE" });
-      }
-
-      const movedItem: ProductItem = { ...prod, storage_backend: targetBackend };
-      persistProductsState((prev) => prev.map((p) => (p.id === prod.id ? movedItem : p)));
-      if (realtimeBus) realtimeBus.emit("products_updated", movedItem);
-
-      toast.success(`"${prod.name}" ahora se guarda en ${targetLabel}`, { id: toastId });
-    } catch (err: any) {
-      console.warn("Error moviendo producto de backend:", err?.message);
-      toast.error("No se pudo mover el producto de backend", { id: toastId });
-    }
-  }
-
   // Reordena por arrastre DENTRO de un mismo grupo de línea y persiste el
-  // nuevo sort_order en el backend correspondiente de cada producto afectado.
+  // nuevo sort_order en Supabase.
   async function handleReorderInGroup(groupItems: ProductItem[], event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -1571,35 +1431,26 @@ export default function ProductosPage() {
       if (realtimeBus) realtimeBus.emit("products_updated", { id: item.id, sort_order: item.sort_order });
     });
 
-    // Persistir en el backend real de cada producto (Supabase o MySQL)
     await Promise.all(
       changed.map(async (item) => {
         try {
-          if ((item.storage_backend || "supabase") === "mysql") {
-            await fetch(`/api/mysql-products/${item.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ sort_order: item.sort_order }),
-            });
-          } else {
-            const payload = {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              brand: item.brand || "Apolo",
-              short_description: item.short_description,
-              presentation: item.presentation,
-              description: item.description,
-              stock: item.stock,
-              is_featured: item.is_featured,
-              is_active: item.is_active,
-              category_id: item.category_id,
-              image_url: item.image_url || null,
-              sort_order: item.sort_order,
-              updated_at: new Date().toISOString(),
-            };
-            await supabase.from("products").upsert([payload], { onConflict: "id" });
-          }
+          const payload = {
+            id: item.id,
+            name: item.name,
+            slug: item.slug,
+            brand: item.brand || "Apolo",
+            short_description: item.short_description,
+            presentation: item.presentation,
+            description: item.description,
+            stock: item.stock,
+            is_featured: item.is_featured,
+            is_active: item.is_active,
+            category_id: item.category_id,
+            image_url: item.image_url || null,
+            sort_order: item.sort_order,
+            updated_at: new Date().toISOString(),
+          };
+          await supabase.from("products").upsert([payload], { onConflict: "id" });
         } catch (err) {
           console.warn("Error persistiendo sort_order:", err);
         }
@@ -2437,7 +2288,6 @@ export default function ProductosPage() {
                                 onToggleFeatured={toggleFeatured}
                                 onToggleActive={toggleActive}
                                 onDuplicate={openDuplicateModal}
-                                onMoveBackend={handleMoveProductBackend}
                                 onEdit={openEditModal}
                                 onDelete={handleDelete}
                               />
@@ -2720,34 +2570,6 @@ export default function ProductosPage() {
                     </select>
                   )}
                 </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                  {isEditing ? "Guardado en:" : "Guardar en"}
-                </label>
-                <div className="flex gap-2">
-                  {(["supabase", "mysql"] as const).map((backend) => (
-                    <button
-                      key={backend}
-                      type="button"
-                      disabled={isEditing}
-                      onClick={() => setCurrentProduct({ ...currentProduct, storage_backend: backend })}
-                      className={`flex-1 rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition-colors ${
-                        (currentProduct.storage_backend || "supabase") === backend
-                          ? "border-[#C7940A] bg-[#C7940A]/15 text-[#C7940A]"
-                          : "border-white/10 bg-black/60 text-zinc-300"
-                      } ${isEditing ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:border-[#C7940A]/60"}`}
-                    >
-                      {backend === "supabase" ? "Supabase" : "MySQL (cPanel)"}
-                    </button>
-                  ))}
-                </div>
-                {isEditing && (
-                  <p className="mt-1.5 text-[11px] text-zinc-400">
-                    Para mover este producto a otro backend usa la acción "Mover a..." desde la lista de productos.
-                  </p>
-                )}
               </div>
 
               <div className="flex items-center gap-2.5 pt-1">
