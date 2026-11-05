@@ -78,7 +78,7 @@ export function Products() {
   const hasWarnedFetchError = useRef(false);
   const lastGoodSupabaseProducts = useRef<Product[]>([]);
 
-  const ADMIN_STORAGE_KEY = "apolo_admin_products_cache";
+  const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
   const DELETED_KEY = "apolo_admin_deleted_products_ids";
 
   const KNOWN_DELETED = [
@@ -652,7 +652,20 @@ export function Products() {
 
       filtered = filtered.filter((p) => {
         const haystack = cleanText(
-          [p.name, p.code, p.viscosity, p.type, p.line, p.brand, p.description, p.presentation, p.subcategory]
+          [
+            p.name,
+            p.id,
+            p.code,
+            p.slug,
+            p.viscosity,
+            p.type,
+            p.line,
+            p.brand,
+            p.description,
+            p.presentation,
+            p.subcategory,
+            p.subcategoryId,
+          ]
             .filter(Boolean)
             .join(" ")
         );

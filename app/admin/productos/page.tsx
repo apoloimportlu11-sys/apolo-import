@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
+import { parseProductUpsert } from "@/lib/validations/product";
 import { products as BASE_PRODUCTS, categories as CATALOG_CATEGORIES } from "@/lib/products-data";
 import { groupProductsByLine, type ProductLineGroup } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
@@ -75,6 +76,8 @@ export interface ProductItem {
   brand_id?: string | null;
   price?: number | null;
   image_url?: string | null;
+  image_is_placeholder?: boolean | null;
+  stock_min?: number | null;
   created_at: string;
   updated_at?: string;
   sort_order?: number;
@@ -123,7 +126,7 @@ const KNOWN_BRANDS = [
   "Yamalube",
 ];
 
-const STORAGE_KEY = "apolo_admin_products_cache";
+const STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 const RESTORE_POINT_KEY = "apolo_admin_products_restore_point";
 const RESTORE_POINT_SLUG = "catalog-restore-point";
@@ -429,6 +432,7 @@ export default function ProductosPage() {
   const [selectedBrandFilter, setSelectedBrandFilter] = useState("all");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
   const [onlyFeaturedFilter, setOnlyFeaturedFilter] = useState(false);
+  const [onlyPlaceholderFilter, setOnlyPlaceholderFilter] = useState(false);
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
 
   // Restore Point State
@@ -606,129 +610,49 @@ export default function ProductosPage() {
           usedLocalIds.add(localMatch.id);
         }
 
-        // Strict precedence: localMatch > dbMatch > baseP
-        const chosenName =
-          localMatch?.name !== undefined && localMatch.name !== ""
-            ? localMatch.name
-            : dbMatch?.name !== undefined && dbMatch.name !== ""
-            ? dbMatch.name
-            : baseP.name;
+        // Fuente de verdad: Supabase (db) > localStorage > catálogo base
+        const pickStr = (
+          dbVal?: string | null,
+          localVal?: string | null,
+          baseVal?: string | null
+        ) => {
+          const db = dbVal != null ? String(dbVal).trim() : "";
+          if (db) return db;
+          const loc = localVal != null ? String(localVal).trim() : "";
+          if (loc) return loc;
+          return baseVal != null ? String(baseVal) : "";
+        };
+        const pickVal = <T,>(dbVal: T | null | undefined, localVal: T | null | undefined, baseVal: T): T => {
+          if (dbVal !== undefined && dbVal !== null) return dbVal;
+          if (localVal !== undefined && localVal !== null) return localVal;
+          return baseVal;
+        };
 
-        const chosenSlug =
-          localMatch?.slug !== undefined && localMatch.slug !== ""
-            ? localMatch.slug
-            : dbMatch?.slug !== undefined && dbMatch.slug !== ""
-            ? dbMatch.slug
-            : baseP.slug;
-
-        const chosenBrand =
-          localMatch?.brand !== undefined && localMatch.brand !== ""
-            ? localMatch.brand
-            : dbMatch?.brand !== undefined && dbMatch.brand !== ""
-            ? dbMatch.brand
-            : baseP.brand;
-
-        const chosenShortDesc =
-          localMatch?.short_description != null
-            ? localMatch.short_description
-            : dbMatch?.short_description != null
-            ? dbMatch.short_description
-            : baseP.short_description;
-
-        const chosenPresentation =
-          localMatch?.presentation != null
-            ? localMatch.presentation
-            : dbMatch?.presentation != null
-            ? dbMatch.presentation
-            : baseP.presentation;
-
-        const chosenDesc =
-          localMatch?.description != null
-            ? localMatch.description
-            : dbMatch?.description != null
-            ? dbMatch.description
-            : baseP.description;
-
-        const chosenStock =
-          localMatch?.stock != null
-            ? localMatch.stock
-            : dbMatch?.stock != null
-            ? dbMatch.stock
-            : baseP.stock;
-
-        const chosenFeatured =
-          localMatch?.is_featured != null
-            ? localMatch.is_featured
-            : dbMatch?.is_featured != null
-            ? dbMatch.is_featured
-            : baseP.is_featured;
-
-        const chosenActive =
-          localMatch?.is_active != null
-            ? localMatch.is_active
-            : dbMatch?.is_active != null
-            ? dbMatch.is_active
-            : baseP.is_active;
-
-        const chosenCategory =
-          localMatch?.category_id != null && localMatch.category_id !== ""
-            ? localMatch.category_id
-            : dbMatch?.category_id != null && dbMatch.category_id !== ""
-            ? dbMatch.category_id
-            : baseP.category_id;
-
-        const chosenImageUrl =
-          localMatch && localMatch.image_url != null
-            ? (localMatch.image_url || "")
-            : dbMatch && dbMatch.image_url != null
-            ? (dbMatch.image_url || "")
-            : (baseP.image_url || "");
-
-        const chosenViscosity =
-          localMatch?.viscosity != null
-            ? localMatch.viscosity
-            : dbMatch?.viscosity != null
-            ? dbMatch.viscosity
-            : (baseP.viscosity || "");
-
-        const chosenType =
-          localMatch?.type != null
-            ? localMatch.type
-            : dbMatch?.type != null
-            ? dbMatch.type
-            : (baseP.type || "Lubricante Especializado");
-
-        const chosenSubcategoryId =
-          localMatch?.subcategory_id !== undefined
-            ? localMatch.subcategory_id
-            : localMatch?.subcategoryId !== undefined
-            ? localMatch.subcategoryId
-            : dbMatch?.subcategory_id !== undefined
-            ? dbMatch.subcategory_id
-            : dbMatch?.subcategoryId !== undefined
-            ? dbMatch.subcategoryId
-            : (baseP.subcategory_id || baseP.subcategoryId || "");
-
-        const chosenSubcategory =
-          localMatch?.subcategory !== undefined
-            ? localMatch.subcategory
-            : dbMatch?.subcategory !== undefined
-            ? dbMatch.subcategory
-            : (baseP.subcategory || "");
-
-        const chosenSortOrder =
-          localMatch?.sort_order != null
-            ? localMatch.sort_order
-            : dbMatch?.sort_order != null
-            ? dbMatch.sort_order
-            : (baseP.sort_order || 0);
-
-        const chosenLineGroupId =
-          localMatch?.line_group_id !== undefined
-            ? localMatch.line_group_id
-            : dbMatch?.line_group_id !== undefined
-            ? dbMatch.line_group_id
-            : (baseP.line_group_id ?? null);
+        const chosenName = pickStr(dbMatch?.name, localMatch?.name, baseP.name);
+        const chosenSlug = pickStr(dbMatch?.slug, localMatch?.slug, baseP.slug);
+        const chosenBrand = pickStr(dbMatch?.brand, localMatch?.brand, baseP.brand);
+        const chosenShortDesc = pickVal(dbMatch?.short_description, localMatch?.short_description, baseP.short_description);
+        const chosenPresentation = pickVal(dbMatch?.presentation, localMatch?.presentation, baseP.presentation);
+        const chosenDesc = pickVal(dbMatch?.description, localMatch?.description, baseP.description);
+        const chosenStock = pickVal(dbMatch?.stock, localMatch?.stock, baseP.stock);
+        const chosenFeatured = pickVal(dbMatch?.is_featured, localMatch?.is_featured, baseP.is_featured);
+        const chosenActive = pickVal(dbMatch?.is_active, localMatch?.is_active, baseP.is_active);
+        const chosenCategory = pickStr(dbMatch?.category_id, localMatch?.category_id, baseP.category_id) || "automovil";
+        const chosenImageUrl = pickStr(dbMatch?.image_url, localMatch?.image_url, baseP.image_url);
+        const chosenViscosity = pickStr(dbMatch?.viscosity, localMatch?.viscosity, baseP.viscosity || "");
+        const chosenType = pickStr(dbMatch?.type, localMatch?.type, baseP.type || "Lubricante Especializado");
+        const chosenSubcategoryId = pickStr(
+          dbMatch?.subcategory_id ?? (dbMatch as any)?.subcategoryId,
+          localMatch?.subcategory_id ?? localMatch?.subcategoryId,
+          baseP.subcategory_id || baseP.subcategoryId || ""
+        );
+        const chosenSubcategory = pickStr(dbMatch?.subcategory, localMatch?.subcategory, baseP.subcategory || "");
+        const chosenSortOrder = pickVal(dbMatch?.sort_order, localMatch?.sort_order, baseP.sort_order || 0);
+        const chosenLineGroupId = pickVal(
+          dbMatch?.line_group_id,
+          localMatch?.line_group_id,
+          baseP.line_group_id ?? null
+        );
 
         return {
           ...baseP,
@@ -751,8 +675,8 @@ export default function ProductosPage() {
           image_url: chosenImageUrl,
           sort_order: chosenSortOrder,
           line_group_id: chosenLineGroupId,
-          created_at: localMatch?.created_at || dbMatch?.created_at || baseP.created_at,
-          updated_at: localMatch?.updated_at || dbMatch?.updated_at,
+          created_at: dbMatch?.created_at || localMatch?.created_at || baseP.created_at,
+          updated_at: dbMatch?.updated_at || localMatch?.updated_at,
         };
       });
 
@@ -1064,8 +988,16 @@ export default function ProductosPage() {
           (p.brand && p.brand.toLowerCase() === selectedBrandFilter.toLowerCase());
 
         const matchesFeatured = !onlyFeaturedFilter || Boolean(p.is_featured);
+        const matchesPlaceholder =
+          !onlyPlaceholderFilter || Boolean(p.image_is_placeholder);
 
-        return matchesSearch && matchesCategory && matchesBrand && matchesFeatured;
+        return (
+          matchesSearch &&
+          matchesCategory &&
+          matchesBrand &&
+          matchesFeatured &&
+          matchesPlaceholder
+        );
       })
       .sort((a, b) => {
         const brandA = a.brand?.trim() || "Apolo";
@@ -1077,7 +1009,14 @@ export default function ProductosPage() {
         }
         return a.name.localeCompare(b.name);
       });
-  }, [products, searchQuery, selectedCategoryFilter, selectedBrandFilter, onlyFeaturedFilter]);
+  }, [
+    products,
+    searchQuery,
+    selectedCategoryFilter,
+    selectedBrandFilter,
+    onlyFeaturedFilter,
+    onlyPlaceholderFilter,
+  ]);
 
   // Agrupación para la tabla: Marca -> Línea de producto (misma heurística que el
   // catálogo público, ver lib/product-grouping.ts). Cada grupo de línea se puede
@@ -1276,7 +1215,7 @@ export default function ProductosPage() {
       }
     }
 
-    const payload = {
+    const payloadRaw = {
       id: finalId,
       name: rawName,
       slug: finalSlug,
@@ -1296,6 +1235,16 @@ export default function ProductosPage() {
       line_group_id: currentProduct.line_group_id || null,
       updated_at: new Date().toISOString(),
     };
+
+    const validated = parseProductUpsert(payloadRaw);
+    if (!validated.success) {
+      toast.error("Datos de producto inválidos", {
+        description: validated.error.issues[0]?.message || "Revisa el formulario",
+      });
+      setSaving(false);
+      return;
+    }
+    const payload = { ...validated.data };
 
     const toastId = toast.loading(
       isEditing ? "Actualizando producto en tiempo real..." : "Guardando nuevo producto..."
@@ -2183,7 +2132,7 @@ export default function ProductosPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={selectedCategoryFilter}
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
@@ -2196,6 +2145,28 @@ export default function ProductosPage() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setOnlyFeaturedFilter((v) => !v)}
+            className={`rounded-xl px-3.5 py-2.5 text-xs font-semibold border transition-colors cursor-pointer ${
+              onlyFeaturedFilter
+                ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                : "bg-[#141414] border-white/10 text-zinc-400 hover:text-white"
+            }`}
+          >
+            Solo destacados
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnlyPlaceholderFilter((v) => !v)}
+            className={`rounded-xl px-3.5 py-2.5 text-xs font-semibold border transition-colors cursor-pointer ${
+              onlyPlaceholderFilter
+                ? "bg-orange-500/20 border-orange-500/40 text-orange-300"
+                : "bg-[#141414] border-white/10 text-zinc-400 hover:text-white"
+            }`}
+          >
+            Foto temporal
+          </button>
         </div>
       </div>
 

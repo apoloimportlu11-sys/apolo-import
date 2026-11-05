@@ -14,17 +14,25 @@ import {
   Flame,
   Sparkles,
   Layers,
+  Warehouse,
+  ClipboardList,
+  Truck,
+  BarChart3,
 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 
 const items = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/admin/banners", label: "Banners y Ofertas", icon: Flame },
   { href: "/admin/tematicas", label: "Temáticas Festivas", icon: Sparkles },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
   { href: "/admin/marcas", label: "Marcas", icon: Tag },
   { href: "/admin/lineas", label: "Líneas de Catálogo", icon: Layers },
   { href: "/admin/productos", label: "Productos", icon: Package },
+  { href: "/admin/inventario", label: "Inventario", icon: Warehouse },
+  { href: "/admin/cotizaciones", label: "Cotizaciones", icon: ClipboardList },
+  { href: "/admin/proveedores", label: "Proveedores", icon: Truck },
   { href: "/admin/paginas", label: "Páginas", icon: FileText },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
 ];

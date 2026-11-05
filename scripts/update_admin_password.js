@@ -3,16 +3,17 @@ const { createClient } = require('@supabase/supabase-js');
 
 (async () => {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_SECRET_KEY =
+    process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const email = process.env.CREATE_ADMIN_EMAIL;
   const newPassword = process.env.CREATE_ADMIN_PASSWORD;
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !email || !newPassword) {
-    console.error('Falta una variable de entorno. Configura SUPABASE_URL (o NEXT_PUBLIC_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY, CREATE_ADMIN_EMAIL y CREATE_ADMIN_PASSWORD en .env.local');
+  if (!SUPABASE_URL || !SUPABASE_SECRET_KEY || !email || !newPassword) {
+    console.error('Falta una variable de entorno. Configura SUPABASE_URL, SUPABASE_SECRET_KEY, CREATE_ADMIN_EMAIL y CREATE_ADMIN_PASSWORD en .env.local');
     process.exit(1);
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
     auth: { persistSession: false }
   });
 

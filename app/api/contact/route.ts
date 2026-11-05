@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { contactFormSchema } from "@/lib/validations/contact";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const parsed = contactFormSchema.safeParse(body);
 
-    const { name, email, phone, message } = body;
-
-    if (!name || !email || !message) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { message: "Nombre, correo y mensaje son obligatorios." },
+        {
+          message: "Datos inválidos.",
+          errors: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
+
+    const { name, email, phone, message } = parsed.data;
 
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       return NextResponse.json(
@@ -29,6 +34,12 @@ export async function POST(req: Request) {
       },
     });
 
+    const safeMessage = message
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br/>");
+
     await transporter.sendMail({
       from: `"Formulario Web Apolo" <${process.env.GMAIL_USER}>`,
       to: "importacionesapolo2011@gmail.com",
@@ -40,7 +51,7 @@ export async function POST(req: Request) {
         <p><strong>Correo:</strong> ${email}</p>
         <p><strong>Teléfono:</strong> ${phone || "No proporcionado"}</p>
         <p><strong>Mensaje:</strong></p>
-        <p>${message.replace(/\n/g, "<br/>")}</p>
+        <p>${safeMessage}</p>
       `,
     });
 

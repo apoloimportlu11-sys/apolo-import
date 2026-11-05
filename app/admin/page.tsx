@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
+import { getAdminAlerts, getQuoteKpis, type DashboardAlert } from "@/lib/alerts";
 import { 
   Package, 
   Tag, 
@@ -17,7 +18,10 @@ import {
   Sparkles,
   TrendingUp,
   ExternalLink,
-  Flame
+  Flame,
+  AlertTriangle,
+  ClipboardList,
+  Warehouse,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -31,7 +35,10 @@ export default function AdminDashboardPage() {
   });
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [lastSync, setLastSync] = useState<Date>(new Date());
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [syncLabel, setSyncLabel] = useState("");
+  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
+  const [quoteKpis, setQuoteKpis] = useState({ last7: 0, last30: 0, conversion: 0 });
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -54,12 +61,35 @@ export default function AdminDashboardPage() {
         users: usersCount !== null && usersCount !== undefined ? usersCount : 1,
       });
       setLastSync(new Date());
+
+      const [nextAlerts, kpis] = await Promise.all([
+        getAdminAlerts(supabase),
+        getQuoteKpis(supabase),
+      ]);
+      setAlerts(nextAlerts);
+      setQuoteKpis({
+        last7: kpis.last7,
+        last30: kpis.last30,
+        conversion: kpis.conversion,
+      });
     } catch (err) {
       console.error("Error loading dashboard metrics:", err);
     } finally {
       setLoading(false);
     }
   }, [supabase]);
+
+  useEffect(() => {
+    if (!lastSync) return;
+    setSyncLabel(
+      lastSync.toLocaleTimeString("es-EC", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+    );
+  }, [lastSync]);
 
   useEffect(() => {
     // 1. Get current user
@@ -81,7 +111,7 @@ export default function AdminDashboardPage() {
 
     // 0. Read cached count if available
     try {
-      const raw = localStorage.getItem("apolo_admin_products_cache");
+      const raw = localStorage.getItem("apolo_admin_products_cache_v3");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -117,12 +147,12 @@ export default function AdminDashboardPage() {
 
   const cards = [
     {
-      title: "Banners y Ofertas",
-      count: 4,
-      icon: Flame,
-      href: "/admin/banners",
-      desc: "Carrusel de inicio (fotos/videos)",
-      accent: "text-red-400 bg-red-400/10 border-red-400/20",
+      title: "Cotizaciones 7d",
+      count: quoteKpis.last7,
+      icon: ClipboardList,
+      href: "/admin/cotizaciones",
+      desc: `${quoteKpis.last30} en 30 días · conv. ${quoteKpis.conversion}%`,
+      accent: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20",
     },
     {
       title: "Productos",
@@ -133,20 +163,20 @@ export default function AdminDashboardPage() {
       accent: "text-amber-400 bg-amber-400/10 border-amber-400/20",
     },
     {
+      title: "Inventario",
+      count: alerts.find((a) => a.type === "stock") ? "!" : "OK",
+      icon: Warehouse,
+      href: "/admin/inventario",
+      desc: "Stock mínimo y movimientos",
+      accent: "text-orange-400 bg-orange-400/10 border-orange-400/20",
+    },
+    {
       title: "Marcas",
       count: metrics.brands,
       icon: Tag,
       href: "/admin/marcas",
       desc: "Marcas y distribuidores",
       accent: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    },
-    {
-      title: "Páginas & Textos",
-      count: metrics.pages,
-      icon: FileText,
-      href: "/admin/paginas",
-      desc: "Contenido y SEO",
-      accent: "text-purple-400 bg-purple-400/10 border-purple-400/20",
     },
     {
       title: "Usuarios",
@@ -160,6 +190,24 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="w-full space-y-8 pb-12">
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((a) => (
+            <Link
+              key={a.id}
+              href={a.href}
+              className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 hover:bg-amber-500/15 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-amber-200">{a.title}</p>
+                <p className="text-xs text-amber-200/70">{a.description}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-5">
         <div>
@@ -180,9 +228,11 @@ export default function AdminDashboardPage() {
             <Radio className="w-3.5 h-3.5" />
             <span>Métricas en Vivo</span>
           </div>
-          <span className="text-[11px] text-zinc-500 hidden md:inline">
-            Sincronizado: {lastSync.toLocaleTimeString()}
-          </span>
+          {syncLabel ? (
+            <span className="text-[11px] text-zinc-500 hidden md:inline" suppressHydrationWarning>
+              Sincronizado: {syncLabel}
+            </span>
+          ) : null}
         </div>
       </div>
 

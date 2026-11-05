@@ -21,7 +21,7 @@ import { products as BASE_PRODUCTS } from "@/lib/products-data";
 import { useQuote } from "@/lib/quote-context";
 import { useHomeContent } from "@/lib/home-content";
 
-const ADMIN_STORAGE_KEY = "apolo_admin_products_cache";
+const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 
 const KNOWN_DELETED = new Set([
@@ -383,12 +383,9 @@ export function FeaturedProductsCarousel() {
           ? Boolean(localMatch.is_active)
           : !isDeleted(baseP.id, baseP.slug, baseP.code);
 
-      const finalImage =
-        localMatch?.image_url !== undefined
-          ? localMatch.image_url
-          : dbMatch?.image_url !== undefined
-          ? dbMatch.image_url
-          : baseP.image;
+      const localImg = localMatch?.image_url != null ? String(localMatch.image_url).trim() : "";
+      const dbImg = dbMatch?.image_url != null ? String(dbMatch.image_url).trim() : "";
+      const finalImage = localImg || dbImg || baseP.image;
 
       return {
         ...baseP,

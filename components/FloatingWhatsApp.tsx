@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Clock, Sparkles, Bot, Construction } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { X, Clock, Sparkles, Bot, Loader2, Send } from "lucide-react";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -12,43 +12,99 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
+type ChatMsg = { role: "user" | "assistant"; content: string };
+
+const WELCOME: ChatMsg = {
+  role: "assistant",
+  content:
+    "¡Hola! Soy Artemisa, asistente de Apolo Lubricantes. ¿Buscas un aceite, grasa o refrigerante? Cuéntame vehículo o viscosidad (ej. 20W-50).",
+};
+
 export default function FloatingWhatsApp() {
   const { settings } = useBusinessSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [hasPrompted, setHasPrompted] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMsg[]>([WELCOME]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  // Auto-suggest after 4 seconds if not opened
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setHasPrompted(true);
-    }, 4000);
+    const timer = setTimeout(() => setHasPrompted(true), 4000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+    listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [messages, isAssistantOpen]);
 
   const cleanPhone = (settings.whatsapp || settings.phone || "51958400028").replace(/[^0-9]/g, "");
   const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
     `¡Hola ${settings.business_name || "Apolo Lubricantes"}! Deseo solicitar información sobre sus lubricantes y aceites.`
   )}`;
 
+  async function sendMessage(e?: React.FormEvent) {
+    e?.preventDefault();
+    const text = input.trim();
+    if (!text || sending) return;
+
+    const nextMessages: ChatMsg[] = [...messages, { role: "user", content: text }];
+    setMessages(nextMessages);
+    setInput("");
+    setSending(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages.slice(-16).map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || "Error del asistente");
+      }
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: String(data.reply || "Sin respuesta.") },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Tuve un problema al responder. Puedes escribirnos por WhatsApp para atención inmediata.",
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-auto">
-      {/* Panel del Asistente Virtual (en desarrollo) */}
       {isAssistantOpen && (
-        <div className="w-80 aspect-square rounded-2xl border border-border bg-card text-foreground p-4 shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col">
-          <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="w-[22rem] max-w-[calc(100vw-2rem)] h-[28rem] rounded-2xl border border-border bg-card text-foreground shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/30">
             <div className="flex items-center gap-2.5">
               <div className="relative">
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold shadow-md">
                   <Bot className="w-5 h-5" />
                 </div>
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-card rounded-full animate-pulse" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-card rounded-full" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-foreground">Artemisa</h4>
-                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  Asistente Virtual · Próximamente
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Asistente Virtual · En línea
                 </p>
               </div>
             </div>
@@ -61,48 +117,77 @@ export default function FloatingWhatsApp() {
             </button>
           </div>
 
-          {/* Vista previa de conversación (simulada, no funcional) */}
-          <div className="flex-1 min-h-0 overflow-hidden py-3 space-y-2">
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-muted/70 px-3 py-2 text-xs text-muted-foreground">
-                ¡Hola! Soy Artemisa, tu asistente virtual, ¿en qué puedo ayudarte?
+          <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2">
+            {messages.map((m, i) => (
+              <div key={`${m.role}-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                    m.role === "user"
+                      ? "rounded-br-sm bg-primary text-primary-foreground"
+                      : "rounded-bl-sm bg-muted/80 text-foreground"
+                  }`}
+                >
+                  {m.content}
+                </div>
               </div>
-            </div>
-            <div className="flex justify-end">
-              <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary/20 px-3 py-2 text-xs text-foreground/70">
-                ¿Tienen aceite 20W-50 disponible?
+            ))}
+            {sending && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-sm bg-muted/80 px-3 py-2 text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Escribiendo...
+                </div>
               </div>
-            </div>
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-muted/70 px-3 py-2 text-xs text-muted-foreground">
-                Estoy aprendiendo a responder eso muy pronto...
-              </div>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-            <Construction className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              <strong className="font-bold">En proceso de implementación.</strong> Esto es solo un avance;
-              por ahora escríbenos por WhatsApp para una atención inmediata.
-            </span>
+          <form onSubmit={sendMessage} className="border-t border-border p-2.5 flex items-center gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Escribe tu consulta..."
+              maxLength={2000}
+              disabled={sending}
+              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={sending || !input.trim()}
+              className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50 cursor-pointer"
+              aria-label="Enviar mensaje"
+            >
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
+          </form>
+
+          <div className="px-3 pb-2.5">
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center text-[11px] text-muted-foreground hover:text-emerald-500 underline-offset-2 hover:underline"
+            >
+              Preferir WhatsApp con un asesor
+            </a>
           </div>
         </div>
       )}
 
       <button
-        onClick={() => setIsAssistantOpen(!isAssistantOpen)}
+        onClick={() => {
+          setIsAssistantOpen(!isAssistantOpen);
+          if (!isAssistantOpen) setIsOpen(false);
+        }}
         className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl shadow-primary/40 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
-        aria-label="Abrir a Artemisa, asistente virtual (en desarrollo)"
+        aria-label="Abrir a Artemisa, asistente virtual"
       >
         <span className="absolute -top-1 -right-1 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-400" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
         </span>
         <Bot className="h-7 w-7 transition-transform group-hover:rotate-12" />
       </button>
 
-      {/* Floating Chat Popup / Tooltip */}
       {isOpen && (
         <div className="w-80 rounded-2xl border border-border bg-card text-foreground p-4 shadow-2xl shadow-emerald-950/20 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-center justify-between border-b border-border pb-3">
@@ -114,7 +199,9 @@ export default function FloatingWhatsApp() {
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-card rounded-full animate-pulse" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-foreground">{settings.business_name || "Apolo Lubricantes"}</h4>
+                <h4 className="text-sm font-bold text-foreground">
+                  {settings.business_name || "Apolo Lubricantes"}
+                </h4>
                 <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Asesoría en línea
@@ -136,10 +223,13 @@ export default function FloatingWhatsApp() {
                 <Clock className="w-3.5 h-3.5 text-primary" />
                 Horario de atención:
               </p>
-              <p className="font-semibold text-foreground">{settings.hours || "Lun - Vie: 9:00 AM - 6:30 PM"}</p>
+              <p className="font-semibold text-foreground">
+                {settings.hours || "Lun - Vie: 9:00 AM - 6:30 PM"}
+              </p>
             </div>
             <p className="text-muted-foreground leading-relaxed">
-              ¿Tienes dudas sobre viscosidad, marcas o despacho? ¡Escríbenos directamente y te asesoramos al instante!
+              ¿Tienes dudas sobre viscosidad, marcas o despacho? ¡Escríbenos directamente y te
+              asesoramos al instante!
             </p>
           </div>
 
@@ -156,7 +246,6 @@ export default function FloatingWhatsApp() {
         </div>
       )}
 
-      {/* Floating Action Trigger Button */}
       <div className="relative flex items-center gap-3">
         {!isOpen && hasPrompted && (
           <button
@@ -170,7 +259,10 @@ export default function FloatingWhatsApp() {
         )}
 
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (!isOpen) setIsAssistantOpen(false);
+          }}
           className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-900/50 transition-all duration-300 hover:scale-110 hover:bg-emerald-500 active:scale-95 cursor-pointer"
           aria-label="Abrir chat de WhatsApp"
         >

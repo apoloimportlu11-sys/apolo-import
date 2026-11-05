@@ -78,18 +78,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${montserrat.variable} ${inter.variable} ${roboto.variable}`} suppressHydrationWarning>
+    <html lang="es" className={`dark ${montserrat.variable} ${inter.variable} ${roboto.variable}`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
       </head>
-      <body className={`${inter.className} font-sans antialiased bg-background text-foreground`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
+      <body className={`${inter.className} font-sans antialiased bg-background text-foreground`} suppressHydrationWarning>
+        <ThemeProvider defaultTheme="dark" enableSystem={false}>
           <ImageProtection />
           <FestiveEffects />
           <BusinessSettingsProvider>

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { products, type Product } from "@/lib/products-data";
 import { ProductDetailClient } from "@/components/ProductDetailClient";
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
 
 interface ProductPageProps {
   params: Promise<{
@@ -39,14 +40,7 @@ const KNOWN_DELETED = new Set([
   "brake-fluid-dot-5-1",
 ]);
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://libngipioqzjoljmsosv.supabase.co";
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpYm5naXBpb3F6am9sam1zb3N2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNDk0MjIsImV4cCI6MjEwMjkyNTQyMn0.7cJHXeS8rAkRwKgb84Xd21bCGal0jmVMKC-Qg6SMxl0";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey());
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;

@@ -32,16 +32,24 @@ export default function QuoteDrawer() {
     isDrawerOpen,
     closeDrawer,
     generateWhatsAppUrl,
+    submitQuote,
   } = useQuote();
 
   const [clientName, setClientName] = useState("");
   const [city, setCity] = useState("");
+  const [sending, setSending] = useState(false);
 
   if (!isDrawerOpen) return null;
 
-  const handleWhatsAppSend = () => {
-    const url = generateWhatsAppUrl(clientName, city);
-    window.open(url, "_blank", "noopener,noreferrer");
+  const handleWhatsAppSend = async () => {
+    setSending(true);
+    try {
+      const saved = await submitQuote(clientName, city);
+      const url = generateWhatsAppUrl(clientName, city, saved?.code);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -278,12 +286,13 @@ export default function QuoteDrawer() {
               {/* WhatsApp Button */}
               <button
                 onClick={handleWhatsAppSend}
+                disabled={sending || items.length === 0}
                 className="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all duration-200 cursor-pointer"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.993.589 1.954.91 2.796.91h.005c3.181 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.767-5.773-5.767zm7.643 5.767c0 4.218-3.431 7.649-7.648 7.649-.001 0-.003 0-.005 0-1.328 0-2.613-.357-3.738-1.026l-4.148 1.088 1.107-4.041c-.736-1.164-1.127-2.511-1.127-3.896 0-4.218 3.43-7.648 7.648-7.648 4.218 0 7.911 3.654 7.911 7.874z" />
                 </svg>
-                <span>Cotizar por WhatsApp</span>
+                <span>{sending ? "Guardando..." : "Cotizar por WhatsApp"}</span>
               </button>
 
               <p className="text-[11px] text-center text-muted-foreground leading-snug">

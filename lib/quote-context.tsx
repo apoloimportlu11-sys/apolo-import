@@ -29,7 +29,8 @@ interface QuoteContextType {
   setIsDrawerOpen: (open: boolean) => void;
   openDrawer: () => void;
   closeDrawer: () => void;
-  generateWhatsAppUrl: (clientName?: string, city?: string) => string;
+  generateWhatsAppUrl: (clientName?: string, city?: string, quoteCode?: string) => string;
+  submitQuote: (clientName?: string, city?: string) => Promise<{ code: string } | null>;
 }
 
 const QuoteContext = createContext<QuoteContextType | null>(null);
@@ -183,7 +184,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
   // Generate WhatsApp formatted URL
   const generateWhatsAppUrl = useCallback(
-    (clientName?: string, city?: string) => {
+    (clientName?: string, city?: string, quoteCode?: string) => {
       const cleanPhone = (settings.whatsapp || settings.phone || "51958400028").replace(/[^0-9]/g, "");
 
       if (items.length === 0) {
@@ -195,6 +196,10 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
       const numberEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
       let message = `Hola, quisiera hacer la siguiente Cotizacion de productos:\n\n`;
+      if (quoteCode) {
+        message += `🔖 *Código:* ${quoteCode}\n`;
+        message += `🔗 Seguimiento: ${(typeof window !== "undefined" ? window.location.origin : "")}/cotizacion/${quoteCode}\n\n`;
+      }
       message += `📋 *LISTA DE PRODUCTOS SELECCIONADOS*\n`;
       message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
@@ -231,6 +236,33 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
     [items, totalUnits, settings]
   );
 
+  const submitQuote = useCallback(
+    async (clientName?: string, city?: string) => {
+      if (items.length === 0) return null;
+      try {
+        const res = await fetch("/api/quotes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientName: clientName?.trim() || undefined,
+            city: city?.trim() || undefined,
+            items,
+          }),
+        });
+        if (!res.ok) {
+          console.warn("No se pudo persistir cotización", await res.text());
+          return null;
+        }
+        const data = await res.json();
+        return data?.code ? { code: String(data.code) } : null;
+      } catch (e) {
+        console.warn("submitQuote error", e);
+        return null;
+      }
+    },
+    [items]
+  );
+
   return (
     <QuoteContext.Provider
       value={{
@@ -247,6 +279,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
         openDrawer,
         closeDrawer,
         generateWhatsAppUrl,
+        submitQuote,
       }}
     >
       {children}

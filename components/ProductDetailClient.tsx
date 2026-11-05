@@ -19,7 +19,7 @@ interface ProductDetailClientProps {
   productId: string;
 }
 
-const ADMIN_STORAGE_KEY = "apolo_admin_products_cache";
+const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 
 const KNOWN_DELETED = new Set([
@@ -240,10 +240,10 @@ export function ProductDetailClient({
 
             if (match) {
               let matchImage = merged.image;
-              if (match.image_url !== undefined) {
-                matchImage = match.image_url || "";
-              } else if (match.image !== undefined) {
-                matchImage = match.image || "";
+              const fromUrl = match.image_url != null ? String(match.image_url).trim() : "";
+              const fromImage = match.image != null ? String(match.image).trim() : "";
+              if (fromUrl || fromImage) {
+                matchImage = fromUrl || fromImage;
               }
 
               merged = {
