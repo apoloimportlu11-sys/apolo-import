@@ -348,35 +348,40 @@ export default function MediaSelector({
             </div>
           </div>
 
-          {/* Gallery Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1 border border-white/5 rounded-lg bg-black/60 custom-scrollbar">
+          {/* Gallery Grid — celdas rectangulares adaptables */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-64 sm:max-h-72 overflow-y-auto p-1.5 border border-white/5 rounded-lg bg-black/60 custom-scrollbar">
             {filteredItems.map((item) => {
               const isSelected = value === item.path;
+              const previewSrc = encodeURI(item.previewUrl || item.path);
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => handleSelectInternal(item)}
-                  className={`relative flex flex-col items-center justify-between p-2 rounded-lg border transition-all group text-left cursor-pointer ${
+                  className={`relative flex flex-col rounded-xl border transition-all group text-left cursor-pointer overflow-hidden ${
                     isSelected
-                      ? "border-[#C7940A] bg-[#C7940A]/20 shadow-md ring-1 ring-[#C7940A]"
-                      : "border-white/5 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                      ? "border-[#C7940A] bg-[#C7940A]/15 shadow-md ring-1 ring-[#C7940A]"
+                      : "border-white/5 bg-white/[0.03] hover:border-white/20 hover:bg-white/10"
                   }`}
                 >
-                  <div className="relative w-full h-16 flex items-center justify-center bg-black/40 rounded p-1">
+                  <div className="relative w-full aspect-[4/3] flex items-center justify-center bg-gradient-to-b from-black/30 to-black/60 p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={item.previewUrl}
+                      src={previewSrc}
                       alt={item.name}
-                      className="max-h-full max-w-full object-contain"
+                      className="max-h-full max-w-full object-contain drop-shadow-sm"
                       loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.opacity = "0.25";
+                      }}
                     />
                   </div>
-                  <span className="text-[10px] text-zinc-300 line-clamp-2 w-full text-center mt-1 group-hover:text-white font-medium leading-tight">
+                  <span className="text-[10px] text-zinc-300 line-clamp-2 w-full text-center px-1.5 py-1.5 group-hover:text-white font-medium leading-tight bg-black/40">
                     {item.name}
                   </span>
 
                   {isSelected && (
-                    <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#C7940A] text-black flex items-center justify-center shadow-lg">
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#C7940A] text-black flex items-center justify-center shadow-lg">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </div>
                   )}

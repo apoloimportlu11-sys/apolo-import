@@ -201,21 +201,18 @@ export function ProductDetailClient({
       }
     } catch (e) {}
 
-    // 2. Apply Local Admin Cache (HIGHEST PRIORITY - ALWAYS WINS)
-    if (typeof window !== "undefined") {
+    // 2. localStorage solo si Supabase no devolvió el producto
+    if (!dbData && typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            // Strict priority matching so different presentations NEVER overwrite each other:
-            // 1. Exact ID match (item.id === productId)
             let match = parsed.find((item: any) => {
               const itemNormId = normalizeKey(item.id);
               return itemNormId && itemNormId === normId;
             });
 
-            // 2. Exact Slug / Code match
             if (!match && normCode) {
               match = parsed.find((item: any) => {
                 const itemNormSlug = normalizeKey(item.slug || item.code);
@@ -223,7 +220,6 @@ export function ProductDetailClient({
               });
             }
 
-            // 3. Name match ONLY IF presentation AND brand also match!
             const normBaseBrand = normalizeKey(merged.brand);
             if (!match && normName && normPres) {
               match = parsed.find((item: any) => {

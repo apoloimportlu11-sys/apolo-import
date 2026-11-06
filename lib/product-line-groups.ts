@@ -59,8 +59,6 @@ export function saveLocalLineGroups(items: ProductLineGroupItem[]) {
 }
 
 export async function saveLineGroups(items: ProductLineGroupItem[]): Promise<{ success: boolean; error?: string }> {
-  saveLocalLineGroups(items);
-
   try {
     const supabase = createBrowserSupabase();
     const { error } = await supabase.from("pages").upsert(
@@ -79,6 +77,8 @@ export async function saveLineGroups(items: ProductLineGroupItem[]): Promise<{ s
       return { success: false, error: error.message };
     }
 
+    // Caché local solo después de persistir en Supabase
+    saveLocalLineGroups(items);
     return { success: true };
   } catch (err: any) {
     console.error("Unexpected error saving line groups:", err);
@@ -118,7 +118,8 @@ export function useProductLineGroups() {
   }, []);
 
   useEffect(() => {
-    setLineGroups(getLocalLineGroups());
+    // Arranca con defaults; Supabase reemplaza al responder
+    setLineGroups(DEFAULT_LINE_GROUPS);
     fetchRemote();
 
     let unsubBus: (() => void) | null = null;
@@ -128,24 +129,8 @@ export function useProductLineGroups() {
       });
     }
 
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === LINE_GROUPS_STORAGE_KEY && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed)) setLineGroups(parsed);
-        } catch (err) {}
-      }
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("storage", handleStorage);
-    }
-
     return () => {
       if (unsubBus) unsubBus();
-      if (typeof window !== "undefined") {
-        window.removeEventListener("storage", handleStorage);
-      }
     };
   }, [fetchRemote]);
 

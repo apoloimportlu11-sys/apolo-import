@@ -28,7 +28,7 @@ export interface BusinessSettings {
 export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   business_name: "Apolo Lubricantes",
   phone: "+51 958 400 028",
-  email: "importacionesapolo2011@gmail.com",
+  email: "apoloimportlu11@gmail.com",
   whatsapp: "+51 958 400 028",
   address: "Las flores SJL, Lima, Perú",
   hours: "Lun - Vie: 9:00 AM - 6:30 PM",

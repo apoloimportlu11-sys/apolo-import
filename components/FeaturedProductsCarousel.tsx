@@ -270,25 +270,16 @@ export function FeaturedProductsCarousel() {
     };
   }, [supabase, fetchDbFeatured]);
 
-  // 3. Merge products (Admin cache > Supabase > Base catalog)
+  // 3. Supabase es la fuente de verdad para destacados
   const normalize = (str?: string | null) =>
     (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const featuredProducts = useMemo(() => {
-    let localAdminList: any[] = [];
     const deletedSet = new Set<string>();
     KNOWN_DELETED.forEach((k) => deletedSet.add(normalize(k)));
     dbInactiveKeys.forEach((k) => deletedSet.add(normalize(k)));
 
     if (mounted && typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) localAdminList = parsed;
-        }
-      } catch {}
-
       try {
         const rawDel = localStorage.getItem(DELETED_KEY);
         if (rawDel) {
@@ -313,8 +304,21 @@ export function FeaturedProductsCarousel() {
       );
     };
 
+    if (isDbLoaded && dbFeatured.length > 0) {
+      return dbFeatured
+        .filter((p) => !isDeleted(p.id, p.slug, p.code) && p.is_active !== false)
+        .map((p) => ({
+          ...p,
+          image: p.image_url || p.image || "",
+          image_url: p.image_url || p.image || "",
+          is_featured: true,
+        }));
+    }
+
+    if (isDbLoaded) return [];
+
     const baseFeatured = BASE_PRODUCTS
-      .filter((p) => !isDeleted(p.id, p.code))
+      .filter((p) => !isDeleted(p.id, p.code) && p.is_featured)
       .map((p, idx) => ({
         id: p.id || `base-${idx + 1}`,
         name: p.name,
@@ -328,128 +332,12 @@ export function FeaturedProductsCarousel() {
         image: p.image || "",
         image_url: p.image || "",
         stock: 15,
-        is_featured: Boolean(p.is_featured),
+        is_featured: true,
         is_active: p.is_active !== false,
         category_id: p.categoryId,
       }));
 
-    const allProductsCombined: FeaturedProductItem[] = baseFeatured.map((baseP) => {
-      const normBaseId = normalize(baseP.id);
-      const normBaseSlug = normalize(baseP.slug);
-      const normBaseCode = normalize(baseP.code);
-      const normBaseName = normalize(baseP.name);
-      const normBasePres = normalize(baseP.presentation);
-      const normBaseBrand = normalize(baseP.brand);
-
-      const localMatch = localAdminList.find((loc: any) => {
-        const nId = normalize(loc.id);
-        const nSlug = normalize(loc.slug || loc.code);
-        const nName = normalize(loc.name);
-        const nPres = normalize(loc.presentation);
-        const nBrand = normalize(loc.brand);
-        return (
-          (nId && nId === normBaseId) ||
-          (nSlug && (nSlug === normBaseSlug || nSlug === normBaseCode)) ||
-          (nBrand && nBrand === normBaseBrand && nName && nName === normBaseName && nPres === normBasePres)
-        );
-      });
-
-      const dbMatch = dbFeatured.find((dbP) => {
-        const nId = normalize(dbP.id);
-        const nSlug = normalize(dbP.slug || dbP.code);
-        const nName = normalize(dbP.name);
-        const nPres = normalize(dbP.presentation);
-        const nBrand = normalize(dbP.brand);
-        return (
-          (nId && nId === normBaseId) ||
-          (nSlug && (nSlug === normBaseSlug || nSlug === normBaseCode)) ||
-          (nBrand && nBrand === normBaseBrand && nName && nName === normBaseName && nPres === normBasePres)
-        );
-      });
-
-      let isFeatured = false;
-      if (localMatch?.is_featured !== undefined) {
-        isFeatured = Boolean(localMatch.is_featured);
-      } else if (dbMatch) {
-        isFeatured = true;
-      } else if (!isDbLoaded) {
-        isFeatured = Boolean(baseP.is_featured);
-      } else {
-        isFeatured = false;
-      }
-
-      const isActive =
-        localMatch?.is_active !== undefined
-          ? Boolean(localMatch.is_active)
-          : !isDeleted(baseP.id, baseP.slug, baseP.code);
-
-      const localImg = localMatch?.image_url != null ? String(localMatch.image_url).trim() : "";
-      const dbImg = dbMatch?.image_url != null ? String(dbMatch.image_url).trim() : "";
-      const finalImage = localImg || dbImg || baseP.image;
-
-      return {
-        ...baseP,
-        name: localMatch?.name || dbMatch?.name || baseP.name,
-        brand: localMatch?.brand || dbMatch?.brand || baseP.brand,
-        line: localMatch?.short_description || dbMatch?.line || baseP.line,
-        presentation: localMatch?.presentation || dbMatch?.presentation || baseP.presentation,
-        description: localMatch?.description || dbMatch?.description || baseP.description,
-        stock: localMatch?.stock ?? dbMatch?.stock ?? baseP.stock,
-        is_featured: isFeatured && isActive,
-        is_active: isActive,
-        image: finalImage,
-        image_url: finalImage,
-      };
-    });
-
-    localAdminList.forEach((loc: any) => {
-      if (isDeleted(loc.id, loc.slug, loc.code) || loc.is_active === false || loc.is_featured === false) return;
-
-      const nId = normalize(loc.id);
-      const nSlug = normalize(loc.slug || loc.code);
-      const exists = allProductsCombined.some(
-        (p) => normalize(p.id) === nId || normalize(p.slug) === nSlug
-      );
-      if (!exists && loc.is_featured && loc.is_active !== false) {
-        allProductsCombined.push({
-          id: loc.id || `custom-${Date.now()}`,
-          name: loc.name,
-          slug: loc.slug || loc.id,
-          code: loc.slug || loc.code,
-          brand: loc.brand || "Apolo",
-          line: loc.short_description || "Apolo Premium",
-          presentation: loc.presentation || "",
-          description: loc.description || "",
-          image: loc.image_url || loc.image || "",
-          image_url: loc.image_url || loc.image || "",
-          stock: loc.stock ?? 15,
-          is_featured: true,
-          is_active: true,
-          category_id: loc.category_id,
-        });
-      }
-    });
-
-    dbFeatured.forEach((dbP) => {
-      if (isDeleted(dbP.id, dbP.slug, dbP.code) || dbP.is_active === false) return;
-      const nId = normalize(dbP.id);
-      const nSlug = normalize(dbP.slug || dbP.code);
-      const exists = allProductsCombined.some(
-        (p) => normalize(p.id) === nId || normalize(p.slug) === nSlug
-      );
-      if (!exists && dbP.is_featured) {
-        allProductsCombined.push(dbP);
-      }
-    });
-
-    const filtered = allProductsCombined.filter(
-      (p) =>
-        p.is_featured === true &&
-        p.is_active !== false &&
-        !isDeleted(p.id, p.slug, p.code)
-    );
-
-    return filtered;
+    return baseFeatured;
   }, [mounted, cacheVersion, dbFeatured, dbInactiveKeys, isDbLoaded]);
 
   // Base list ensured to have at least 8 items for seamless stepping

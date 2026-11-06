@@ -1041,7 +1041,7 @@ export default function ConfiguracionPage() {
                       <Mail className="w-4 h-4 text-blue-400 shrink-0" />
                       <div className="min-w-0">
                         <span className="text-[10px] text-zinc-500 block">Email</span>
-                        <span className="text-zinc-200 truncate block">{formData.email || "importacionesapolo2011@gmail.com"}</span>
+                        <span className="text-zinc-200 truncate block">{formData.email || "apoloimportlu11@gmail.com"}</span>
                       </div>
                     </div>
 

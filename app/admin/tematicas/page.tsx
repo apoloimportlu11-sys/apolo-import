@@ -72,12 +72,13 @@ export default function TematicasPage() {
     return t.category === activeTab;
   });
 
-  const handleToggleGlobal = () => {
+  const handleToggleGlobal = async () => {
     const next = !config.globalEnabled;
-    setGlobalEnabled(next);
+    const ok = await setGlobalEnabled(next);
+    if (!ok) return;
     if (next) {
       toast.success("¡Modo Festivo ACTIVADO!", {
-        description: `El sitio web ahora muestra la temática: "${activeTheme?.name || 'Festividad'}"`,
+        description: `El sitio web ahora muestra la temática: "${activeTheme?.name || "Festividad"}"`,
       });
     } else {
       toast.info("Modo Festivo DESACTIVADO", {
@@ -86,8 +87,9 @@ export default function TematicasPage() {
     }
   };
 
-  const handleActivateTheme = (themeId: string, themeName: string) => {
-    selectActiveTheme(themeId);
+  const handleActivateTheme = async (themeId: string, themeName: string) => {
+    const ok = await selectActiveTheme(themeId);
+    if (!ok) return;
     toast.success(`¡Temática "${themeName}" activada en vivo!`, {
       description: "El cintillo y los efectos festivos ya están visibles en la tienda.",
     });

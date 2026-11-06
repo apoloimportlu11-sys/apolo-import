@@ -21,7 +21,6 @@ export const productUpsertSchema = z.object({
   image_is_placeholder: z.boolean().optional(),
   sort_order: z.coerce.number().int().optional().nullable(),
   line_group_id: z.string().trim().max(120).nullable().optional(),
-  price: z.coerce.number().nonnegative().nullable().optional(),
   updated_at: z.string().optional(),
 });
 

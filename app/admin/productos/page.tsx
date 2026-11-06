@@ -74,7 +74,6 @@ export interface ProductItem {
   is_active: boolean;
   category_id?: string | null;
   brand_id?: string | null;
-  price?: number | null;
   image_url?: string | null;
   image_is_placeholder?: boolean | null;
   stock_min?: number | null;
@@ -560,7 +559,29 @@ export default function ProductosPage() {
         );
       };
 
-      // 2. Read localStorage cache
+      // 2. Fetch from Supabase (fuente de verdad)
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      const dbList: ProductItem[] = data && !error ? data.filter((p) => !isDeleted(p.id, p.slug)) : [];
+
+      if (dbList.length > 0) {
+        const normalized = dbList.map((p) => ({
+          ...p,
+          stock: Number(p.stock) || 0,
+          stock_min: Number(p.stock_min) || 0,
+          is_featured: Boolean(p.is_featured),
+          is_active: p.is_active !== false,
+          subcategory_id: p.subcategory_id || (p as any).subcategoryId || "",
+          subcategoryId: p.subcategory_id || (p as any).subcategoryId || "",
+        }));
+        persistProductsState(() => normalized);
+        return;
+      }
+
+      // 3. Fallback offline: localStorage / catálogo base
       let localList: ProductItem[] = [];
       try {
         const cached = localStorage.getItem(STORAGE_KEY);
@@ -572,33 +593,12 @@ export default function ProductosPage() {
         }
       } catch {}
 
-      // 3. Fetch from Supabase
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      const dbList: ProductItem[] = data && !error ? data.filter((p) => !isDeleted(p.id, p.slug)) : [];
-
-      // 4. Build merged list from non-deleted base products
       const activeBaseProds = INITIAL_CATALOG_PRODUCTS.filter((baseP) => !isDeleted(baseP.id, baseP.slug));
-      const usedDbIds = new Set<string>();
       const usedLocalIds = new Set<string>();
 
       const mergedList: ProductItem[] = activeBaseProds.map((baseP) => {
         const normBaseId = normalize(baseP.id);
         const normBaseSlug = normalize(baseP.slug);
-
-        // Strict 1-to-1 match by exact ID or exact slug (never by name alone to avoid ID collisions)
-        const dbMatch = dbList.find((dbP) => {
-          if (usedDbIds.has(dbP.id)) return false;
-          const nId = normalize(dbP.id);
-          const nSlug = normalize(dbP.slug);
-          return (nId && nId === normBaseId) || (normBaseSlug && nSlug && nSlug === normBaseSlug);
-        });
-        if (dbMatch) {
-          usedDbIds.add(dbMatch.id);
-        }
 
         const localMatch = localList.find((locP) => {
           if (usedLocalIds.has(locP.id)) return false;
@@ -610,53 +610,40 @@ export default function ProductosPage() {
           usedLocalIds.add(localMatch.id);
         }
 
-        // Fuente de verdad: Supabase (db) > localStorage > catálogo base
-        const pickStr = (
-          dbVal?: string | null,
-          localVal?: string | null,
-          baseVal?: string | null
-        ) => {
-          const db = dbVal != null ? String(dbVal).trim() : "";
-          if (db) return db;
+        const pickStr = (localVal?: string | null, baseVal?: string | null) => {
           const loc = localVal != null ? String(localVal).trim() : "";
           if (loc) return loc;
           return baseVal != null ? String(baseVal) : "";
         };
-        const pickVal = <T,>(dbVal: T | null | undefined, localVal: T | null | undefined, baseVal: T): T => {
-          if (dbVal !== undefined && dbVal !== null) return dbVal;
+        const pickVal = <T,>(localVal: T | null | undefined, baseVal: T): T => {
           if (localVal !== undefined && localVal !== null) return localVal;
           return baseVal;
         };
 
-        const chosenName = pickStr(dbMatch?.name, localMatch?.name, baseP.name);
-        const chosenSlug = pickStr(dbMatch?.slug, localMatch?.slug, baseP.slug);
-        const chosenBrand = pickStr(dbMatch?.brand, localMatch?.brand, baseP.brand);
-        const chosenShortDesc = pickVal(dbMatch?.short_description, localMatch?.short_description, baseP.short_description);
-        const chosenPresentation = pickVal(dbMatch?.presentation, localMatch?.presentation, baseP.presentation);
-        const chosenDesc = pickVal(dbMatch?.description, localMatch?.description, baseP.description);
-        const chosenStock = pickVal(dbMatch?.stock, localMatch?.stock, baseP.stock);
-        const chosenFeatured = pickVal(dbMatch?.is_featured, localMatch?.is_featured, baseP.is_featured);
-        const chosenActive = pickVal(dbMatch?.is_active, localMatch?.is_active, baseP.is_active);
-        const chosenCategory = pickStr(dbMatch?.category_id, localMatch?.category_id, baseP.category_id) || "automovil";
-        const chosenImageUrl = pickStr(dbMatch?.image_url, localMatch?.image_url, baseP.image_url);
-        const chosenViscosity = pickStr(dbMatch?.viscosity, localMatch?.viscosity, baseP.viscosity || "");
-        const chosenType = pickStr(dbMatch?.type, localMatch?.type, baseP.type || "Lubricante Especializado");
+        const chosenName = pickStr(localMatch?.name, baseP.name);
+        const chosenSlug = pickStr(localMatch?.slug, baseP.slug);
+        const chosenBrand = pickStr(localMatch?.brand, baseP.brand);
+        const chosenShortDesc = pickVal(localMatch?.short_description, baseP.short_description);
+        const chosenPresentation = pickVal(localMatch?.presentation, baseP.presentation);
+        const chosenDesc = pickVal(localMatch?.description, baseP.description);
+        const chosenStock = pickVal(localMatch?.stock, baseP.stock);
+        const chosenFeatured = pickVal(localMatch?.is_featured, baseP.is_featured);
+        const chosenActive = pickVal(localMatch?.is_active, baseP.is_active);
+        const chosenCategory = pickStr(localMatch?.category_id, baseP.category_id) || "automovil";
+        const chosenImageUrl = pickStr(localMatch?.image_url, baseP.image_url);
+        const chosenViscosity = pickStr(localMatch?.viscosity, baseP.viscosity || "");
+        const chosenType = pickStr(localMatch?.type, baseP.type || "Lubricante Especializado");
         const chosenSubcategoryId = pickStr(
-          dbMatch?.subcategory_id ?? (dbMatch as any)?.subcategoryId,
           localMatch?.subcategory_id ?? localMatch?.subcategoryId,
           baseP.subcategory_id || baseP.subcategoryId || ""
         );
-        const chosenSubcategory = pickStr(dbMatch?.subcategory, localMatch?.subcategory, baseP.subcategory || "");
-        const chosenSortOrder = pickVal(dbMatch?.sort_order, localMatch?.sort_order, baseP.sort_order || 0);
-        const chosenLineGroupId = pickVal(
-          dbMatch?.line_group_id,
-          localMatch?.line_group_id,
-          baseP.line_group_id ?? null
-        );
+        const chosenSubcategory = pickStr(localMatch?.subcategory, baseP.subcategory || "");
+        const chosenSortOrder = pickVal(localMatch?.sort_order, baseP.sort_order || 0);
+        const chosenLineGroupId = pickVal(localMatch?.line_group_id, baseP.line_group_id ?? null);
 
         return {
           ...baseP,
-          id: baseP.id, // Keep the base product's own unique ID intact
+          id: baseP.id,
           name: chosenName,
           slug: chosenSlug,
           brand: chosenBrand,
@@ -675,8 +662,8 @@ export default function ProductosPage() {
           image_url: chosenImageUrl,
           sort_order: chosenSortOrder,
           line_group_id: chosenLineGroupId,
-          created_at: dbMatch?.created_at || localMatch?.created_at || baseP.created_at,
-          updated_at: dbMatch?.updated_at || localMatch?.updated_at,
+          created_at: localMatch?.created_at || baseP.created_at,
+          updated_at: localMatch?.updated_at,
         };
       });
 
@@ -1228,6 +1215,10 @@ export default function ProductosPage() {
       subcategory: currentProduct.subcategory !== undefined && currentProduct.subcategory !== null ? currentProduct.subcategory.trim() : null,
       description: currentProduct.description?.trim() || null,
       stock: Number(currentProduct.stock) || 0,
+      stock_min:
+        currentProduct.stock_min === undefined || currentProduct.stock_min === null
+          ? 0
+          : Number(currentProduct.stock_min) || 0,
       is_featured: Boolean(currentProduct.is_featured),
       is_active: currentProduct.is_active !== undefined ? currentProduct.is_active : true,
       category_id: currentProduct.category_id || "automovil",
@@ -2790,6 +2781,24 @@ export default function ProductosPage() {
                     min="0"
                     value={currentProduct.stock ?? 15}
                     onChange={(e) => setCurrentProduct({ ...currentProduct, stock: parseInt(e.target.value) || 0 })}
+                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+                    Stock mínimo (alerta)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={currentProduct.stock_min ?? 0}
+                    onChange={(e) =>
+                      setCurrentProduct({
+                        ...currentProduct,
+                        stock_min: parseInt(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
                   />
                 </div>

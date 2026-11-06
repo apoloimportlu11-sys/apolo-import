@@ -165,14 +165,10 @@ export async function fetchRemotePromoSlides(): Promise<PromoSlide[] | null> {
   return null;
 }
 
-// Save promo slides to both local cache and Supabase (so mobile devices get the updates immediately)
+// Guarda primero en Supabase (fuente de verdad); localStorage solo como caché
 export async function savePromoSlides(
   slides: PromoSlide[]
 ): Promise<{ success: boolean; error?: string }> {
-  // 1. Guardar localmente y emitir en el bus en vivo
-  saveLocalPromoSlides(slides);
-
-  // 2. Persistir en la tabla pages de Supabase
   try {
     const supabase = createBrowserSupabase();
     const { error } = await supabase.from("pages").upsert(
@@ -191,6 +187,7 @@ export async function savePromoSlides(
       return { success: false, error: error.message };
     }
 
+    saveLocalPromoSlides(slides);
     return { success: true };
   } catch (err: any) {
     console.error("Unexpected error saving promo banners:", err);

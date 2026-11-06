@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FestiveConfig,
   FestiveTheme,
@@ -10,29 +10,31 @@ import {
   fetchRemoteFestiveConfig,
   getActiveTheme,
   getAllThemes,
+  shouldApplyRemoteConfig,
   FESTIVE_STORAGE_KEY,
   FESTIVE_THEME_PAGE_SLUG,
 } from "@/lib/festive-theme";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
+import { toast } from "sonner";
 
 export function useFestiveTheme() {
   const [config, setConfig] = useState<FestiveConfig>(DEFAULT_FESTIVE_CONFIG);
   const [mounted, setMounted] = useState(false);
+  const configRef = useRef(config);
+  configRef.current = config;
 
   useEffect(() => {
     setMounted(true);
     const initial = getFestiveConfig();
     setConfig(initial);
 
-    // Consulta remota a Supabase (para celulares)
     fetchRemoteFestiveConfig().then((remote) => {
-      if (remote) {
+      if (remote && shouldApplyRemoteConfig(configRef.current, remote)) {
         setConfig(remote);
       }
     });
 
-    // Escuchar eventos en Supabase Realtime (con canal único y protegido contra excepciones)
     const supabase = createBrowserSupabase();
     let channel: any = null;
     try {
@@ -50,7 +52,7 @@ export function useFestiveTheme() {
           async () => {
             try {
               const remote = await fetchRemoteFestiveConfig();
-              if (remote) {
+              if (remote && shouldApplyRemoteConfig(configRef.current, remote)) {
                 setConfig(remote);
               }
             } catch (err) {
@@ -63,20 +65,21 @@ export function useFestiveTheme() {
       console.warn("Supabase Realtime festive channel error:", err);
     }
 
-    // Escuchar eventos en vivo del BroadcastChannel
     let unsubscribeBus: (() => void) | null = null;
     if (realtimeBus) {
       unsubscribeBus = realtimeBus.on("festive_theme_updated", (newConfig: FestiveConfig) => {
-        if (newConfig) {
+        if (newConfig && shouldApplyRemoteConfig(configRef.current, newConfig)) {
           setConfig(newConfig);
         }
       });
     }
 
-    // Escuchar eventos de Storage entre ventanas del navegador
     const handleStorage = (e: StorageEvent) => {
       if (e.key === FESTIVE_STORAGE_KEY) {
-        setConfig(getFestiveConfig());
+        const next = getFestiveConfig();
+        if (shouldApplyRemoteConfig(configRef.current, next)) {
+          setConfig(next);
+        }
       }
     };
 
@@ -93,56 +96,77 @@ export function useFestiveTheme() {
     };
   }, []);
 
-  const updateConfig = useCallback((updater: (prev: FestiveConfig) => FestiveConfig) => {
-    setConfig((prev) => {
-      const next = updater(prev);
-      // Ejecutar persistencia de forma asíncrona fuera del ciclo de renderizado de React
-      setTimeout(() => {
-        saveFestiveConfig(next);
-      }, 0);
-      return next;
-    });
+  const updateConfig = useCallback(async (updater: (prev: FestiveConfig) => FestiveConfig) => {
+    const prev = configRef.current;
+    const next: FestiveConfig = {
+      ...updater(prev),
+      updatedAt: Date.now(),
+    };
+    // UI optimista
+    setConfig(next);
+    const result = await saveFestiveConfig(next);
+    if (!result.success) {
+      setConfig(prev);
+      toast.error("No se pudo guardar la temática en Supabase", {
+        description: result.error || "¿Estás logueado como admin?",
+      });
+      return false;
+    }
+    return true;
   }, []);
 
-  const setGlobalEnabled = useCallback((enabled: boolean) => {
-    updateConfig((prev) => ({
-      ...prev,
-      globalEnabled: enabled,
-    }));
-  }, [updateConfig]);
-
-  const selectActiveTheme = useCallback((themeId: string) => {
-    updateConfig((prev) => ({
-      ...prev,
-      activeThemeId: themeId,
-      globalEnabled: true, // Si selecciona una temática directamente, la activa
-    }));
-  }, [updateConfig]);
-
-  const saveCustomTheme = useCallback((theme: FestiveTheme) => {
-    updateConfig((prev) => {
-      const existingIdx = prev.customThemes.findIndex((t) => t.id === theme.id);
-      let updatedCustom: FestiveTheme[];
-      if (existingIdx >= 0) {
-        updatedCustom = [...prev.customThemes];
-        updatedCustom[existingIdx] = theme;
-      } else {
-        updatedCustom = [...prev.customThemes, theme];
-      }
-      return {
+  const setGlobalEnabled = useCallback(
+    async (enabled: boolean) => {
+      return updateConfig((prev) => ({
         ...prev,
-        customThemes: updatedCustom,
-      };
-    });
-  }, [updateConfig]);
+        globalEnabled: enabled,
+      }));
+    },
+    [updateConfig]
+  );
 
-  const deleteCustomTheme = useCallback((themeId: string) => {
-    updateConfig((prev) => ({
-      ...prev,
-      customThemes: prev.customThemes.filter((t) => t.id !== themeId),
-      activeThemeId: prev.activeThemeId === themeId ? "dia-de-la-bandera" : prev.activeThemeId,
-    }));
-  }, [updateConfig]);
+  const selectActiveTheme = useCallback(
+    async (themeId: string) => {
+      return updateConfig((prev) => ({
+        ...prev,
+        activeThemeId: themeId,
+        globalEnabled: true,
+      }));
+    },
+    [updateConfig]
+  );
+
+  const saveCustomTheme = useCallback(
+    async (theme: FestiveTheme) => {
+      return updateConfig((prev) => {
+        const existingIdx = prev.customThemes.findIndex((t) => t.id === theme.id);
+        let updatedCustom: FestiveTheme[];
+        if (existingIdx >= 0) {
+          updatedCustom = [...prev.customThemes];
+          updatedCustom[existingIdx] = theme;
+        } else {
+          updatedCustom = [...prev.customThemes, theme];
+        }
+        return {
+          ...prev,
+          customThemes: updatedCustom,
+        };
+      });
+    },
+    [updateConfig]
+  );
+
+  const deleteCustomTheme = useCallback(
+    async (themeId: string) => {
+      return updateConfig((prev) => ({
+        ...prev,
+        customThemes: prev.customThemes.filter((t) => t.id !== themeId),
+        activeThemeId:
+          prev.activeThemeId === themeId ? "dia-de-la-bandera" : prev.activeThemeId,
+      }));
+    },
+    [updateConfig]
+  );
 
   const activeTheme = mounted ? getActiveTheme(config) : null;
   const allThemes = getAllThemes(config);

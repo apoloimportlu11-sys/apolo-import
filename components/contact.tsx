@@ -66,8 +66,8 @@ export function Contact() {
     {
       icon: Mail,
       title: "Email",
-      content: settings.email || "importacionesapolo2011@gmail.com",
-      href: `mailto:${settings.email || "importacionesapolo2011@gmail.com"}`,
+      content: settings.email || "apoloimportlu11@gmail.com",
+      href: `mailto:${settings.email || "apoloimportlu11@gmail.com"}`,
     },
     {
       icon: Clock,

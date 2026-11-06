@@ -22,12 +22,14 @@ interface Particle {
   flipAngle?: number;
 }
 
-function FestiveEffectsInternal() {
+function FestiveEffectsInternal({ disabled = false }: { disabled?: boolean }) {
   const { isFestiveActive, activeTheme } = useFestiveTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canRender =
+    !disabled && isFestiveActive && !!activeTheme && activeTheme.effectType !== "none";
 
   useEffect(() => {
-    if (!isFestiveActive || !activeTheme || activeTheme.effectType === "none") {
+    if (!canRender || !activeTheme) {
       return;
     }
 
@@ -350,9 +352,9 @@ function FestiveEffectsInternal() {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isFestiveActive, activeTheme]);
+  }, [canRender, activeTheme]);
 
-  if (!isFestiveActive || !activeTheme || activeTheme.effectType === "none") {
+  if (!canRender) {
     return null;
   }
 
@@ -368,6 +370,6 @@ function FestiveEffectsInternal() {
 export default function FestiveEffects() {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin") || pathname?.startsWith("/admin-login");
-  if (isAdmin) return null;
-  return <FestiveEffectsInternal />;
+  // Siempre montamos el hijo para no romper el orden de hooks entre rutas
+  return <FestiveEffectsInternal disabled={Boolean(isAdmin)} />;
 }

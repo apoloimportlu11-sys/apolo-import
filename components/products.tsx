@@ -241,21 +241,13 @@ export function Products() {
     String(str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const allMergedProducts = useMemo(() => {
-    // 1. Read admin cache directly (HIGHEST PRIORITY) only after client mount to prevent hydration mismatch
+    // localStorage solo como caché de respaldo si Supabase aún no respondió
     let localAdminList: any[] = [];
     const deletedSet = new Set<string>();
     KNOWN_DELETED.forEach((k) => deletedSet.add(normalizeKey(k)));
     dbInactiveKeys.forEach((k) => deletedSet.add(normalizeKey(k)));
 
     if (mounted && typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) localAdminList = parsed;
-        }
-      } catch (e) {}
-
       try {
         const rawDel = localStorage.getItem(DELETED_KEY);
         if (rawDel) {
@@ -267,6 +259,17 @@ export function Products() {
           }
         }
       } catch (e) {}
+
+      // Solo leer caché local si todavía no hay catálogo remoto
+      if (dbProducts.length === 0) {
+        try {
+          const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) localAdminList = parsed;
+          }
+        } catch (e) {}
+      }
     }
 
     const isDeleted = (id?: any, code?: any) => {
@@ -274,6 +277,11 @@ export function Products() {
       const nCode = normalizeKey(code);
       return Boolean((nId && deletedSet.has(nId)) || (nCode && deletedSet.has(nCode)));
     };
+
+    // Supabase es la fuente de verdad cuando hay datos remotos
+    if (dbProducts.length > 0) {
+      return dbProducts.filter((p) => !isDeleted(p.id, p.code));
+    }
 
     const staticIds = new Set<string>();
 
@@ -327,102 +335,69 @@ export function Products() {
         );
       });
 
-      // Merge with strict precedence: localMatch > dbMatch > baseP
+      // Fuente de verdad: Supabase (db) > catálogo base. localStorage solo si DB no tiene el producto.
+      const preferred = dbMatch || localMatch || null;
       let finalImage = baseP.image || "";
-      if (localMatch) {
-        if (localMatch.image_url != null && String(localMatch.image_url).trim() !== "") {
-          finalImage = String(localMatch.image_url);
-        } else if (localMatch.image != null && String(localMatch.image).trim() !== "") {
-          finalImage = String(localMatch.image);
-        }
-      } else if (dbMatch) {
-        if (dbMatch.image_url != null && String(dbMatch.image_url).trim() !== "") {
-          finalImage = String(dbMatch.image_url);
-        } else if (dbMatch.image != null && String(dbMatch.image).trim() !== "") {
-          finalImage = String(dbMatch.image);
+      if (preferred) {
+        if (preferred.image_url != null && String(preferred.image_url).trim() !== "") {
+          finalImage = String(preferred.image_url);
+        } else if (preferred.image != null && String(preferred.image).trim() !== "") {
+          finalImage = String(preferred.image);
         }
       }
 
       const finalPresentation =
-        localMatch?.presentation != null && String(localMatch.presentation).trim() !== ""
-          ? String(localMatch.presentation)
-          : dbMatch?.presentation != null && String(dbMatch.presentation).trim() !== ""
-          ? String(dbMatch.presentation)
+        preferred?.presentation != null && String(preferred.presentation).trim() !== ""
+          ? String(preferred.presentation)
           : baseP.presentation || "";
 
       const finalName =
-        localMatch?.name && String(localMatch.name).trim() !== "" && localMatch.name !== "Sin nombre"
-          ? String(localMatch.name)
-          : dbMatch?.name && String(dbMatch.name).trim() !== "" && dbMatch.name !== "Sin nombre"
-          ? String(dbMatch.name)
+        preferred?.name && String(preferred.name).trim() !== "" && preferred.name !== "Sin nombre"
+          ? String(preferred.name)
           : baseP.name || "Producto";
 
       const finalBrand =
-        localMatch?.brand != null && String(localMatch.brand).trim() !== ""
-          ? String(localMatch.brand)
-          : dbMatch?.brand != null && String(dbMatch.brand).trim() !== ""
-          ? String(dbMatch.brand)
+        preferred?.brand != null && String(preferred.brand).trim() !== ""
+          ? String(preferred.brand)
           : baseP.brand || "Apolo";
 
       const finalLine =
-        localMatch?.short_description != null && String(localMatch.short_description).trim() !== ""
-          ? String(localMatch.short_description)
-          : dbMatch?.line && dbMatch.line !== "Apolo Premium" && String(dbMatch.line).trim() !== ""
-          ? String(dbMatch.line)
+        preferred?.short_description != null && String(preferred.short_description).trim() !== ""
+          ? String(preferred.short_description)
+          : preferred?.line && preferred.line !== "Apolo Premium" && String(preferred.line).trim() !== ""
+          ? String(preferred.line)
           : baseP.line || "Apolo Premium";
 
       const finalDesc =
-        localMatch?.description != null && String(localMatch.description).trim() !== ""
-          ? String(localMatch.description)
-          : dbMatch?.description != null && String(dbMatch.description).trim() !== ""
-          ? String(dbMatch.description)
+        preferred?.description != null && String(preferred.description).trim() !== ""
+          ? String(preferred.description)
           : baseP.description || "";
 
       const finalViscosity =
-        localMatch?.viscosity != null
-          ? String(localMatch.viscosity)
-          : dbMatch?.viscosity != null
-          ? String(dbMatch.viscosity)
-          : baseP.viscosity || "";
+        preferred?.viscosity != null ? String(preferred.viscosity) : baseP.viscosity || "";
 
       const finalType =
-        localMatch?.type != null
-          ? String(localMatch.type)
-          : dbMatch?.type != null
-          ? String(dbMatch.type)
-          : baseP.type || "";
+        preferred?.type != null ? String(preferred.type) : baseP.type || "";
 
       const finalSubcategoryId =
-        localMatch?.subcategory_id != null
-          ? String(localMatch.subcategory_id)
-          : localMatch?.subcategoryId != null
-          ? String(localMatch.subcategoryId)
-          : dbMatch?.subcategory_id != null
-          ? String(dbMatch.subcategory_id)
-          : dbMatch?.subcategoryId != null
-          ? String(dbMatch.subcategoryId)
-          : (baseP.subcategoryId || "");
+        preferred?.subcategory_id != null
+          ? String(preferred.subcategory_id)
+          : preferred?.subcategoryId != null
+          ? String(preferred.subcategoryId)
+          : baseP.subcategoryId || "";
 
       const finalSubcategory =
-        localMatch?.subcategory != null
-          ? String(localMatch.subcategory)
-          : dbMatch?.subcategory != null
-          ? String(dbMatch.subcategory)
-          : (baseP.subcategory || "");
+        preferred?.subcategory != null
+          ? String(preferred.subcategory)
+          : baseP.subcategory || "";
 
       const finalSortOrder =
-        localMatch?.sort_order != null
-          ? Number(localMatch.sort_order)
-          : dbMatch?.sort_order != null
-          ? Number(dbMatch.sort_order)
-          : (baseP.sort_order || 0);
+        preferred?.sort_order != null ? Number(preferred.sort_order) : baseP.sort_order || 0;
 
       const finalLineGroupId =
-        localMatch?.line_group_id !== undefined
-          ? localMatch.line_group_id
-          : dbMatch?.line_group_id !== undefined
-          ? dbMatch.line_group_id
-          : (baseP.line_group_id ?? null);
+        preferred?.line_group_id !== undefined
+          ? preferred.line_group_id
+          : baseP.line_group_id ?? null;
 
       return {
         ...baseP,
@@ -537,24 +512,7 @@ export function Products() {
     brandSet.add("Overts");
     brandSet.add("Valtrom");
 
-    // Marcas activas configuradas en el panel administrativo
-    if (mounted && typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("apolo_admin_brands_cache");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((b: any) => {
-              if (b.name && b.is_active !== false) {
-                brandSet.add(b.name.trim());
-              }
-            });
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Marcas presentes en los productos combinados
+    // Marcas presentes en el catálogo (Supabase)
     allMergedProducts.forEach((p) => {
       if (p.brand && p.brand.trim()) {
         brandSet.add(p.brand.trim());

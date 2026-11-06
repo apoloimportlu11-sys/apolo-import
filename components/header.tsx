@@ -201,18 +201,53 @@ export function Header() {
         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-black/60 pointer-events-none" />
 
         <div className="container mx-auto flex h-[78px] sm:h-[105px] lg:h-[140px] items-center justify-between px-3 sm:px-6 lg:px-8 relative z-10">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="px-1 py-1 h-[62px] sm:h-[85px] lg:h-[105px] flex items-center">
+          <div
+            className="flex items-center gap-1.5 sm:gap-3 lg:gap-5 min-w-0 shrink"
+            aria-label="Marcas Apolo, Overts y Valtrom"
+          >
+            <Link
+              href="/"
+              className="flex items-center justify-center shrink-0 rounded-md px-0.5 py-1 transition-opacity hover:opacity-90"
+              title="Apolo"
+            >
               <Image
-                src={activeLogo}
-                alt={settings.business_name || "Apolo Logo"}
+                src="/images/logoApolo.png"
+                alt="Apolo"
                 width={200}
                 height={200}
                 priority
-                className="object-contain h-[56px] sm:h-[80px] lg:h-[120px] w-auto max-w-[210px] sm:max-w-none"
+                className="object-contain h-[44px] sm:h-[70px] lg:h-[100px] w-auto max-w-[110px] sm:max-w-[160px] lg:max-w-[200px]"
               />
-            </div>
-          </Link>
+            </Link>
+            <span className="hidden xs:block h-8 sm:h-12 lg:h-16 w-px bg-white/30 shrink-0" aria-hidden />
+            <Link
+              href="/productos?brand=Overts"
+              className="flex items-center justify-center shrink-0 rounded-md px-0.5 py-1 transition-opacity hover:opacity-90"
+              title="Overts"
+            >
+              <Image
+                src="/images/logo%20overts.png"
+                alt="Overts"
+                width={180}
+                height={90}
+                className="object-contain h-[36px] sm:h-[56px] lg:h-[78px] w-auto max-w-[90px] sm:max-w-[140px] lg:max-w-[170px]"
+              />
+            </Link>
+            <span className="hidden xs:block h-8 sm:h-12 lg:h-16 w-px bg-white/30 shrink-0" aria-hidden />
+            <Link
+              href="/productos?brand=Valtrom"
+              className="flex items-center justify-center shrink-0 rounded-md px-0.5 py-1 transition-opacity hover:opacity-90"
+              title="Valtrom"
+            >
+              <Image
+                src="/images/logo%20valtrom%20ter.png"
+                alt="Valtrom"
+                width={180}
+                height={90}
+                className="object-contain h-[36px] sm:h-[56px] lg:h-[78px] w-auto max-w-[90px] sm:max-w-[140px] lg:max-w-[170px]"
+              />
+            </Link>
+          </div>
 
           <nav className="hidden lg:flex items-center gap-3 xl:gap-6 font-heading">
             <Link

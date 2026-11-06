@@ -60,7 +60,7 @@ export function Footer() {
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>{settings.email || "importacionesapolo2011@gmail.com"}</span>
+                <span>{settings.email || "apoloimportlu11@gmail.com"}</span>
               </p>
             </div>
 

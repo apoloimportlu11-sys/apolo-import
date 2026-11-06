@@ -35,6 +35,8 @@ export interface FestiveConfig {
   activeThemeId: string;
   globalEnabled: boolean; // Si está en false, la web se muestra 100% formal y estándar
   customThemes: FestiveTheme[];
+  /** Epoch ms — evita que un fetch remoto viejo reactive la temática tras desactivarla */
+  updatedAt?: number;
 }
 
 export const FESTIVE_PRESETS: FestiveTheme[] = [
@@ -152,6 +154,7 @@ export const DEFAULT_FESTIVE_CONFIG: FestiveConfig = {
   activeThemeId: "dia-de-la-bandera",
   globalEnabled: false, // Por defecto desactivado para respetar el diseño sobrio original hasta que el admin lo active
   customThemes: [],
+  updatedAt: 0,
 };
 
 export const FESTIVE_STORAGE_KEY = "apolo_festive_theme_config";
@@ -184,23 +187,28 @@ export async function fetchRemoteFestiveConfig(): Promise<FestiveConfig | null> 
     const supabase = createBrowserSupabase();
     const { data, error } = await supabase
       .from("pages")
-      .select("content")
+      .select("content,updated_at")
       .eq("slug", FESTIVE_THEME_PAGE_SLUG)
       .maybeSingle();
 
     if (data && data.content && !error) {
       const parsed = JSON.parse(data.content);
       if (parsed && typeof parsed.globalEnabled === "boolean") {
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem(FESTIVE_STORAGE_KEY, JSON.stringify(parsed));
-          } catch (e) {}
-        }
-        return {
+        const normalized: FestiveConfig = {
           ...DEFAULT_FESTIVE_CONFIG,
           ...parsed,
           customThemes: Array.isArray(parsed.customThemes) ? parsed.customThemes : [],
+          updatedAt:
+            Number(parsed.updatedAt) ||
+            Date.parse(data.updated_at || "") ||
+            Date.now(),
         };
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(FESTIVE_STORAGE_KEY, JSON.stringify(normalized));
+          } catch (e) {}
+        }
+        return normalized;
       }
     }
   } catch (err) {
@@ -209,36 +217,61 @@ export async function fetchRemoteFestiveConfig(): Promise<FestiveConfig | null> 
   return null;
 }
 
-export async function saveFestiveConfig(config: FestiveConfig): Promise<void> {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(FESTIVE_STORAGE_KEY, JSON.stringify(config));
-      // Notificar a otras pestañas y componentes en vivo
-      if (realtimeBus) {
-        realtimeBus.emit("festive_theme_updated", config);
-      }
-    } catch (e) {
-      console.error("Error saving festive theme config:", e);
-    }
-  }
+export async function saveFestiveConfig(
+  config: FestiveConfig
+): Promise<{ success: boolean; error?: string }> {
+  const payload: FestiveConfig = {
+    ...config,
+    updatedAt: config.updatedAt || Date.now(),
+  };
 
-  // Persistir en Supabase en segundo plano para sincronizar celulares
+  // 1) Supabase primero (fuente de verdad)
   try {
     const { createBrowserSupabase } = await import("./supabase-client");
     const supabase = createBrowserSupabase();
-    await supabase.from("pages").upsert(
+    const { error } = await supabase.from("pages").upsert(
       {
         slug: FESTIVE_THEME_PAGE_SLUG,
         title: "Configuración de Temáticas Festivas",
-        content: JSON.stringify(config),
+        content: JSON.stringify(payload),
         is_published: true,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "slug" }
     );
-  } catch (cloudErr) {
+    if (error) {
+      console.error("Error saving festive config to Supabase:", error);
+      return { success: false, error: error.message };
+    }
+  } catch (cloudErr: any) {
     console.error("Error saving festive config to Supabase:", cloudErr);
+    return { success: false, error: cloudErr?.message || "Error de red" };
   }
+
+  // 2) Caché local + bus solo si la nube aceptó el cambio
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(FESTIVE_STORAGE_KEY, JSON.stringify(payload));
+      if (realtimeBus) {
+        realtimeBus.emit("festive_theme_updated", payload);
+      }
+    } catch (e) {
+      console.error("Error saving festive theme config locally:", e);
+    }
+  }
+
+  return { success: true };
+}
+
+/** Aplica remote solo si es igual o más reciente que el estado local conocido. */
+export function shouldApplyRemoteConfig(
+  current: FestiveConfig,
+  remote: FestiveConfig
+): boolean {
+  const remoteTs = Number(remote.updatedAt) || 0;
+  const currentTs = Number(current.updatedAt) || 0;
+  if (remoteTs === 0 && currentTs === 0) return true;
+  return remoteTs >= currentTs;
 }
 
 export function getAllThemes(config: FestiveConfig): FestiveTheme[] {

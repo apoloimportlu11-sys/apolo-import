@@ -89,6 +89,7 @@ DROP POLICY IF EXISTS "users_select_own" ON public.users;
 DROP POLICY IF EXISTS "users_insert_own" ON public.users;
 DROP POLICY IF EXISTS "users_update_own" ON public.users;
 DROP POLICY IF EXISTS "users_admin_all" ON public.users;
+DROP POLICY IF EXISTS "users_admin_delete" ON public.users;
 
 -- Lectura: propia fila (login/rol) o admin
 CREATE POLICY "users_select_own" ON public.users
@@ -119,3 +120,67 @@ CREATE POLICY "users_update_own" ON public.users
 
 CREATE POLICY "users_admin_delete" ON public.users
   FOR DELETE USING (public.is_admin());
+
+-- ========== CATEGORIES ==========
+ALTER TABLE IF EXISTS public.categories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "categories_select" ON public.categories;
+DROP POLICY IF EXISTS "categories_write_admin" ON public.categories;
+DROP POLICY IF EXISTS "categories_auth_write" ON public.categories;
+CREATE POLICY "categories_select" ON public.categories FOR SELECT USING (true);
+CREATE POLICY "categories_write_admin" ON public.categories
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ========== SUPPLIERS ==========
+ALTER TABLE IF EXISTS public.suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.product_suppliers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "suppliers_admin_all" ON public.suppliers;
+DROP POLICY IF EXISTS "suppliers_select_admin" ON public.suppliers;
+DROP POLICY IF EXISTS "product_suppliers_admin_all" ON public.product_suppliers;
+CREATE POLICY "suppliers_admin_all" ON public.suppliers
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "product_suppliers_admin_all" ON public.product_suppliers
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ========== QUOTES / CUSTOMERS ==========
+ALTER TABLE IF EXISTS public.customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.quotes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "customers_admin_all" ON public.customers;
+DROP POLICY IF EXISTS "customers_anon_insert" ON public.customers;
+DROP POLICY IF EXISTS "quotes_admin_all" ON public.quotes;
+DROP POLICY IF EXISTS "quotes_public_read" ON public.quotes;
+DROP POLICY IF EXISTS "quotes_anon_insert" ON public.quotes;
+CREATE POLICY "customers_admin_all" ON public.customers
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "customers_anon_insert" ON public.customers
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "quotes_admin_all" ON public.quotes
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "quotes_public_read" ON public.quotes
+  FOR SELECT USING (true);
+CREATE POLICY "quotes_anon_insert" ON public.quotes
+  FOR INSERT WITH CHECK (true);
+
+-- ========== INVENTORY ==========
+ALTER TABLE IF EXISTS public.inventory_movements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "inventory_movements_select" ON public.inventory_movements;
+DROP POLICY IF EXISTS "inventory_movements_write_admin" ON public.inventory_movements;
+CREATE POLICY "inventory_movements_select" ON public.inventory_movements
+  FOR SELECT USING (public.is_admin());
+CREATE POLICY "inventory_movements_write_admin" ON public.inventory_movements
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ========== SITE TEXTS ==========
+ALTER TABLE IF EXISTS public.site_texts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "site_texts_select" ON public.site_texts;
+DROP POLICY IF EXISTS "site_texts_write_admin" ON public.site_texts;
+CREATE POLICY "site_texts_select" ON public.site_texts FOR SELECT USING (true);
+CREATE POLICY "site_texts_write_admin" ON public.site_texts
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Limpiar policies bootstrap demasiado abiertas (si aún existen)
+DROP POLICY IF EXISTS "products_auth_write" ON public.products;
+DROP POLICY IF EXISTS "users_auth_all" ON public.users;
+DROP POLICY IF EXISTS "pages_auth_write" ON public.pages;
+DROP POLICY IF EXISTS "brands_auth_write" ON public.brands;
+DROP POLICY IF EXISTS "business_settings_all" ON public.business_settings;
+DROP POLICY IF EXISTS "product_images_all" ON public.product_images;
