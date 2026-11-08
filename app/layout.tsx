@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import { Montserrat, Inter, Roboto } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -82,6 +83,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <Script id="apolo-admin-theme" strategy="beforeInteractive">
+          {`(function(){try{var p=location.pathname;if(!(p==="/admin"||p.indexOf("/admin/")===0))return;var t=localStorage.getItem("apolo-admin-theme")||"light";var dark=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.remove("admin-tone-light","admin-tone-dark");document.documentElement.classList.add(dark?"admin-tone-dark":"admin-tone-light");document.documentElement.setAttribute("data-admin-theme",t);document.documentElement.style.colorScheme=dark?"dark":"light";}catch(e){}})();`}
+        </Script>
       </head>
       <body className={`${inter.className} font-sans antialiased bg-background text-foreground`} suppressHydrationWarning>
         <ThemeProvider defaultTheme="dark" enableSystem={false}>

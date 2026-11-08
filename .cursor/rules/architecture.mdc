@@ -1,0 +1,15 @@
+---
+description: Arquitectura App Router, capas y límites del sistema
+alwaysApply: true
+---
+
+# Arquitectura
+
+- App Router: rutas en `app/`. Storefront público + `app/admin/**` (panel).
+- Datos: Supabase Postgres. Clientes: `lib/supabase-client.ts` (browser), `lib/supabase-server.ts` (RSC/route), `lib/supabase-admin.ts` (service role, solo server/scripts).
+- Env centralizado en `lib/supabase-env.ts`.
+- Estado UI de cotización: `lib/quote-context.tsx`. Settings negocio/realtime: `lib/realtime-context.tsx`.
+- CMS ligero: tablas `pages`, `site_texts`, `business_settings` (+ helpers en `lib/*-data.ts`).
+- Schema fuente: SQL en raíz (`supabase_schema.sql`, alters, quotes, inventory, suppliers, RLS). Aplicar vía SQL Editor o scripts `npm run db:*`.
+- Integraciones externas solo vía Route Handlers o scripts: Resend, OpenAI, Storage.
+- Detalle: `docs/ARCHITECTURE.md`. Verificar código antes de asumir.

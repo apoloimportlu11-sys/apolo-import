@@ -1,0 +1,15 @@
+---
+description: Schema Supabase, RLS y seguridad de datos
+globs: "{supabase_*.sql,lib/supabase*.ts,lib/require-admin.ts,scripts/**/*}"
+alwaysApply: false
+---
+
+# Base de datos
+
+- Fuente de verdad del schema: `supabase_*.sql` en raíz. Docs: `docs/DATABASE.md`.
+- Tablas clave: `users`, `products`, `product_images`, `brands`, `categories`, `pages`, `site_texts`, `business_settings`, `customers`, `quotes`, `suppliers`, `product_suppliers`, `inventory_movements`.
+- `products.id` es **text** (no uuid) tras `supabase_products_alter.sql`.
+- Roles: `admin|editor|vendor|cliente` en `public.users`. Escritura admin vía `public.is_admin()` (RLS en `supabase_rls_secure.sql`).
+- Cotizaciones: insert anónimo permitido; lectura pública de quotes (seguimiento por `code`). Admin ALL con `is_admin()`.
+- No debilitar RLS a `USING (true)` en escritura. No commitear credenciales Postgres.
+- Storage: bucket `products` (ver `MediaSelector`). Cambios de schema: SQL versionado + actualizar docs/memory.

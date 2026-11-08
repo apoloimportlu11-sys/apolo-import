@@ -3,11 +3,12 @@ import { realtimeBus } from "@/lib/realtime-bus";
 
 export type FestiveEffectType =
   | "none"
-  | "peruvian_confetti" // Confeti rojiblanco y estrellas patrias
-  | "snow" // Copos de nieve suaves
-  | "halloween" // Murciélagos y destellos naranjas/morados
-  | "hearts" // Corazones flotantes suaves
-  | "new_year_sparkles" // Destellos dorados y fuegos artificiales sutiles
+  | "peruvian_confetti" // Confeti rojiblanco, estrellas y escarapelas
+  | "snow" // Nieve, luces y regalos de Navidad
+  | "halloween" // Murciélagos, calabazas y bruma
+  | "hearts" // Corazones y pétalos
+  | "new_year_sparkles" // Destellos y fuegos artificiales
+  | "petals" // Pétalos de flor
   | "custom_particles";
 
 export interface FestiveTheme {
@@ -24,10 +25,17 @@ export interface FestiveTheme {
   bannerTextColor: string;
   icon: string; // Emoji o identificador de icono
   effectType: FestiveEffectType;
+  /** 0.35 a 1.5. Controla cantidad y velocidad de las partículas. */
+  effectIntensity?: number;
+  /** false apaga el lienzo y los adornos, y deja el cintillo. */
+  effectsEnabled?: boolean;
   showBadge: boolean;
   badgeText?: string;
+  /** YYYY-MM-DD para una sola temporada, o MM-DD si se repite cada año. */
   startDate?: string;
   endDate?: string;
+  /** true: mes y día se comparan todos los años, incluido el cruce de diciembre a enero. */
+  repeatYearly?: boolean;
   description: string;
 }
 
@@ -54,8 +62,13 @@ export const FESTIVE_PRESETS: FestiveTheme[] = [
     bannerTextColor: "#FFFFFF",
     icon: "🇵🇪",
     effectType: "peruvian_confetti",
+    effectIntensity: 1,
+    effectsEnabled: true,
     showBadge: true,
-    badgeText: "7 de Junio 🇵🇪",
+    badgeText: "7 de Junio",
+    startDate: "06-06",
+    endDate: "06-08",
+    repeatYearly: true,
     description: "Conmemoración del Día de la Bandera peruana con la franja rojiblanca patriótica y confeti nacional.",
   },
   {
@@ -72,8 +85,13 @@ export const FESTIVE_PRESETS: FestiveTheme[] = [
     bannerTextColor: "#FFFFFF",
     icon: "🇵🇪",
     effectType: "peruvian_confetti",
+    effectIntensity: 1.15,
+    effectsEnabled: true,
     showBadge: true,
-    badgeText: "¡Felices Fiestas Patrias! 🇵🇪",
+    badgeText: "Fiestas Patrias",
+    startDate: "07-01",
+    endDate: "07-31",
+    repeatYearly: true,
     description: "Homenaje a la independencia del Perú durante todo el mes de julio.",
   },
   {
@@ -90,9 +108,14 @@ export const FESTIVE_PRESETS: FestiveTheme[] = [
     bannerTextColor: "#FFAA00",
     icon: "🎃",
     effectType: "halloween",
+    effectIntensity: 1,
+    effectsEnabled: true,
     showBadge: true,
-    badgeText: "Noche Criolla y Halloween 🎃",
-    description: "Combina la celebración peruana de la Canción Criolla con el ambiente festivo de Halloween.",
+    badgeText: "Noche criolla",
+    startDate: "10-24",
+    endDate: "11-01",
+    repeatYearly: true,
+    description: "Combina la celebración peruana de la Canción Criolla con murciélagos, calabazas y bruma.",
   },
   {
     id: "navidad",
@@ -108,9 +131,14 @@ export const FESTIVE_PRESETS: FestiveTheme[] = [
     bannerTextColor: "#FFFFFF",
     icon: "🎄",
     effectType: "snow",
+    effectIntensity: 1,
+    effectsEnabled: true,
     showBadge: true,
-    badgeText: "Especial de Navidad 🎄",
-    description: "Ambiente navideño con copos de nieve sutiles y tonos verde pino con rojo cereza.",
+    badgeText: "Navidad",
+    startDate: "12-01",
+    endDate: "12-26",
+    repeatYearly: true,
+    description: "Nieve, luces y regalos sobre un cintillo verde pino.",
   },
   {
     id: "ano-nuevo",
@@ -126,9 +154,14 @@ export const FESTIVE_PRESETS: FestiveTheme[] = [
     bannerTextColor: "#FDE047",
     icon: "🍾",
     effectType: "new_year_sparkles",
+    effectIntensity: 1.15,
+    effectsEnabled: true,
     showBadge: true,
-    badgeText: "Feliz Año Nuevo ✨",
-    description: "Elegante temática dorada con destellos y confeti de fin de año.",
+    badgeText: "Año Nuevo",
+    startDate: "12-27",
+    endDate: "01-02",
+    repeatYearly: true,
+    description: "Destellos dorados y ráfagas de fuegos artificiales entre el 27 de diciembre y el 2 de enero.",
   },
   {
     id: "san-valentin",
@@ -144,9 +177,83 @@ export const FESTIVE_PRESETS: FestiveTheme[] = [
     bannerTextColor: "#FECDD3",
     icon: "❤️",
     effectType: "hearts",
+    effectIntensity: 1,
+    effectsEnabled: true,
     showBadge: true,
-    badgeText: "Especial San Valentín ❤️",
-    description: "Temática romántica y apasionada de San Valentín con corazones sutiles flotantes.",
+    badgeText: "San Valentín",
+    startDate: "02-10",
+    endDate: "02-15",
+    repeatYearly: true,
+    description: "Corazones y pétalos sobre un cintillo vino, alrededor del 14 de febrero.",
+  },
+  {
+    id: "dia-de-la-madre",
+    name: "Día de la Madre",
+    category: "peruvian",
+    enabled: true,
+    tagline: "En mayo celebramos a mamá. Cuida el motor que mueve a toda la familia",
+    buttonText: "Ver el catálogo",
+    buttonLink: "/productos",
+    primaryColor: "#E11D48",
+    accentColor: "#FBCFE8",
+    bannerBgGradient: "from-[#4A044E] via-[#9D174D] to-[#4A044E]",
+    bannerTextColor: "#FDF2F8",
+    icon: "🌷",
+    effectType: "petals",
+    effectIntensity: 1,
+    effectsEnabled: true,
+    showBadge: true,
+    badgeText: "Día de la Madre",
+    startDate: "05-01",
+    endDate: "05-15",
+    repeatYearly: true,
+    description: "Pétalos de rosa durante la primera quincena de mayo.",
+  },
+  {
+    id: "dia-del-padre",
+    name: "Día del Padre",
+    category: "peruvian",
+    enabled: true,
+    tagline: "Un detalle para papá y para el motor que lo acompaña cada día",
+    buttonText: "Ver el catálogo",
+    buttonLink: "/productos",
+    primaryColor: "#1E3A5F",
+    accentColor: "#E4C36A",
+    bannerBgGradient: "from-[#0B1F33] via-[#1E3A5F] to-[#0B1F33]",
+    bannerTextColor: "#F8E7B0",
+    icon: "🎁",
+    effectType: "custom_particles",
+    effectIntensity: 0.85,
+    effectsEnabled: true,
+    showBadge: true,
+    badgeText: "Día del Padre",
+    startDate: "06-15",
+    endDate: "06-21",
+    repeatYearly: true,
+    description: "Destellos dorados sobre azul noche, en la semana del Día del Padre.",
+  },
+  {
+    id: "santa-rosa-de-lima",
+    name: "Santa Rosa de Lima",
+    category: "peruvian",
+    enabled: true,
+    tagline: "Santa Rosa de Lima, patrona del Perú. 30 de agosto",
+    buttonText: "Ver el catálogo",
+    buttonLink: "/productos",
+    primaryColor: "#BE123C",
+    accentColor: "#FDE68A",
+    bannerBgGradient: "from-[#4C0519] via-[#9F1239] to-[#3F1D0B]",
+    bannerTextColor: "#FFF1F2",
+    icon: "🌹",
+    effectType: "petals",
+    effectIntensity: 0.9,
+    effectsEnabled: true,
+    showBadge: true,
+    badgeText: "Santa Rosa",
+    startDate: "08-23",
+    endDate: "08-30",
+    repeatYearly: true,
+    description: "Rosas y pétalos en la semana de Santa Rosa de Lima.",
   },
 ];
 
@@ -274,12 +381,137 @@ export function shouldApplyRemoteConfig(
   return remoteTs >= currentTs;
 }
 
-export function getAllThemes(config: FestiveConfig): FestiveTheme[] {
-  return [...FESTIVE_PRESETS, ...config.customThemes];
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+export function todayKey(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-export function getActiveTheme(config: FestiveConfig): FestiveTheme | null {
+export function clampIntensity(value?: number): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return 1;
+  return Math.min(1.5, Math.max(0.35, value));
+}
+
+export function effectsAreOn(theme: FestiveTheme): boolean {
+  if (theme.effectsEnabled === false) return false;
+  return theme.effectType !== "none";
+}
+
+export function isPresetTheme(id: string): boolean {
+  return FESTIVE_PRESETS.some((preset) => preset.id === id);
+}
+
+export function hasThemeOverride(config: FestiveConfig, id: string): boolean {
+  return config.customThemes.some((theme) => theme.id === id);
+}
+
+function cleanDate(value?: string): string {
+  return (value || "").trim();
+}
+
+/** Una fecha MM-DD se repite; YYYY-MM-DD es una sola temporada, salvo que repeatYearly esté activo. */
+export function repeatsYearly(theme: FestiveTheme): boolean {
+  if (theme.repeatYearly === false) return false;
+  if (theme.repeatYearly === true) return true;
+  const start = cleanDate(theme.startDate);
+  const end = cleanDate(theme.endDate);
+  return /^\d{2}-\d{2}$/.test(start) || /^\d{2}-\d{2}$/.test(end);
+}
+
+export function monthDay(value?: string): string | undefined {
+  const trimmed = cleanDate(value);
+  if (/^\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed.slice(5);
+  return undefined;
+}
+
+export function formatFestiveDate(value?: string): string {
+  const trimmed = cleanDate(value);
+  const yearly = /^\d{2}-\d{2}$/.test(trimmed) ? trimmed : /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed.slice(5) : "";
+  if (!yearly) return trimmed;
+  const [month, day] = yearly.split("-").map(Number);
+  const label = `${day} ${MONTHS[month - 1] || ""}`.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed) ) return `${label} ${trimmed.slice(0, 4)}`;
+  return label;
+}
+
+export function isThemeInWindow(theme: FestiveTheme, today = todayKey()): boolean {
+  if (theme.enabled === false) return false;
+  const start = cleanDate(theme.startDate);
+  const end = cleanDate(theme.endDate);
+  if (!start && !end) return true;
+
+  if (repeatsYearly(theme)) {
+    const current = today.slice(5);
+    const from = monthDay(start);
+    const to = monthDay(end);
+    if (from && to) {
+      if (from <= to) return current >= from && current <= to;
+      return current >= from || current <= to;
+    }
+    if (from) return current >= from;
+    if (to) return current <= to;
+    return true;
+  }
+
+  if (start && /^\d{4}-\d{2}-\d{2}$/.test(start) && today < start) return false;
+  if (end && /^\d{4}-\d{2}-\d{2}$/.test(end) && today > end) return false;
+  return true;
+}
+
+export type ScheduleState = "open" | "waiting" | "closed" | "disabled" | "undated";
+
+export function scheduleState(theme: FestiveTheme, today = todayKey()): ScheduleState {
+  if (theme.enabled === false) return "disabled";
+  const start = cleanDate(theme.startDate);
+  const end = cleanDate(theme.endDate);
+  if (!start && !end) return "undated";
+  if (isThemeInWindow(theme, today)) return "open";
+  if (!repeatsYearly(theme) && end && /^\d{4}-\d{2}-\d{2}$/.test(end) && today > end) return "closed";
+  return "waiting";
+}
+
+export function scheduleLabel(theme: FestiveTheme, today = todayKey()): string {
+  const state = scheduleState(theme, today);
+  const start = formatFestiveDate(theme.startDate);
+  const end = formatFestiveDate(theme.endDate);
+  if (state === "disabled") return "Desactivada";
+  if (state === "undated") return "Sin calendario";
+  if (state === "open" && start && end) return `En fecha, del ${start} al ${end}`;
+  if (state === "open") return "En fecha";
+  if (state === "closed") return end ? `Terminó el ${end}` : "Fuera de fecha";
+  if (repeatsYearly(theme)) {
+    const current = today.slice(5);
+    const from = monthDay(theme.startDate);
+    const to = monthDay(theme.endDate);
+    if (from && to && from <= to && current > to) return `Vuelve el ${start}`;
+  }
+  return start ? `Empieza el ${start}` : "Fuera de fecha";
+}
+
+export function getAllThemes(config: FestiveConfig): FestiveTheme[] {
+  const overrides = new Map(config.customThemes.map((theme) => [theme.id, theme]));
+  const presets = FESTIVE_PRESETS.map((preset) => {
+    const override = overrides.get(preset.id);
+    if (!override) return preset;
+    return { ...preset, ...override, id: preset.id, category: preset.category };
+  });
+  const extras = config.customThemes.filter((theme) => !isPresetTheme(theme.id));
+  return [...presets, ...extras];
+}
+
+export function getThemeById(config: FestiveConfig, id: string): FestiveTheme | null {
+  return getAllThemes(config).find((theme) => theme.id === id) || null;
+}
+
+/** Temática publicada solo si el interruptor global está activo y hoy cae en su calendario. */
+export function getActiveTheme(config: FestiveConfig, today = todayKey()): FestiveTheme | null {
   if (!config.globalEnabled) return null;
-  const all = getAllThemes(config);
-  return all.find((t) => t.id === config.activeThemeId) || FESTIVE_PRESETS[0];
+  const selected = getThemeById(config, config.activeThemeId);
+  if (!selected) return null;
+  if (!isThemeInWindow(selected, today)) return null;
+  return selected;
 }

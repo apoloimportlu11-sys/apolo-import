@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { X, Clock, Sparkles, Bot, Loader2, Send } from "lucide-react";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 
@@ -21,6 +22,7 @@ const WELCOME: ChatMsg = {
 };
 
 export default function FloatingWhatsApp() {
+  const pathname = usePathname();
   const { settings } = useBusinessSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [hasPrompted, setHasPrompted] = useState(false);
@@ -87,6 +89,8 @@ export default function FloatingWhatsApp() {
       setSending(false);
     }
   }
+
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-auto">

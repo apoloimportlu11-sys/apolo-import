@@ -102,10 +102,12 @@ export function useFestiveTheme() {
       ...updater(prev),
       updatedAt: Date.now(),
     };
-    // UI optimista
+    // El ref se actualiza ya, para que un segundo guardado encadene el primero.
+    configRef.current = next;
     setConfig(next);
     const result = await saveFestiveConfig(next);
     if (!result.success) {
+      configRef.current = prev;
       setConfig(prev);
       toast.error("No se pudo guardar la temática en Supabase", {
         description: result.error || "¿Estás logueado como admin?",
@@ -156,6 +158,16 @@ export function useFestiveTheme() {
     [updateConfig]
   );
 
+  const removeThemeOverride = useCallback(
+    async (themeId: string) => {
+      return updateConfig((prev) => ({
+        ...prev,
+        customThemes: prev.customThemes.filter((theme) => theme.id !== themeId),
+      }));
+    },
+    [updateConfig]
+  );
+
   const deleteCustomTheme = useCallback(
     async (themeId: string) => {
       return updateConfig((prev) => ({
@@ -177,8 +189,10 @@ export function useFestiveTheme() {
     allThemes,
     isFestiveActive: Boolean(mounted && config.globalEnabled && activeTheme),
     setGlobalEnabled,
+    ready: mounted,
     selectActiveTheme,
     saveCustomTheme,
     deleteCustomTheme,
+    removeThemeOverride,
   };
 }

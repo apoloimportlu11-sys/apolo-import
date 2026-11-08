@@ -13,7 +13,6 @@ import {
   Loader2,
   Star,
   Search,
-  Radio,
   Save,
   Image as ImageIcon,
   Minus,
@@ -37,6 +36,7 @@ import {
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
 import { parseProductUpsert } from "@/lib/validations/product";
+import { adjustStock, isLowStock, setStockMin } from "@/lib/inventory";
 import { products as BASE_PRODUCTS, categories as CATALOG_CATEGORIES } from "@/lib/products-data";
 import { groupProductsByLine, type ProductLineGroup } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
@@ -125,6 +125,7 @@ const KNOWN_BRANDS = [
   "Yamalube",
 ];
 
+const PAGE_SIZE = 20;
 const STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 const RESTORE_POINT_KEY = "apolo_admin_products_restore_point";
@@ -304,27 +305,38 @@ function SortableProductRow({
 
       {/* Stock with quick +/- buttons */}
       <td className="px-5 py-4">
-        <div className="inline-flex items-center gap-1.5 bg-black/60 border border-white/10 rounded-lg p-1">
-          <button
-            type="button"
-            onClick={() => onQuickStockChange(prod.id, prod.stock - 1)}
-            className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            title="Disminuir stock"
-          >
-            <Minus className="w-3 h-3" />
-          </button>
-          <span className="px-2 font-mono font-bold text-xs text-[#C7940A] min-w-[28px] text-center">
-            {prod.stock}
-          </span>
-          <button
-            type="button"
-            onClick={() => onQuickStockChange(prod.id, prod.stock + 1)}
-            className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            title="Aumentar stock"
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-        </div>
+        {(() => {
+          const low = isLowStock(prod);
+          const min = Number(prod.stock_min) || 0;
+          return (
+            <div className={`inline-flex flex-col gap-1 rounded-lg border p-1 ${low ? "border-orange-500/40 bg-orange-500/10" : "border-white/10 bg-black/60"}`}>
+              <div className="inline-flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onQuickStockChange(prod.id, prod.stock - 1)}
+                  className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-white"
+                  aria-label={`Bajar stock de ${prod.name}`}
+                >
+                  <Minus className="h-3 w-3" />
+                </button>
+                <span className={`min-w-[28px] text-center font-mono text-xs font-bold ${low ? "text-orange-300" : "text-[#C7940A]"}`}>
+                  {prod.stock}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onQuickStockChange(prod.id, prod.stock + 1)}
+                  className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-white"
+                  aria-label={`Subir stock de ${prod.name}`}
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+              <span className="px-1 text-[10px] text-zinc-400">
+                {low ? `Bajo mínimo · mínimo ${min}` : min > 0 ? `Mínimo ${min}` : "Sin mínimo"}
+              </span>
+            </div>
+          );
+        })()}
       </td>
 
       {/* Featured */}
@@ -432,6 +444,9 @@ export default function ProductosPage() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
   const [onlyFeaturedFilter, setOnlyFeaturedFilter] = useState(false);
   const [onlyPlaceholderFilter, setOnlyPlaceholderFilter] = useState(false);
+  const [onlyLowStock, setOnlyLowStock] = useState(false);
+  const [page, setPage] = useState(1);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
 
   // Restore Point State
@@ -977,13 +992,15 @@ export default function ProductosPage() {
         const matchesFeatured = !onlyFeaturedFilter || Boolean(p.is_featured);
         const matchesPlaceholder =
           !onlyPlaceholderFilter || Boolean(p.image_is_placeholder);
+        const matchesLowStock = !onlyLowStock || (p.is_active !== false && isLowStock(p));
 
         return (
           matchesSearch &&
           matchesCategory &&
           matchesBrand &&
           matchesFeatured &&
-          matchesPlaceholder
+          matchesPlaceholder &&
+          matchesLowStock
         );
       })
       .sort((a, b) => {
@@ -1003,6 +1020,7 @@ export default function ProductosPage() {
     selectedBrandFilter,
     onlyFeaturedFilter,
     onlyPlaceholderFilter,
+    onlyLowStock,
   ]);
 
   // Agrupación para la tabla: Marca -> Línea de producto (misma heurística que el
@@ -1022,6 +1040,56 @@ export default function ProductosPage() {
       lines: groupProductsByLine(prods, "featured", lineGroupsById),
     }));
   }, [filteredProducts, lineGroupsById]);
+
+  const lowStockProducts = useMemo(
+    () => products.filter((product) => product.is_active !== false && isLowStock(product)),
+    [products]
+  );
+
+  const orderedRows = useMemo(() => {
+    const rows: ProductItem[] = [];
+    groupedForTable.forEach((brandGroup) => {
+      brandGroup.lines.forEach((lineGroup) => {
+        rows.push(...lineGroup.products);
+      });
+    });
+    return rows;
+  }, [groupedForTable]);
+
+  const pageCount = Math.max(1, Math.ceil(orderedRows.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const visibleIds = new Set(orderedRows.slice(pageStart, pageStart + PAGE_SIZE).map((product) => product.id));
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stock") === "bajo") setOnlyLowStock(true);
+    const id = params.get("id");
+    if (id) setFocusId(id);
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedBrandFilter, selectedCategoryFilter, onlyFeaturedFilter, onlyPlaceholderFilter, onlyLowStock]);
+
+  useEffect(() => {
+    if (!focusId || loading) return;
+    const index = orderedRows.findIndex((product) => product.id === focusId);
+    if (index >= 0) {
+      setPage(Math.floor(index / PAGE_SIZE) + 1);
+      setRecentlyUpdatedId(focusId);
+    }
+    setFocusId(null);
+  }, [focusId, orderedRows, loading]);
+
+  function setLowStockView(next: boolean) {
+    setOnlyLowStock(next);
+    const url = new URL(window.location.href);
+    if (next) url.searchParams.set("stock", "bajo");
+    else url.searchParams.delete("stock");
+    url.searchParams.delete("id");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -1244,28 +1312,50 @@ export default function ProductosPage() {
     let savedData: any = null;
 
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .upsert([payload], { onConflict: "id" })
-        .select()
-        .single();
-
-      if (error) {
-        console.warn("Supabase upsert error on id, trying unique slug:", error);
-        if (error.code === "23505") {
-          payload.slug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
-          const retry = await supabase
-            .from("products")
-            .upsert([payload], { onConflict: "id" })
-            .select()
-            .single();
-          if (!retry.error) savedData = retry.data;
+      if (isEditing) {
+        const stockResult = await adjustStock(supabase, finalId, Number(payload.stock) || 0, "ajuste_manual");
+        const savedMin = await setStockMin(supabase, finalId, Number(payload.stock_min) || 0);
+        const { id: _ignoredId, stock: _ignoredStock, stock_min: _ignoredMin, ...rest } = payload;
+        const { data, error } = await supabase
+          .from("products")
+          .update({ ...rest, stock: stockResult.stock, stock_min: savedMin })
+          .eq("id", finalId)
+          .select()
+          .maybeSingle();
+        if (error || !data) {
+          persistProductsState((prev) =>
+            prev.map((p) => (p.id === finalId ? { ...p, stock: stockResult.stock, stock_min: savedMin } : p))
+          );
+          if (realtimeBus) {
+            realtimeBus.emit("products_updated", { id: finalId, stock: stockResult.stock, stock_min: savedMin });
+          }
+          toast.error("El resto del producto no se guardó", {
+            id: toastId,
+            description: error?.message || "El stock y el mínimo sí quedaron guardados.",
+          });
+          setSaving(false);
+          return;
         }
+        savedData = { ...data, stock: stockResult.stock, stock_min: savedMin };
       } else {
+        const { data, error } = await supabase.from("products").insert(payload).select().maybeSingle();
+        if (error || !data) {
+          toast.error("No se guardó el producto", {
+            id: toastId,
+            description: error?.message || "La base no confirmó el producto nuevo.",
+          });
+          setSaving(false);
+          return;
+        }
         savedData = data;
       }
     } catch (err: any) {
-      console.warn("Supabase upsert note:", err?.message);
+      toast.error("No se guardó el producto", {
+        id: toastId,
+        description: err?.message || "No se pudo escribir el stock.",
+      });
+      setSaving(false);
+      return;
     }
 
     const savedItem: ProductItem = {
@@ -1410,36 +1500,18 @@ export default function ProductosPage() {
       updated_at: new Date().toISOString(),
     };
 
-    persistProductsState((prev) =>
-      prev.map((p) => (p.id === id ? updatedProduct : p))
-    );
-    setRecentlyUpdatedId(id);
-
-    if (realtimeBus) {
-      realtimeBus.emit("products_updated", { id, slug: targetProduct.slug, stock: validStock });
-    }
-
     try {
-      const payload = {
-        id: updatedProduct.id,
-        name: updatedProduct.name,
-        slug: updatedProduct.slug,
-        brand: updatedProduct.brand || "Apolo",
-        short_description: updatedProduct.short_description,
-        presentation: updatedProduct.presentation,
-        description: updatedProduct.description,
-        stock: validStock,
-        is_featured: updatedProduct.is_featured,
-        is_active: updatedProduct.is_active,
-        category_id: updatedProduct.category_id,
-        image_url: updatedProduct.image_url || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      await supabase.from("products").upsert([payload], { onConflict: "id" });
-      toast.success(`Stock actualizado a ${validStock}`, { duration: 1500 });
+      const result = await adjustStock(supabase, id, validStock, "ajuste_manual");
+      const savedProduct = { ...updatedProduct, stock: result.stock };
+      persistProductsState((prev) => prev.map((p) => (p.id === id ? savedProduct : p)));
+      setRecentlyUpdatedId(id);
+      if (realtimeBus) {
+        realtimeBus.emit("products_updated", { id, slug: targetProduct.slug, stock: result.stock });
+      }
+      toast.success(`Stock actualizado a ${result.stock}`, { duration: 1500 });
     } catch (err) {
-      console.warn("Supabase background stock sync note:", err);
+      const message = err instanceof Error ? err.message : "No se pudo guardar el stock.";
+      toast.error("El stock no se guardó", { description: message });
     }
   }
 
@@ -1915,30 +1987,28 @@ export default function ProductosPage() {
               <Package className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                  Productos & Catálogo
-                </h1>
-                <span suppressHydrationWarning className="text-xs font-bold text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-full">
-                  {products.length} productos
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
-                Control de inventario, lubricantes, stock y destacados ordenados por marca en tiempo real.
+              <h1 className="font-heading text-2xl text-white sm:text-3xl">Productos</h1>
+              <p className="mt-1 max-w-xl text-sm text-zinc-400">
+                {products.length} en el catálogo. El stock y el mínimo de esta lista son los mismos que usa la alerta del dashboard.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <details className="relative">
+            <summary className="h-10 cursor-pointer list-none rounded-full border border-white/15 px-4 text-sm leading-10 text-zinc-100">
+              Herramientas
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-64 space-y-1 rounded-2xl border border-white/10 bg-[#141414] p-2 shadow-xl">
           <button
             type="button"
             onClick={handleRemoveAllImages}
-            className="flex items-center gap-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-2.5 font-semibold text-red-300 text-xs transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10"
             title="Quita las imágenes de todos los productos"
           >
             <ImageOff className="w-4 h-4 text-red-400" />
-            <span>Quitar Todas las Imágenes</span>
+            <span>Quitar todas las imágenes</span>
           </button>
 
           {/* FIJAR NUEVO PUNTO DE RESTAURACIÓN */}
@@ -1946,7 +2016,7 @@ export default function ProductosPage() {
             type="button"
             onClick={handleSetRestorePoint}
             disabled={savingRestorePoint}
-            className="flex items-center gap-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 px-3.5 py-2.5 font-semibold text-blue-300 text-xs transition-colors cursor-pointer disabled:opacity-50"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-blue-300 hover:bg-white/5 disabled:opacity-50"
             title={
               restorePoint
                 ? `Punto actual guardado: ${new Date(restorePoint.timestamp).toLocaleString("es-PE")}. Haz clic para fijar uno nuevo.`
@@ -1958,7 +2028,7 @@ export default function ProductosPage() {
             ) : (
               <BookmarkPlus className="w-3.5 h-3.5 text-blue-400" />
             )}
-            <span>Fijar Punto de Restauración</span>
+            <span>Fijar punto de restauración</span>
             {restorePoint?.timestamp && (
               <span className="text-[10px] text-blue-300/80 font-mono hidden md:inline px-1.5 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/30">
                 {new Date(restorePoint.timestamp).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" })}
@@ -1976,7 +2046,7 @@ export default function ProductosPage() {
                 handleRestoreDefaultImages();
               }
             }}
-            className="flex items-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2.5 font-semibold text-zinc-300 text-xs transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-zinc-300 hover:bg-white/5"
             title={
               restorePoint
                 ? "Restaurar al punto guardado o al catálogo original de fábrica"
@@ -1984,36 +2054,61 @@ export default function ProductosPage() {
             }
           >
             <RotateCcw className="w-3.5 h-3.5 text-zinc-400" />
-            <span>{restorePoint ? "Restaurar Catálogo" : "Restaurar Originales"}</span>
+            <span>{restorePoint ? "Restaurar catálogo" : "Restaurar originales"}</span>
           </button>
 
           <button
             type="button"
             onClick={syncAllCatalogToSupabase}
             disabled={syncingAll}
-            className="flex items-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-3.5 py-2.5 font-semibold text-zinc-200 text-xs transition-colors cursor-pointer disabled:opacity-50"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-zinc-200 hover:bg-white/5 disabled:opacity-50"
             title="Guarda todo el catálogo en Supabase"
           >
             <FolderSync className={`w-4 h-4 text-[#C7940A] ${syncingAll ? "animate-spin" : ""}`} />
-            <span>Sincronizar a BD</span>
+            <span>Guardar catálogo</span>
           </button>
-
-          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <Radio className="w-3.5 h-3.5" />
-            <span>En vivo</span>
-          </div>
+            </div>
+          </details>
 
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-[#C7940A] px-4 py-2.5 font-bold text-black hover:bg-[#d9a311] transition-all text-xs sm:text-sm shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-[#C7940A] px-4 text-sm font-medium text-black"
           >
             <Plus className="w-4 h-4" />
-            Nuevo Producto
+            Nuevo producto
           </button>
+        </div>
+      </div>
+
+      <div className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${lowStockProducts.length > 0 ? "border-orange-500/40 bg-orange-500/10" : "border-white/10 bg-[#141414]"}`}>
+        <div>
+          <p className="text-sm font-medium text-white">
+            {loading
+              ? "Revisando stock…"
+              : lowStockProducts.length === 0
+                ? "Ningún producto activo está bajo el mínimo."
+                : lowStockProducts.length === 1
+                  ? "1 producto activo está bajo el mínimo."
+                  : `${lowStockProducts.length} productos activos están bajo el mínimo.`}
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">
+            Entra en la alerta cuando el stock es igual o menor al mínimo y el mínimo es mayor que 0. El dashboard cuenta los mismos productos.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setLowStockView(!onlyLowStock)}
+            className={`h-9 rounded-full px-3 text-sm ${onlyLowStock ? "bg-orange-400 text-black" : "border border-white/15 text-zinc-100"}`}
+          >
+            {onlyLowStock ? "Ver todo el catálogo" : "Ver bajo mínimo"}
+          </button>
+          <a href="/admin" className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+            Ir al dashboard
+          </a>
+          <a href="/admin/inventario" className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+            Ajustar mínimos
+          </a>
         </div>
       </div>
 
@@ -2025,7 +2120,9 @@ export default function ProductosPage() {
             Filtrar y Ordenar por Marcas:
           </span>
           <span suppressHydrationWarning className="text-[11px] text-zinc-500 lowercase">
-            Mostrando {filteredProducts.length} de {products.length}
+            {orderedRows.length === 0
+              ? "0 productos"
+              : `Página ${safePage} de ${pageCount} · ${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, orderedRows.length)} de ${orderedRows.length}`}
           </span>
         </div>
 
@@ -2171,18 +2268,25 @@ export default function ProductosPage() {
         <div className="rounded-2xl border border-white/10 bg-[#141414] p-12 text-center text-zinc-400 space-y-3">
           <Package className="w-12 h-12 mx-auto text-zinc-600" />
           <p className="text-lg font-bold text-white">
-            {searchQuery || selectedBrandFilter !== "all"
-              ? "No se encontraron productos coincidentes"
-              : "No hay productos disponibles"}
+            {onlyLowStock
+              ? "Ningún producto está bajo el mínimo."
+              : searchQuery || selectedBrandFilter !== "all"
+                ? "Ningún producto coincide con la búsqueda."
+                : "No hay productos en el catálogo."}
           </p>
           <p className="text-sm text-zinc-500 max-w-sm mx-auto">
-            Prueba restableciendo los filtros de marca o búsqueda.
+            {onlyLowStock
+              ? "El dashboard muestra la misma cuenta. La alerta aparece cuando el stock llega al mínimo."
+              : "Prueba con otro nombre o quita los filtros."}
           </p>
           <button
             onClick={() => {
               setSearchQuery("");
               setSelectedBrandFilter("all");
               setSelectedCategoryFilter("all");
+              setOnlyFeaturedFilter(false);
+              setOnlyPlaceholderFilter(false);
+              setLowStockView(false);
             }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-white border border-white/10 cursor-pointer"
           >
@@ -2207,22 +2311,30 @@ export default function ProductosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-zinc-300">
-                {groupedForTable.map((brandGroup) => (
+                {groupedForTable.map((brandGroup) => {
+                  const visibleLines = brandGroup.lines
+                    .map((lineGroup) => ({
+                      ...lineGroup,
+                      visible: lineGroup.products.filter((product) => visibleIds.has(product.id)),
+                    }))
+                    .filter((lineGroup) => lineGroup.visible.length > 0);
+                  if (visibleLines.length === 0) return null;
+                  return (
                   <Fragment key={brandGroup.brand}>
                     <tr className="bg-white/[0.04]">
-                      <td colSpan={8} className="px-5 py-2.5 text-xs font-black text-[#C7940A] uppercase tracking-wide">
+                      <td colSpan={8} className="px-5 py-2.5 text-xs font-semibold text-[#C7940A]">
                         {brandGroup.brand}{" "}
-                        <span className="text-zinc-500 font-semibold normal-case">
+                        <span className="font-normal text-zinc-500">
                           ({brandGroup.totalProducts} {brandGroup.totalProducts === 1 ? "producto" : "productos"})
                         </span>
                       </td>
                     </tr>
-                    {brandGroup.lines.map((lineGroup) => (
+                    {visibleLines.map((lineGroup) => (
                       <Fragment key={`${brandGroup.brand}-${lineGroup.lineName}`}>
                         <tr className="bg-white/[0.015]">
-                          <td colSpan={8} className="pl-9 pr-5 py-2 text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
+                          <td colSpan={8} className="py-2 pl-9 pr-5 text-[11px] font-medium text-zinc-400">
                             {lineGroup.lineName}{" "}
-                            <span className="text-zinc-600 font-semibold normal-case">
+                            <span className="font-normal text-zinc-600">
                               ({lineGroup.products.length})
                             </span>
                           </td>
@@ -2236,14 +2348,14 @@ export default function ProductosPage() {
                           }}
                         >
                           <SortableContext
-                            items={lineGroup.products.map((p) => p.id)}
+                            items={lineGroup.visible.map((p) => p.id)}
                             strategy={verticalListSortingStrategy}
                           >
-                            {lineGroup.products.map((prod) => (
+                            {lineGroup.visible.map((prod) => (
                               <SortableProductRow
                                 key={`admin-prod-${prod.id}-${prod.slug || ""}`}
                                 prod={prod}
-                                isHighlighted={recentlyUpdatedId === prod.id}
+                                isHighlighted={recentlyUpdatedId === prod.id || focusId === prod.id}
                                 onOpenImageModal={openImageModal}
                                 onQuickStockChange={handleQuickStockChange}
                                 onQuickRemoveImage={handleQuickRemoveImage}
@@ -2259,9 +2371,25 @@ export default function ProductosPage() {
                       </Fragment>
                     ))}
                   </Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {!loading && orderedRows.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-zinc-400">20 productos por página. Arrastrar reordena dentro de la línea completa.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setPage(safePage - 1)} disabled={safePage <= 1} className="h-9 rounded-full border border-white/15 px-3 text-sm text-zinc-100 disabled:opacity-40">
+              Anterior
+            </button>
+            <span className="text-sm text-zinc-300">{safePage} / {pageCount}</span>
+            <button type="button" onClick={() => setPage(safePage + 1)} disabled={safePage >= pageCount} className="h-9 rounded-full border border-white/15 px-3 text-sm text-zinc-100 disabled:opacity-40">
+              Siguiente
+            </button>
           </div>
         </div>
       )}

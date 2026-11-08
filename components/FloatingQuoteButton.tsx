@@ -1,15 +1,15 @@
 "use client";
 
 import React from "react";
-import { FileText, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { FileText } from "lucide-react";
 import { useQuote } from "@/lib/quote-context";
 
 export default function FloatingQuoteButton() {
+  const pathname = usePathname();
   const { totalCount, totalUnits, openDrawer } = useQuote();
 
-  // If no items, we can still show a sleek compact launcher or show only when items > 0
-  // When items > 0, show a vibrant glowing badge that invites the user to review and quote!
-  if (totalCount === 0) return null;
+  if (pathname.startsWith("/admin") || totalCount === 0) return null;
 
   return (
     <div className="fixed bottom-24 right-6 z-40 animate-in fade-in slide-in-from-bottom-5 duration-300">

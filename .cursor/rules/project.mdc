@@ -1,0 +1,16 @@
+---
+description: Reglas generales del proyecto Apolo Lubricantes
+alwaysApply: true
+---
+
+# Proyecto
+
+- Contexto en `AGENTS.md`. Estado en `docs/PROJECT_STATUS.md`. Memoria corta en `.cursor/memory/`.
+- No inventar tablas, endpoints, roles ni variables de entorno.
+- No leer el repo completo: localizar archivos con búsqueda y abrir solo lo necesario.
+- Reutilizar `components/`, `lib/`, `hooks/` y schemas Zod existentes; evitar lógica duplicada.
+- No modificar funcionalidad ajena a la tarea; no cambiar dependencias ni schema DB sin petición explícita.
+- No incluir secretos, tokens ni valores de `.env*` en docs ni commits.
+- Tras cambios relevantes: actualizar `docs/PROJECT_STATUS.md`, `docs/CHANGELOG.md` y memory afectada.
+- Next.js 16 puede diferir de conocimiento previo: consultar `node_modules/next/dist/docs/` ante dudas de API.
+- Preferir soluciones mantenibles y seguras (RLS, validación Zod, least privilege).

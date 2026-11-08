@@ -327,8 +327,8 @@ export default function AdminDashboardPage() {
     {
       title: "Bajo mínimo",
       value: metrics.lowStock,
-      href: "/admin/inventario",
-      desc: metrics.lowStock > 0 ? "Requiere reposición" : "Stock en rango",
+      href: "/admin/productos?stock=bajo",
+      desc: metrics.lowStock > 0 ? "Abrir esos productos" : "Stock en rango",
       icon: Warehouse,
       tone:
         metrics.lowStock > 0
@@ -483,10 +483,10 @@ export default function AdminDashboardPage() {
               <h2 className="text-sm font-bold text-white">Stock bajo mínimo</h2>
             </div>
             <Link
-              href="/admin/inventario"
+              href="/admin/productos?stock=bajo"
               className="text-[11px] text-[#C7940A] hover:underline font-semibold"
             >
-              Ver todo
+              Ver en productos
             </Link>
           </div>
           <div className="divide-y divide-white/5">
@@ -502,7 +502,7 @@ export default function AdminDashboardPage() {
               lowStockItems.map((p) => (
                 <Link
                   key={p.id}
-                  href="/admin/inventario"
+                  href={`/admin/productos?stock=bajo&id=${encodeURIComponent(p.id)}`}
                   className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
                 >
                   <div className="min-w-0">

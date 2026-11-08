@@ -23,7 +23,7 @@ export async function getAdminAlerts(supabase: SupabaseClient): Promise<Dashboar
           .slice(0, 3)
           .map((p) => p.name)
           .join(", "),
-        href: "/admin/inventario",
+        href: "/admin/productos?stock=bajo",
       });
     }
   } catch {

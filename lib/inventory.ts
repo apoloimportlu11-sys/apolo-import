@@ -45,11 +45,16 @@ export async function adjustStock(
   const prev = Number(current?.stock) || 0;
   const delta = stock - prev;
 
-  const { error: upErr } = await supabase
+  const { data: updated, error: upErr } = await supabase
     .from("products")
     .update({ stock, updated_at: new Date().toISOString() })
-    .eq("id", productId);
+    .eq("id", productId)
+    .select("stock")
+    .maybeSingle();
   if (upErr) throw upErr;
+  if (!updated) {
+    throw new Error("La base no confirmó el stock. El número anterior sigue guardado.");
+  }
 
   if (delta !== 0) {
     const {
@@ -63,7 +68,7 @@ export async function adjustStock(
     });
   }
 
-  return { prev, stock, delta };
+  return { prev, stock: Number(updated.stock) || 0, delta };
 }
 
 export async function setStockMin(
@@ -72,10 +77,15 @@ export async function setStockMin(
   stockMin: number
 ) {
   const stock_min = Math.max(0, Math.floor(Number(stockMin) || 0));
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .update({ stock_min, updated_at: new Date().toISOString() })
-    .eq("id", productId);
+    .eq("id", productId)
+    .select("stock_min")
+    .maybeSingle();
   if (error) throw error;
-  return stock_min;
+  if (!data) {
+    throw new Error("La base no confirmó el mínimo. El número anterior sigue guardado.");
+  }
+  return Number(data.stock_min) || 0;
 }

@@ -1,62 +1,110 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Monitor, Moon, Sun, Menu, ExternalLink } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
-import { User, ShieldCheck, Radio, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import {
+  ADMIN_THEME_EVENT,
+  readAdminThemeChoice,
+  writeAdminTheme,
+  type AdminThemeChoice,
+} from "@/lib/admin-theme";
 
-export default function AdminHeader() {
+const themeOptions: { id: AdminThemeChoice; label: string; icon: typeof Sun }[] = [
+  { id: "light", label: "Claro", icon: Sun },
+  { id: "dark", label: "Oscuro", icon: Moon },
+  { id: "system", label: "Sistema", icon: Monitor },
+];
+
+export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const supabase = createBrowserSupabase();
   const { settings } = useBusinessSettings();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [theme, setTheme] = useState<AdminThemeChoice>("light");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data?.user?.email) {
-        setUserEmail(data.user.email);
-      }
+      if (data?.user?.email) setUserEmail(data.user.email);
     });
   }, [supabase]);
 
+  useEffect(() => {
+    setTheme(readAdminThemeChoice());
+    const onTheme = (event: Event) => {
+      const next = (event as CustomEvent<AdminThemeChoice>).detail;
+      if (next) setTheme(next);
+    };
+    window.addEventListener(ADMIN_THEME_EVENT, onTheme);
+    return () => window.removeEventListener(ADMIN_THEME_EVENT, onTheme);
+  }, []);
+
   return (
-    <header className="flex h-16 items-center justify-between border-b border-white/10 bg-[#111111]/90 backdrop-blur-md px-6 shrink-0 sticky top-0 z-20">
-      <div className="flex items-center gap-3">
-        <div className="p-1.5 rounded-lg bg-[#C7940A]/10 border border-[#C7940A]/20">
-          <ShieldCheck className="w-4 h-4 text-[#C7940A]" />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold tracking-wide text-white" suppressHydrationWarning>
+    <header className="sticky top-0 z-20 flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--admin-line)] bg-[var(--admin-surface)] px-3 py-2 sm:px-5">
+      <div className="flex min-w-0 items-center gap-2">
+        {onOpenMenu && (
+          <button
+            type="button"
+            onClick={onOpenMenu}
+            aria-label="Abrir menú"
+            className="inline-flex size-10 items-center justify-center rounded-lg border border-[var(--admin-line)] text-[var(--admin-ink)] lg:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-accent)]"
+          >
+            <Menu className="size-5" />
+          </button>
+        )}
+        <div className="min-w-0">
+          <p className="truncate font-heading text-sm font-semibold text-[var(--admin-ink)]" suppressHydrationWarning>
             {settings.business_name || "Apolo Lubricantes"}
-          </span>
-          <span className="text-xs text-zinc-500 hidden sm:inline">• Panel Admin</span>
+          </p>
+          <p className="text-[11px] text-[var(--admin-faint)]">Panel de administración</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Real-time Indicator in Header */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span>Tiempo Real</span>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div
+          role="radiogroup"
+          aria-label="Tema del panel"
+          className="flex rounded-lg border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-0.5"
+        >
+          {themeOptions.map((option) => {
+            const Icon = option.icon;
+            const selected = theme === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => {
+                  setTheme(option.id);
+                  writeAdminTheme(option.id);
+                }}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-accent)] sm:px-2.5 ${
+                  selected
+                    ? "bg-[var(--admin-surface)] text-[var(--admin-ink)] shadow-sm"
+                    : "text-[var(--admin-muted)] hover:text-[var(--admin-ink)]"
+                }`}
+              >
+                <Icon className="size-3.5" aria-hidden />
+                {option.label}
+              </button>
+            );
+          })}
         </div>
 
         <Link
           href="/"
           target="_blank"
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-colors border border-white/5"
+          rel="noreferrer"
+          className="hidden items-center gap-1.5 rounded-lg border border-[var(--admin-line)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-muted)] hover:text-[var(--admin-ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-accent)] md:inline-flex"
         >
-          <ExternalLink className="w-3.5 h-3.5 text-[#C7940A]" />
-          <span>Ver Tienda</span>
+          <ExternalLink className="size-3.5" aria-hidden />
+          Ver tienda
         </Link>
 
         {userEmail && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300">
-            <User className="w-3.5 h-3.5 text-[#C7940A]" />
-            <span className="max-w-[150px] truncate">{userEmail}</span>
-          </div>
+          <p className="hidden max-w-[11rem] truncate text-xs text-[var(--admin-faint)] sm:block">{userEmail}</p>
         )}
       </div>
     </header>

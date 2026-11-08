@@ -521,4 +521,279 @@ body.protect-images [role="img"] {
 .animate-festive-float {
   animation: festive-float 3s ease-in-out infinite;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .festive-shimmer-sweep,
+  .animate-festive-wiggle,
+  .animate-festive-glow,
+  .animate-festive-float {
+    animation: none;
+  }
+}
+
+/* Panel admin: tokens de la marca (rojo #DC2626, tinta #141414, blanco) */
+html.admin-tone-light,
+html:not(.admin-tone-dark) .admin-layout-root {
+  --admin-canvas: #f3f4f6;
+  --admin-surface: #ffffff;
+  --admin-sidebar: #ffffff;
+  --admin-ink: #141414;
+  --admin-muted: #52525b;
+  --admin-faint: #71717a;
+  --admin-line: #e5e7eb;
+  --admin-input: #f4f4f5;
+  --admin-subtle: #f4f4f5;
+  --admin-accent: #dc2626;
+  --admin-accent-soft: rgba(220, 38, 38, 0.1);
+}
+
+html.admin-tone-dark {
+  --admin-canvas: #121212;
+  --admin-surface: #1c1c1c;
+  --admin-sidebar: #161616;
+  --admin-ink: #f4f4f5;
+  --admin-muted: #a1a1aa;
+  --admin-faint: #71717a;
+  --admin-line: rgba(255, 255, 255, 0.1);
+  --admin-input: #101010;
+  --admin-subtle: rgba(255, 255, 255, 0.06);
+  --admin-accent: #dc2626;
+  --admin-accent-soft: rgba(220, 38, 38, 0.18);
+}
+
+html.admin-tone-light .admin-layout-root,
+html.admin-tone-dark .admin-layout-root {
+  background: var(--admin-canvas);
+  color: var(--admin-ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html.admin-tone-light .admin-layout-root :is(h1, h2, h3, .font-heading),
+html.admin-tone-dark .admin-layout-root :is(h1, h2, h3, .font-heading) {
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Superficies que antes eran negro puro */
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"], [role="menu"]) :is(
+  [class~="bg-[#0E0E0E]"],
+  [class~="bg-[#111111]"],
+  [class~="bg-[#121212]"],
+  [class~="bg-[#141414]"],
+  [class~="bg-[#191919]"],
+  [class~="bg-[#1A160E]"],
+  [class~="bg-zinc-900"],
+  [class~="bg-zinc-950"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"], [role="menu"]) :is(
+  [class~="bg-[#0E0E0E]"],
+  [class~="bg-[#111111]"],
+  [class~="bg-[#121212]"],
+  [class~="bg-[#141414]"],
+  [class~="bg-[#1A160E]"]
+) {
+  background-color: var(--admin-surface);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-black/40"],
+  [class~="bg-black/50"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-black/40"],
+  [class~="bg-black/50"]
+) {
+  background-color: var(--admin-input);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-white/5"],
+  [class~="bg-white/10"]
+) {
+  background-color: var(--admin-subtle);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-white/5"],
+  [class~="border-white/10"],
+  [class~="border-white/15"],
+  [class~="border-white/20"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-white/5"],
+  [class~="border-white/10"],
+  [class~="border-white/15"]
+) {
+  border-color: var(--admin-line);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-white,
+  .text-zinc-100,
+  .text-zinc-200
+) {
+  color: var(--admin-ink);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-zinc-300,
+  .text-zinc-400
+) {
+  color: var(--admin-muted);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-zinc-500,
+  .text-zinc-600
+) {
+  color: var(--admin-faint);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-orange-200,
+  .text-orange-300
+) {
+  color: #9a3412;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-emerald-200,
+  .text-emerald-300,
+  .text-emerald-400
+) {
+  color: #047857;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-red-300,
+  .text-red-400
+) {
+  color: #b91c1c;
+}
+
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-zinc-400,
+  .text-zinc-500
+) {
+  color: var(--admin-muted);
+}
+
+/* El dorado del panel pasa al rojo de la marca */
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+) {
+  background-color: var(--admin-accent);
+  color: #ffffff;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]/10"],
+  [class~="bg-[#C7940A]/15"],
+  [class~="bg-[#C7940A]/20"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]/10"],
+  [class~="bg-[#C7940A]/15"],
+  [class~="bg-[#C7940A]/20"]
+) {
+  background-color: var(--admin-accent-soft);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="text-[#C7940A]"],
+  [class~="text-[#E4C36A]"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="text-[#C7940A]"],
+  [class~="text-[#E4C36A]"]
+) {
+  color: var(--admin-accent);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-[#C7940A]"],
+  [class~="border-[#E4C36A]"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-[#C7940A]"]
+) {
+  border-color: var(--admin-accent);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+) :is(.text-white, .text-black, .text-zinc-100),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+) :is(.text-white, .text-black, .text-zinc-100),
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+).text-black,
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+).text-black,
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-red-600"],
+  [class~="bg-red-700"],
+  [class~="bg-emerald-600"]
+).text-white {
+  color: #ffffff;
+}
+
+html.admin-tone-light .admin-layout-root svg :is([stroke="#E4C36A"], [stroke="#C7940A"]),
+html.admin-tone-dark .admin-layout-root svg :is([stroke="#E4C36A"], [stroke="#C7940A"]) {
+  stroke: var(--admin-accent);
+}
+
+html.admin-tone-light .admin-layout-root svg :is([fill="#E4C36A"], [fill="#C7940A"]),
+html.admin-tone-dark .admin-layout-root svg :is([fill="#E4C36A"], [fill="#C7940A"]) {
+  fill: var(--admin-accent);
+}
+
+html.admin-tone-light .admin-layout-root svg [fill="#d4d4d8"] {
+  fill: var(--admin-muted);
+}
+
+html.admin-tone-light .admin-layout-root svg [stroke="rgba(255,255,255,0.08)"] {
+  stroke: var(--admin-line);
+}
+
+html.admin-tone-light .admin-layout-root svg stop[stop-color="#E4C36A"],
+html.admin-tone-dark .admin-layout-root svg stop[stop-color="#E4C36A"] {
+  stop-color: #dc2626;
+}
+
+html.admin-tone-light .admin-layout-root [class*="outline-[#C7940A]"]:focus-visible,
+html.admin-tone-dark .admin-layout-root [class*="outline-[#C7940A]"]:focus-visible,
+html.admin-tone-light .admin-layout-root [class*="ring-[#C7940A]"]:focus-visible,
+html.admin-tone-dark .admin-layout-root [class*="ring-[#C7940A]"]:focus-visible {
+  outline-color: var(--admin-accent);
+}
+
+.admin-layout-root :focus-visible {
+  outline-color: var(--admin-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-layout-root *,
+  .admin-layout-root *::before,
+  .admin-layout-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 

@@ -23,6 +23,7 @@ import {
   getLocalPromoSlides,
   fetchRemotePromoSlides,
   savePromoSlides,
+  isSlideOnHome,
 } from "@/lib/banners-data";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
@@ -138,9 +139,9 @@ export function PromoCarousel({
   }, []);
 
   const activeSlides = useMemo(() => {
-    const list = slides.filter((s) => s.isActive !== false);
+    const list = slides.filter((s) => (mounted ? isSlideOnHome(s) : s.isActive !== false));
     return list.length > 0 ? list : DEFAULT_PROMO_SLIDES;
-  }, [slides]);
+  }, [slides, mounted]);
 
   const totalSlides = activeSlides.length;
 

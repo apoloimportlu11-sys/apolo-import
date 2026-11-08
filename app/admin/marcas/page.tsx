@@ -1,27 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
 import {
-  Tag,
-  Plus,
-  Trash2,
-  Edit,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
+  ExternalLink,
   Image as ImageIcon,
-  Save,
-  Radio,
-  X,
+  Loader2,
+  Plus,
   Search,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 export interface BrandItem {
   id: string;
@@ -35,7 +38,6 @@ export interface BrandItem {
 }
 
 const STORAGE_KEY = "apolo_admin_brands_cache";
-const PAGE_SIZE = 12;
 
 const DEFAULT_BRANDS: BrandItem[] = [
   {
@@ -274,19 +276,72 @@ function getInitialBrands(): BrandItem[] {
   return DEFAULT_BRANDS;
 }
 
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function brandKey(name: string) {
+  return name.trim().toLowerCase();
+}
+
+function LogoField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const fileName = value ? decodeURI(value.split("/").pop() || value) : "Sin logo";
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+      <div className="flex items-center gap-3">
+        <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-black">
+          {value ? <img src={encodeURI(value)} alt="" className="max-h-full max-w-full object-contain" /> : <ImageIcon className="size-5 text-zinc-400" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-zinc-200">Logo</p>
+          <p className="truncate text-xs text-zinc-400">{fileName}</p>
+        </div>
+        <button type="button" onClick={() => setOpen((current) => !current)} className="h-9 shrink-0 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+          {open ? "Cerrar" : value ? "Cambiar" : "Elegir"}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-3">
+          <MediaSelector
+            label="Logo"
+            description="Galería, enlace o archivo."
+            value={value}
+            categoryFilter="brands"
+            onChange={(url) => {
+              onChange(url);
+              setOpen(false);
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MarcasPage() {
   const supabase = createBrowserSupabase();
-  const [brands, setBrands] = useState<BrandItem[]>(DEFAULT_BRANDS);
+  const [brands, setBrands] = useState<BrandItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [connected, setConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [page, setPage] = useState(1);
-  const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
-
-  // Modal State
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "missing-logo">("all");
+  const [productCounts, setProductCounts] = useState<Record<string, number>>({});
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<BrandItem | null>(null);
+  const [confirmCatalog, setConfirmCatalog] = useState(false);
   const [currentBrand, setCurrentBrand] = useState<Partial<BrandItem>>({
     name: "",
     slug: "",
@@ -318,10 +373,18 @@ export default function MarcasPage() {
 
       if (error) throw error;
 
+      const { data: productRows } = await supabase.from("products").select("brand");
+      const counts: Record<string, number> = {};
+      for (const row of productRows || []) {
+        const key = brandKey(String(row.brand || ""));
+        if (!key) continue;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+      setProductCounts(counts);
+
       if (data && data.length > 0) {
-        // Supabase es la fuente de verdad (sin mezclar defaults fantasma)
         persistBrands(() => data as BrandItem[]);
-        if (showToast) toast.info("Marcas sincronizadas desde Supabase");
+        if (showToast) toast.info("Lista actualizada");
       } else {
         // Tabla vacía: sembrar defaults reales en Supabase (sin ids texto inválidos)
         const seedRows = DEFAULT_BRANDS.map(({ id: _id, ...rest }) => ({
@@ -372,20 +435,19 @@ export default function MarcasPage() {
         (payload) => {
           if (payload.eventType === "INSERT") {
             const newBrand = payload.new as BrandItem;
-            setBrands((prev) => [newBrand, ...prev.filter((b) => b.id !== newBrand.id)]);
-            setRecentlyUpdatedId(newBrand.id);
-            toast.info(`Nueva marca agregada: ${newBrand.name}`);
+            persistBrands((prev) => [newBrand, ...prev.filter((b) => b.id !== newBrand.id && b.slug !== newBrand.slug)]);
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as BrandItem;
-            setBrands((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-            setRecentlyUpdatedId(updated.id);
+            persistBrands((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
           } else if (payload.eventType === "DELETE") {
             const oldId = payload.old.id;
-            setBrands((prev) => prev.filter((b) => b.id !== oldId));
+            persistBrands((prev) => prev.filter((b) => b.id !== oldId));
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
       if (unsubscribeBus) unsubscribeBus();
@@ -393,15 +455,9 @@ export default function MarcasPage() {
     };
   }, [supabase, loadBrands]);
 
-  useEffect(() => {
-    if (recentlyUpdatedId) {
-      const timer = setTimeout(() => setRecentlyUpdatedId(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [recentlyUpdatedId]);
-
   function openCreateModal() {
     setIsEditing(false);
+    setSlugTouched(false);
     setCurrentBrand({
       name: "",
       slug: "",
@@ -414,637 +470,376 @@ export default function MarcasPage() {
 
   function openEditModal(brand: BrandItem) {
     setIsEditing(true);
+    setSlugTouched(true);
     setCurrentBrand({ ...brand });
     setShowModal(true);
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-
-    const slug =
-      currentBrand.slug?.trim() ||
-      currentBrand.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
-      `brand-${Date.now()}`;
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
+    const name = currentBrand.name?.trim() || "";
+    if (!name) {
+      toast.error("Escribe el nombre de la marca.");
+      return;
+    }
+    const slug = toSlug(currentBrand.slug?.trim() || name);
+    if (!slug) {
+      toast.error("El identificador quedó vacío.");
+      return;
+    }
+    const duplicate = brands.find(
+      (brand) => brand.id !== currentBrand.id && (brand.slug === slug || brandKey(brand.name) === brandKey(name))
+    );
+    if (duplicate) {
+      toast.error(`Ya existe ${duplicate.name}. Usa otro nombre.`);
+      return;
+    }
 
     const payload = {
-      name: currentBrand.name?.trim() || "Sin nombre",
+      name,
       slug,
       logo_url: currentBrand.logo_url?.trim() || null,
       description: currentBrand.description?.trim() || null,
-      is_active: currentBrand.is_active !== undefined ? currentBrand.is_active : true,
+      is_active: currentBrand.is_active !== false,
       updated_at: new Date().toISOString(),
     };
 
-    const toastId = toast.loading(
-      isEditing ? "Actualizando marca en tiempo real..." : "Creando marca..."
-    );
-
+    setSaving(true);
     try {
-      // Verificar si el ID es un UUID válido de Postgres
-      const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(currentBrand.id || "");
-
-      if (isEditing && currentBrand.id && isUUID) {
-        const { error } = await supabase
-          .from("brands")
-          .update(payload)
-          .eq("id", currentBrand.id);
-
+      if (isEditing && currentBrand.id && isUuid(currentBrand.id)) {
+        const { error } = await supabase.from("brands").update(payload).eq("id", currentBrand.id);
         if (error) throw error;
-
         const updatedItem = { ...currentBrand, ...payload, id: currentBrand.id } as BrandItem;
-        persistBrands((prev) => prev.map((b) => (b.id === currentBrand.id ? updatedItem : b)));
-        setRecentlyUpdatedId(currentBrand.id);
-
+        persistBrands((prev) => prev.map((brand) => (brand.id === currentBrand.id ? updatedItem : brand)));
         if (realtimeBus) realtimeBus.emit("brands_updated", updatedItem);
-
-        toast.success("¡Marca guardada exitosamente!", {
-          id: toastId,
-          description: `Los cambios en "${payload.name}" están sincronizados en vivo.`,
-        });
+        toast.success(`${name} quedó guardada.`);
       } else {
-        // Crear en Supabase primero (fuente de verdad); el UUID lo asigna Postgres
-        const { data, error } = await supabase
-          .from("brands")
-          .insert([payload])
-          .select()
-          .single();
-
+        const { data, error } = await supabase.from("brands").insert([payload]).select().single();
         if (error) throw error;
-
         const saved = data as BrandItem;
-        persistBrands((prev) => {
-          const withoutLegacy = prev.filter(
-            (b) => b.id !== currentBrand.id && b.slug !== saved.slug
-          );
-          return [saved, ...withoutLegacy];
-        });
-        setRecentlyUpdatedId(saved.id);
-
+        persistBrands((prev) => [saved, ...prev.filter((brand) => brand.id !== currentBrand.id && brand.slug !== saved.slug)]);
         if (realtimeBus) realtimeBus.emit("brands_updated", saved);
-
-        toast.success("¡Marca guardada exitosamente!", {
-          id: toastId,
-          description: `La marca "${payload.name}" ha sido guardada en Supabase.`,
-        });
+        toast.success(`${name} ya se puede elegir al crear un producto.`);
       }
-
       setShowModal(false);
-    } catch (err: any) {
-      toast.error("Error al guardar marca", {
-        id: toastId,
-        description: err.message,
-      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo guardar.";
+      const friendly = /duplicate|unique/i.test(message) ? "Ya hay una marca con ese identificador." : message;
+      toast.error("No se guardó la marca", { description: friendly });
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`¿Estás seguro de eliminar la marca "${name}"? Esta acción se sincronizará inmediatamente.`)) {
+  async function confirmDelete() {
+    const brand = pendingDelete;
+    if (!brand) return;
+    setPendingDelete(null);
+    const { data, error } = await supabase.from("brands").delete().eq("id", brand.id).select("id");
+    if (error || !data?.length) {
+      toast.error("No se quitó la marca", { description: error?.message || "Sigue en la base de datos." });
       return;
     }
-
-    const toastId = toast.loading("Eliminando marca...");
-    try {
-      persistBrands((prev) => prev.filter((b) => b.id !== id));
-      if (realtimeBus) realtimeBus.emit("brands_updated", { id, deleted: true });
-
-      try {
-        await supabase.from("brands").delete().eq("id", id);
-      } catch (dbErr) {
-        console.log("Supabase delete note:", dbErr);
-      }
-
-      toast.success("Marca eliminada", {
-        id: toastId,
-        description: `"${name}" ha sido removida del catálogo.`,
-      });
-    } catch (err: any) {
-      toast.error("Error al eliminar", {
-        id: toastId,
-        description: err.message,
-      });
-    }
+    persistBrands((prev) => prev.filter((item) => item.id !== brand.id));
+    if (realtimeBus) realtimeBus.emit("brands_updated", { id: brand.id, deleted: true });
+    toast.success(`${brand.name} salió de la lista. Los productos que ya la usan conservan ese nombre.`);
   }
 
-  async function toggleStatus(id: string, current: boolean) {
-    persistBrands((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, is_active: !current, updated_at: new Date().toISOString() } : b))
-    );
-    setRecentlyUpdatedId(id);
-
-    try {
-      if (realtimeBus) realtimeBus.emit("brands_updated", { id, is_active: !current });
-      await supabase
-        .from("brands")
-        .update({ is_active: !current, updated_at: new Date().toISOString() })
-        .eq("id", id);
-
-      toast.success(!current ? "Marca activada" : "Marca pausada", { duration: 1500 });
-    } catch (err: any) {
-      console.log("Supabase toggle note:", err);
-      toast.success(!current ? "Marca activada localmente" : "Marca pausada localmente", { duration: 1500 });
+  async function toggleStatus(brand: BrandItem) {
+    const nextActive = !brand.is_active;
+    const previous = brands;
+    persistBrands((prev) => prev.map((item) => (item.id === brand.id ? { ...item, is_active: nextActive } : item)));
+    const { error } = await supabase
+      .from("brands")
+      .update({ is_active: nextActive, updated_at: new Date().toISOString() })
+      .eq("id", brand.id);
+    if (error) {
+      persistBrands(() => previous);
+      toast.error(nextActive ? "No se pudo volver a incluir la marca." : "No se pudo pausar la marca.", { description: error.message });
+      return;
     }
+    if (realtimeBus) realtimeBus.emit("brands_updated", { id: brand.id, is_active: nextActive });
+    toast.success(nextActive ? `${brand.name} vuelve a la lista de productos.` : `${brand.name} ya no aparece al crear un producto.`);
   }
 
-  async function restoreDefaultBrands() {
-    const toastId = toast.loading("Sincronizando marcas del catálogo...");
+  const missingCatalog = DEFAULT_BRANDS.filter(
+    (preset) => !brands.some((brand) => brand.slug === preset.slug || brandKey(brand.name) === brandKey(preset.name))
+  );
+
+  function askMissingCatalog() {
+    if (missingCatalog.length === 0) {
+      toast.success("El catálogo ya estaba completo. No se cambió ningún logo.");
+      return;
+    }
+    setConfirmCatalog(true);
+  }
+
+  async function addMissingCatalog() {
+    setConfirmCatalog(false);
+    const toastId = toast.loading("Agregando las marcas que faltan…");
     try {
       let created = 0;
-      for (const def of DEFAULT_BRANDS) {
-        const exists = brands.some(
-          (b) => b.slug === def.slug || b.name.toLowerCase() === def.name.toLowerCase()
-        );
-        if (exists) {
-          // Actualiza logo oficial si la marca ya existe
-          const hit = brands.find(
-            (b) => b.slug === def.slug || b.name.toLowerCase() === def.name.toLowerCase()
-          );
-          if (hit && def.logo_url && hit.logo_url !== def.logo_url) {
-            await supabase
-              .from("brands")
-              .update({
-                logo_url: def.logo_url,
-                description: hit.description || def.description,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", hit.id);
-          }
-          continue;
-        }
-        const { id: _ignore, ...row } = def;
-        const { error } = await supabase.from("brands").insert({
-          ...row,
-          updated_at: new Date().toISOString(),
-        });
-        if (!error) created += 1;
+      for (const preset of DEFAULT_BRANDS) {
+        const exists = brands.some((brand) => brand.slug === preset.slug || brandKey(brand.name) === brandKey(preset.name));
+        if (exists) continue;
+        const { id: _id, ...row } = preset;
+        const { error } = await supabase.from("brands").insert({ ...row, updated_at: new Date().toISOString() });
+        if (error) throw error;
+        created += 1;
       }
       await loadBrands();
       if (realtimeBus) realtimeBus.emit("brands_updated", { synced: true });
-      toast.success("¡Marcas sincronizadas!", {
-        id: toastId,
-        description: created
-          ? `Se agregaron ${created} marcas nuevas y se actualizaron logos oficiales.`
-          : "Logos oficiales actualizados (Apolo, Overts, Valtrom y catálogo).",
-      });
-    } catch (e: any) {
-      toast.error("Error al sincronizar marcas", { id: toastId, description: e.message });
+      toast.success(created ? `Se agregaron ${created} marcas.` : "El catálogo ya estaba completo. No se cambió ningún logo.", { id: toastId });
+    } catch (err: unknown) {
+      toast.error("No se completó el catálogo", { id: toastId, description: err instanceof Error ? err.message : "Error desconocido" });
     }
   }
 
-  const stats = useMemo(() => {
-    const active = brands.filter((b) => b.is_active).length;
-    return { total: brands.length, active, inactive: brands.length - active };
-  }, [brands]);
+  const missingLogo = brands.filter((brand) => !brand.logo_url).length;
+  const paused = brands.filter((brand) => !brand.is_active).length;
 
   const filteredBrands = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return brands.filter((b) => {
-      if (statusFilter === "active" && !b.is_active) return false;
-      if (statusFilter === "inactive" && b.is_active) return false;
-      if (!q) return true;
-      return (
-        b.name.toLowerCase().includes(q) ||
-        b.slug.toLowerCase().includes(q) ||
-        Boolean(b.description && b.description.toLowerCase().includes(q))
-      );
+    const query = searchQuery.toLowerCase().trim();
+    return brands.filter((brand) => {
+      if (statusFilter === "active" && !brand.is_active) return false;
+      if (statusFilter === "paused" && brand.is_active) return false;
+      if (statusFilter === "missing-logo" && brand.logo_url) return false;
+      if (!query) return true;
+      return brand.name.toLowerCase().includes(query) || brand.slug.toLowerCase().includes(query) || Boolean(brand.description?.toLowerCase().includes(query));
     });
   }, [brands, searchQuery, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredBrands.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginatedBrands = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredBrands.slice(start, start + PAGE_SIZE);
-  }, [filteredBrands, currentPage]);
-
-  // Al buscar o filtrar, vuelve a la página 1
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, statusFilter]);
-
-  function logoSrc(url?: string | null) {
-    if (!url) return "";
-    return encodeURI(url);
-  }
+  const catalogPreset = DEFAULT_BRANDS.find(
+    (preset) => preset.slug === currentBrand.slug || brandKey(preset.name) === brandKey(currentBrand.name || "")
+  );
+  const deleteCount = pendingDelete ? productCounts[brandKey(pendingDelete.name)] || 0 : 0;
 
   return (
-    <div className="w-full space-y-6 pb-12">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 border-b border-white/10 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#C7940A]/10 border border-[#C7940A]/20 text-[#C7940A]">
-            <Tag className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Marcas Distribuidas
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
-              Logos, estado y ficha de cada marca sincronizados con Supabase.
-            </p>
-          </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl text-white">Marcas</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-300">
+            El nombre se ofrece al crear un producto. Pausar una marca la quita de esa lista. Los productos que ya la usan siguen en la tienda.
+          </p>
         </div>
+        <p className="text-sm text-zinc-300">{connected ? "Otra pestaña del panel recibe los cambios." : "Puedes guardar. La actualización automática está en pausa."}</p>
+      </header>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-            <Radio className="w-3.5 h-3.5" />
-            En vivo
-          </div>
-          <button
-            type="button"
-            onClick={restoreDefaultBrands}
-            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 text-[#C7940A]" />
-            Sincronizar logos
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">{brands.length} en total</span>
+        <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">{paused} pausadas</span>
+        <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">{missingLogo} sin logo</span>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <button type="button" onClick={askMissingCatalog} className="h-10 rounded-full border border-white/15 px-4 text-sm text-zinc-100">
+            Completar catálogo
           </button>
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-[#C7940A] px-4 py-2.5 font-bold text-black hover:bg-[#d9a311] transition-all text-xs sm:text-sm shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
+          <button type="button" onClick={openCreateModal} className="inline-flex h-10 items-center gap-2 rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black">
+            <Plus className="size-4" />
             Nueva marca
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Total", value: stats.total },
-          { label: "Activas", value: stats.active },
-          { label: "Inactivas", value: stats.inactive },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-white/10 bg-[#141414] px-4 py-3">
-            <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">{s.label}</p>
-            <p className="text-2xl font-black text-white mt-1">{s.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
           <input
-            type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nombre, slug o descripción..."
-            className="w-full rounded-xl border border-white/10 bg-[#141414] pl-10 pr-10 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Buscar por nombre"
+            className="h-10 w-full rounded-full border border-white/10 bg-black/40 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
         </div>
-        <div className="flex rounded-xl border border-white/10 bg-[#141414] p-1 gap-1">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtro de marcas">
           {(
             [
-              { id: "all", label: "Todas" },
-              { id: "active", label: "Activas" },
-              { id: "inactive", label: "Inactivas" },
+              ["all", "Todas"],
+              ["active", "En la lista"],
+              ["paused", "Pausadas"],
+              ["missing-logo", "Sin logo"],
             ] as const
-          ).map((f) => (
+          ).map(([id, label]) => (
             <button
-              key={f.id}
+              key={id}
               type="button"
-              onClick={() => setStatusFilter(f.id)}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                statusFilter === f.id
-                  ? "bg-[#C7940A] text-black"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
+              role="tab"
+              aria-selected={statusFilter === id}
+              onClick={() => setStatusFilter(id)}
+              className={`h-10 rounded-full px-4 text-sm ${statusFilter === id ? "bg-white font-semibold text-black" : "bg-white/10 text-zinc-100"}`}
             >
-              {f.label}
+              {label}
             </button>
           ))}
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 text-zinc-400 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-[#C7940A]" />
-          <span className="text-sm">Cargando marcas...</span>
+        <div className="flex items-center gap-3 py-20 text-sm text-zinc-300">
+          <Loader2 className="size-5 animate-spin text-[#C7940A]" />
+          Cargando las marcas guardadas.
         </div>
       ) : filteredBrands.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[#141414] p-12 text-center text-zinc-400 space-y-3">
-          <Tag className="w-12 h-12 mx-auto text-zinc-600" />
-          <p className="text-lg font-bold text-white">No hay marcas para mostrar</p>
-          <p className="text-sm text-zinc-500">Ajusta el filtro o crea una marca nueva.</p>
+        <div className="rounded-2xl border border-white/10 bg-[#141414] px-5 py-12 text-center">
+          <p className="font-heading text-xl text-white">No hay marcas con ese criterio</p>
+          <button type="button" onClick={openCreateModal} className="mt-4 h-10 rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black">
+            Nueva marca
+          </button>
         </div>
       ) : (
-        <>
-        <div className="flex items-center justify-between gap-3 text-xs text-zinc-500">
-          <span>
-            Mostrando{" "}
-            <strong className="text-zinc-300">
-              {(currentPage - 1) * PAGE_SIZE + 1}–
-              {Math.min(currentPage * PAGE_SIZE, filteredBrands.length)}
-            </strong>{" "}
-            de <strong className="text-zinc-300">{filteredBrands.length}</strong>
-          </span>
-          <span>
-            Página {currentPage} / {totalPages}
-          </span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {paginatedBrands.map((brand) => {
-            const isHighlighted = recentlyUpdatedId === brand.id;
+        <ul className="grid gap-3 lg:grid-cols-2">
+          {filteredBrands.map((brand) => {
+            const count = productCounts[brandKey(brand.name)] || 0;
             return (
-              <article
-                key={brand.id}
-                className={`rounded-2xl border bg-[#141414] overflow-hidden transition-all ${
-                  isHighlighted
-                    ? "border-emerald-500/50 ring-1 ring-emerald-500/30"
-                    : "border-white/10 hover:border-white/20"
-                }`}
-              >
-                <div className="aspect-[16/9] bg-gradient-to-b from-black/40 to-black/80 border-b border-white/5 flex items-center justify-center p-4">
+              <li key={brand.id} className="flex gap-3 rounded-2xl border border-white/10 bg-[#141414] p-3">
+                <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-black">
                   {brand.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoSrc(brand.logo_url)}
-                      alt={brand.name}
-                      className="max-h-full max-w-full object-contain"
-                    />
+                    <img src={encodeURI(brand.logo_url)} alt="" className="max-h-full max-w-full object-contain" />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-zinc-600">
-                      <ImageIcon className="w-8 h-8" />
-                      <span className="text-[11px]">Sin logo</span>
-                    </div>
+                    <ImageIcon className="size-5 text-zinc-400" />
                   )}
                 </div>
-                <div className="p-4 space-y-3">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="font-black text-white truncate">{brand.name}</h3>
-                      <p className="text-[11px] font-mono text-zinc-500 truncate">/{brand.slug}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleStatus(brand.id, brand.is_active)}
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border cursor-pointer ${
-                        brand.is_active
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                          : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
-                      }`}
-                    >
-                      {brand.is_active ? "Activa" : "Inactiva"}
-                    </button>
+                    <h2 className="truncate font-heading text-lg text-white">{brand.name}</h2>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${brand.is_active ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-zinc-300"}`}>
+                      {brand.is_active ? "En la lista" : "Pausada"}
+                    </span>
                   </div>
-                  <p className="text-xs text-zinc-400 line-clamp-2 min-h-[2.5rem]">
-                    {brand.description || "Sin descripción"}
+                  <p className="mt-1 line-clamp-2 text-sm text-zinc-300">{brand.description || "Sin descripción"}</p>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    {count === 0 ? "Ningún producto usa este nombre." : count === 1 ? "1 producto usa este nombre." : `${count} productos usan este nombre.`}
+                    {!brand.logo_url ? " Falta el logo." : ""}
                   </p>
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(brand)}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-semibold text-white cursor-pointer"
-                    >
-                      <Edit className="w-3.5 h-3.5 text-[#C7940A]" />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => openEditModal(brand)} className="h-8 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
                       Editar
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(brand.id, brand.name)}
-                      className="inline-flex items-center justify-center rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/15 px-3 py-2 text-red-400 cursor-pointer"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => void toggleStatus(brand)} className="h-8 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+                      {brand.is_active ? "Pausar" : "Incluir"}
+                    </button>
+                    {count > 0 && (
+                      <a href={`/productos?brand=${encodeURIComponent(brand.name)}`} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+                        Ver productos
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    )}
+                    <button type="button" onClick={() => setPendingDelete(brand)} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+                      <Trash2 className="size-3.5" />
+                      Quitar
                     </button>
                   </div>
                 </div>
-              </article>
+              </li>
             );
           })}
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#141414] px-4 py-3">
-            <p className="text-xs text-zinc-500 order-2 sm:order-1">
-              {PAGE_SIZE} marcas por página
-            </p>
-            <div className="flex items-center gap-1.5 order-1 sm:order-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1}
-                className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Anterior
-              </button>
-              <div className="hidden sm:flex items-center gap-1 px-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((n) => {
-                    if (totalPages <= 7) return true;
-                    if (n === 1 || n === totalPages) return true;
-                    return Math.abs(n - currentPage) <= 1;
-                  })
-                  .reduce<(number | "…")[]>((acc, n, idx, arr) => {
-                    if (idx > 0 && typeof arr[idx - 1] === "number" && n - (arr[idx - 1] as number) > 1) {
-                      acc.push("…");
-                    }
-                    acc.push(n);
-                    return acc;
-                  }, [])
-                  .map((n, idx) =>
-                    n === "…" ? (
-                      <span key={`e-${idx}`} className="px-1 text-zinc-600 text-xs">
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setPage(n)}
-                        className={`min-w-8 h-8 rounded-lg text-xs font-bold cursor-pointer ${
-                          n === currentPage
-                            ? "bg-[#C7940A] text-black"
-                            : "text-zinc-400 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    )
-                  )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Siguiente
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-        </>
+        </ul>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="w-full sm:max-w-3xl lg:max-w-4xl max-h-[95vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-white/10 bg-[#161616] shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#161616]/95 backdrop-blur px-5 py-4">
-              <div className="flex items-center gap-2">
-                <Tag className="w-5 h-5 text-[#C7940A]" />
-                <h2 className="text-lg font-bold text-white">
-                  {isEditing ? "Editar marca" : "Nueva marca"}
-                </h2>
-              </div>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#141414] text-zinc-100 sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl text-white">{isEditing ? "Editar marca" : "Nueva marca"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(event) => void handleSave(event)} className="space-y-4">
+            <label className="block text-sm text-zinc-200">
+              Nombre
+              <input
+                required
+                value={currentBrand.name || ""}
+                onChange={(event) => {
+                  const name = event.target.value;
+                  setCurrentBrand((prev) => ({ ...prev, name, slug: slugTouched ? prev.slug : toSlug(name) }));
+                }}
+                className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
+              />
+              <span className="mt-1 block text-xs text-zinc-400">Así aparece en el producto y en el filtro de la tienda.</span>
+            </label>
+            <label className="block text-sm text-zinc-200">
+              Identificador
+              <input
+                value={currentBrand.slug || ""}
+                onChange={(event) => {
+                  setSlugTouched(true);
+                  setCurrentBrand((prev) => ({ ...prev, slug: toSlug(event.target.value) }));
+                }}
+                className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 font-mono text-sm text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
+              />
+              <span className="mt-1 block text-xs text-zinc-400">Evita dos marcas con el mismo nombre interno.</span>
+            </label>
+            <LogoField value={currentBrand.logo_url || ""} onChange={(url) => setCurrentBrand((prev) => ({ ...prev, logo_url: url }))} />
+            {catalogPreset?.logo_url && catalogPreset.logo_url !== currentBrand.logo_url && (
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
-                className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                onClick={() => setCurrentBrand((prev) => ({ ...prev, logo_url: catalogPreset.logo_url }))}
+                className="text-sm text-[#E4C36A]"
               >
-                <X className="w-5 h-5" />
+                Usar el logo original de {catalogPreset.name}
+              </button>
+            )}
+            <label className="block text-sm text-zinc-200">
+              Descripción
+              <textarea
+                value={currentBrand.description || ""}
+                onChange={(event) => setCurrentBrand((prev) => ({ ...prev, description: event.target.value }))}
+                className="mt-1.5 h-24 w-full resize-none rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
+              />
+            </label>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 px-3 py-3">
+              <div>
+                <p className="text-sm text-zinc-100">Disponible al crear productos</p>
+                <p className="text-xs text-zinc-400">Si la pausas, deja de salir en esa lista.</p>
+              </div>
+              <Switch checked={currentBrand.is_active !== false} onCheckedChange={(checked) => setCurrentBrand((prev) => ({ ...prev, is_active: checked }))} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowModal(false)} className="h-10 rounded-full border border-white/15 px-4 text-sm text-zinc-100">
+                Cancelar
+              </button>
+              <button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black disabled:opacity-50">
+                {saving && <Loader2 className="size-4 animate-spin" />}
+                Guardar
               </button>
             </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-            <form onSubmit={handleSave} className="p-5 space-y-5">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
-                <div className="space-y-4 min-w-0">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                      Nombre de la marca
-                    </label>
-                    <input
-                      type="text"
-                      value={currentBrand.name || ""}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        const autoSlug = name
-                          .toLowerCase()
-                          .normalize("NFD")
-                          .replace(/[\u0300-\u036f]/g, "")
-                          .replace(/[^a-z0-9]+/g, "-")
-                          .replace(/^-+|-+$/g, "");
-                        setCurrentBrand((prev) => ({
-                          ...prev,
-                          name,
-                          slug: isEditing && prev.slug ? prev.slug : autoSlug,
-                        }));
-                      }}
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                      placeholder="Ej: Overts, Amalie, Valtrom"
-                      required
-                    />
-                  </div>
+      <AlertDialog open={confirmCatalog} onOpenChange={setConfirmCatalog}>
+        <AlertDialogContent className="border-white/10 bg-[#141414] text-zinc-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Agregar {missingCatalog.length === 1 ? "1 marca" : `${missingCatalog.length} marcas`}</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-300">
+              Se agregan {missingCatalog.map((preset) => preset.name).join(", ")}. Las marcas que ya están no cambian de logo ni de nombre.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/15 bg-transparent text-zinc-100">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void addMissingCatalog()} className="bg-[#C7940A] text-black hover:bg-[#E4C36A]">
+              Agregar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                      Slug (URL)
-                    </label>
-                    <input
-                      type="text"
-                      value={currentBrand.slug || ""}
-                      onChange={(e) =>
-                        setCurrentBrand({
-                          ...currentBrand,
-                          slug: e.target.value
-                            .toLowerCase()
-                            .replace(/[^a-z0-9-]+/g, "-")
-                            .replace(/^-+|-+$/g, ""),
-                        })
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-xs font-mono text-white focus:border-[#C7940A] focus:outline-none"
-                      placeholder="overts"
-                    />
-                  </div>
-
-                  <MediaSelector
-                    label="Logo de la marca"
-                    description="Usa la galería (Apolo, Overts, Valtrom…), una URL o sube un archivo."
-                    value={currentBrand.logo_url || ""}
-                    onChange={(url) => setCurrentBrand({ ...currentBrand, logo_url: url })}
-                    categoryFilter="brands"
-                  />
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                      Descripción
-                    </label>
-                    <textarea
-                      value={currentBrand.description || ""}
-                      onChange={(e) =>
-                        setCurrentBrand({ ...currentBrand, description: e.target.value })
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2 text-sm text-white focus:border-[#C7940A] focus:outline-none h-24 resize-none"
-                      placeholder="Breve descripción o especialidad de la marca..."
-                    />
-                  </div>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={currentBrand.is_active !== undefined ? currentBrand.is_active : true}
-                      onChange={(e) =>
-                        setCurrentBrand({ ...currentBrand, is_active: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
-                    />
-                    <span className="text-xs text-zinc-300">Marca activa en el sitio</span>
-                  </label>
-                </div>
-
-                <aside className="rounded-2xl border border-white/10 bg-black/40 p-4 h-fit lg:sticky lg:top-20">
-                  <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold mb-3">
-                    Vista previa
-                  </p>
-                  <div className="aspect-[16/10] rounded-xl border border-white/10 bg-[#991b1b] flex items-center justify-center p-4 mb-3">
-                    {currentBrand.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={logoSrc(currentBrand.logo_url)}
-                        alt="Vista previa"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <span className="text-xs text-white/50">Sin logo</span>
-                    )}
-                  </div>
-                  <p className="text-sm font-bold text-white truncate">
-                    {currentBrand.name || "Nombre de marca"}
-                  </p>
-                  <p className="text-[11px] font-mono text-zinc-500 truncate mt-0.5">
-                    /{currentBrand.slug || "slug"}
-                  </p>
-                  <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
-                    Así se verá aproximado el logo sobre la barra roja del sitio.
-                  </p>
-                </aside>
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  disabled={saving}
-                  className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#C7940A] px-6 py-2.5 text-xs font-bold text-black hover:bg-[#d9a311] shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {saving ? "Guardando..." : "Guardar cambios"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="border-white/10 bg-[#141414] text-zinc-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Quitar {pendingDelete?.name}</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-300">
+              {deleteCount > 0
+                ? `${deleteCount === 1 ? "Hay 1 producto" : `Hay ${deleteCount} productos`} con este nombre. Seguirán publicados. La marca deja de ofrecerse al crear productos.`
+                : "Ningún producto usa este nombre. La marca deja de ofrecerse al crear productos."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/15 bg-transparent text-zinc-100">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmDelete()} className="bg-[#C7940A] text-black hover:bg-[#E4C36A]">
+              Quitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

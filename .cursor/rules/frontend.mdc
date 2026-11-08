@@ -1,0 +1,16 @@
+---
+description: Convenciones frontend React/Next/Tailwind/shadcn
+globs: "{app,components,hooks}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Frontend
+
+- Componentes funcionales; App Router. Preferir Server Components salvo interactividad (admin pages suelen ser `"use client"`).
+- UI base: `components/ui/*` (shadcn new-york). Iconos: `lucide-react`. Utilidad de clases: `cn` en `lib/utils.ts`.
+- Estilos: Tailwind 4 + CSS variables en `app/globals.css`. Marca: tonos `#0E0E0E` / `#C7940A` / `#F5C542`.
+- Fuentes en `app/layout.tsx`: Montserrat, Inter, Roboto.
+- Formularios: patrones existentes + Zod en `lib/validations/*`. Toasts: sonner.
+- Cotización: `QuoteProvider`, `QuoteDrawer`, `FloatingQuoteButton` — no reinventar el carrito.
+- Media: `MediaSelector`, Storage bucket `products`; respetar `ImageProtection` en storefront.
+- No añadir dependencias UI nuevas si ya hay primitivo Radix/shadcn equivalente.

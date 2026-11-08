@@ -1,0 +1,15 @@
+---
+description: Route Handlers, auth y convenciones de servidor
+globs: "{app/api,app/auth,lib,scripts,proxy.ts}/**/*.{ts,tsx,js}"
+alwaysApply: false
+---
+
+# Backend / servidor
+
+- API solo en `app/api/*/route.ts`. Validar body con Zod (`lib/validations/*`) antes de side effects.
+- Respuestas JSON con status HTTP claros; no filtrar stack traces ni secretos.
+- Auth: Supabase Auth. Cookies `sb-*` / set vía `/api/auth/set-cookie` y `/auth/callback`. Gate admin: `requireAdmin()` o RLS `is_admin()`.
+- Protección ruta admin: `proxy.ts` (matcher `/admin/:path*`). Confirmar docs Next 16 antes de renombrar a `middleware`.
+- Service role (`getSupabaseAdmin`) solo en servidor/scripts; nunca importar en client components.
+- Email contacto: Resend en `/api/contact`. Chat Artemisa: OpenAI en `/api/chat` (requiere `OPENAI_API_KEY`).
+- Scripts en `scripts/` para migraciones/ops; no ejecutar destructivos sin confirmación.

@@ -19,6 +19,24 @@ export interface PromoSlide {
   accentColor: string; // Gradient class or custom string
   isActive?: boolean;
   order?: number;
+  /** Fecha local YYYY-MM-DD. Vacío: visible desde ya. */
+  startsOn?: string;
+  /** Fecha local YYYY-MM-DD, inclusive. Vacío: no vence. */
+  endsOn?: string;
+}
+
+export function todayKey(date = new Date()) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Visible en el inicio: activo y dentro del rango de fechas, si lo tiene. */
+export function isSlideOnHome(slide: PromoSlide, today = todayKey()) {
+  if (slide.isActive === false) return false;
+  if (slide.startsOn && slide.startsOn > today) return false;
+  if (slide.endsOn && slide.endsOn < today) return false;
+  return true;
 }
 
 export const PROMO_BANNERS_STORAGE_KEY = "apolo_admin_promo_banners";

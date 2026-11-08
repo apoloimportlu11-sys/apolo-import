@@ -192,11 +192,8 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
     }
 
     try {
-      const { data, error } = await supabase
-        .from("business_settings")
-        .select("id, business_name, phone, email, whatsapp, address, hours, maps_url, logo_url, primary_color, secondary_color, accent_color, font_scale, font_family")
-        .limit(1)
-        .maybeSingle();
+      const baseColumns = "id, business_name, phone, email, whatsapp, address, hours, maps_url, logo_url, primary_color, secondary_color, accent_color";
+      const { data, error } = await supabase.from("business_settings").select(baseColumns).limit(1).maybeSingle();
 
       if (data && !error) {
         const cleanLogoUrl = (!data.logo_url || String(data.logo_url).toLowerCase().includes("overts") || String(data.logo_url).toLowerCase().includes("live_site"))
@@ -217,8 +214,8 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
           primary_color: data.primary_color || DEFAULT_BUSINESS_SETTINGS.primary_color,
           secondary_color: data.secondary_color || DEFAULT_BUSINESS_SETTINGS.secondary_color,
           accent_color: data.accent_color || DEFAULT_BUSINESS_SETTINGS.accent_color,
-          font_scale: data.font_scale || DEFAULT_BUSINESS_SETTINGS.font_scale,
-          font_family: data.font_family || DEFAULT_BUSINESS_SETTINGS.font_family,
+          font_scale: settingsRef.current.font_scale || DEFAULT_BUSINESS_SETTINGS.font_scale,
+          font_family: settingsRef.current.font_family || DEFAULT_BUSINESS_SETTINGS.font_family,
         };
         updateLocalSettings(merged, "initial");
       }
@@ -302,6 +299,8 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
         updated_at: new Date().toISOString(),
       };
 
+      const previous = settings;
+
       // 1. Optimistic local update
       updateLocalSettings(optimisticState, "save");
 
@@ -310,66 +309,42 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
         realtimeBus.emit("business_settings_updated", optimisticState);
       }
 
-      try {
-        let errorResult: any = null;
+      const baseRow = {
+        business_name: optimisticState.business_name,
+        phone: optimisticState.phone,
+        email: optimisticState.email,
+        whatsapp: optimisticState.whatsapp,
+        address: optimisticState.address,
+        hours: optimisticState.hours,
+        maps_url: optimisticState.maps_url,
+        logo_url: optimisticState.logo_url,
+        primary_color: optimisticState.primary_color,
+        secondary_color: optimisticState.secondary_color,
+        accent_color: optimisticState.accent_color,
+      };
 
+      const writeRow = async (row: Record<string, unknown>) => {
         if (optimisticState.id) {
-          const { error } = await supabase
-            .from("business_settings")
-            .update({
-              business_name: optimisticState.business_name,
-              phone: optimisticState.phone,
-              email: optimisticState.email,
-              whatsapp: optimisticState.whatsapp,
-              address: optimisticState.address,
-              hours: optimisticState.hours,
-              maps_url: optimisticState.maps_url,
-              logo_url: optimisticState.logo_url,
-              primary_color: optimisticState.primary_color,
-              secondary_color: optimisticState.secondary_color,
-              accent_color: optimisticState.accent_color,
-              font_scale: optimisticState.font_scale,
-              font_family: optimisticState.font_family,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", optimisticState.id);
-          errorResult = error;
-        } else {
-          // If no row exists yet, insert
-          const { data, error } = await supabase
-            .from("business_settings")
-            .insert([
-              {
-                business_name: optimisticState.business_name,
-                phone: optimisticState.phone,
-                email: optimisticState.email,
-                whatsapp: optimisticState.whatsapp,
-                address: optimisticState.address,
-                hours: optimisticState.hours,
-                maps_url: optimisticState.maps_url,
-                logo_url: optimisticState.logo_url,
-                primary_color: optimisticState.primary_color,
-                secondary_color: optimisticState.secondary_color,
-                accent_color: optimisticState.accent_color,
-                font_scale: optimisticState.font_scale,
-                font_family: optimisticState.font_family,
-              },
-            ])
-            .select()
-            .single();
+          return supabase.from("business_settings").update({ ...row, updated_at: new Date().toISOString() }).eq("id", optimisticState.id);
+        }
+        return supabase.from("business_settings").insert([row]).select().single();
+      };
 
-          if (data) {
-            setSettings((prev) => ({ ...prev, id: data.id }));
-          }
-          errorResult = error;
+      try {
+        const result = await writeRow(baseRow);
+
+        if (result.error) {
+          throw new Error(result.error.message || "Error al persistir en la base de datos");
         }
 
-        if (errorResult) {
-          throw new Error(errorResult.message || "Error al persistir en la base de datos");
+        if (!optimisticState.id && "data" in result && result.data && typeof result.data === "object" && "id" in result.data) {
+          setSettings((prev) => ({ ...prev, id: String(result.data.id) }));
         }
 
         return { success: true };
       } catch (err: any) {
+        updateLocalSettings(previous, "save");
+        if (realtimeBus) realtimeBus.emit("business_settings_updated", previous);
         console.error("Failed to save business_settings:", err);
         return {
           success: false,
