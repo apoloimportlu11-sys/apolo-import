@@ -16,6 +16,7 @@ import {
   Loader2,
   Box,
 } from "lucide-react";
+import { toast } from "sonner";
 import { LOCAL_MEDIA_ITEMS, LocalMediaItem, searchLocalMedia } from "@/lib/local-media-catalog";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 
@@ -28,6 +29,8 @@ interface MediaSelectorProps {
   allowedExtensions?: string[]; // e.g. ['.png', '.gltf', '.glb']
   categoryFilter?: "products" | "brands" | "hero" | "about" | "categories" | "inicio" | "all";
   className?: string;
+  compact?: boolean;
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 export default function MediaSelector({
@@ -39,8 +42,12 @@ export default function MediaSelector({
   allowedExtensions,
   categoryFilter = "all",
   className = "",
+  compact = false,
+  onUploadingChange,
 }: MediaSelectorProps) {
   const supabase = createBrowserSupabase();
+  const onChangeRef = React.useRef(onChange);
+  onChangeRef.current = onChange;
 
   // Detect mode based on current value
   const detectMode = (val: string): "internal" | "external" | "upload" => {
@@ -61,6 +68,14 @@ export default function MediaSelector({
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    onUploadingChange?.(uploading);
+  }, [uploading, onUploadingChange]);
+
+  useEffect(() => {
+    return () => onUploadingChange?.(false);
+  }, [onUploadingChange]);
 
   // Sync externalUrl when value prop changes externally
   useEffect(() => {
@@ -172,36 +187,29 @@ export default function MediaSelector({
           upsert: true,
         });
 
-      if (!error && data) {
-        const { data: pubData } = supabase.storage.from("products").getPublicUrl(filePath);
-        if (pubData?.publicUrl) {
-          onChange(pubData.publicUrl);
-          setUploading(false);
-          return;
-        }
+      if (error || !data) {
+        toast.error("No se pudo subir la foto", {
+          description: error?.message || "El almacén no aceptó el archivo.",
+        });
+        return;
       }
 
-      // Fallback to FileReader if storage upload failed
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) {
-          onChange(reader.result as string);
-        }
-        setUploading(false);
-      };
-      reader.onerror = () => setUploading(false);
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.warn("Upload fallback note:", err);
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) {
-          onChange(reader.result as string);
-        }
-        setUploading(false);
-      };
-      reader.onerror = () => setUploading(false);
-      reader.readAsDataURL(file);
+      const { data: pubData } = supabase.storage.from("products").getPublicUrl(filePath);
+      if (!pubData?.publicUrl) {
+        toast.error("No se pudo subir la foto", {
+          description: "No hubo un enlace público para el archivo.",
+        });
+        return;
+      }
+
+      onChangeRef.current(pubData.publicUrl);
+    } catch (err: any) {
+      toast.error("No se pudo subir la foto", {
+        description: err?.message || "Error de red al subir la imagen.",
+      });
+    } finally {
+      setUploading(false);
+      setIsDragging(false);
     }
   }
 
@@ -251,6 +259,95 @@ export default function MediaSelector({
     setExternalUrl("");
     setImageError(false);
     onChange("");
+  }
+
+  if (compact) {
+    return (
+      <div className={className}>
+        {label ? <p className="mb-1.5 text-xs text-[var(--admin-muted)]">{label}</p> : null}
+        <div
+          className={`relative flex min-h-[120px] flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed ${
+            isDragging
+              ? "border-[var(--admin-accent)] bg-[var(--admin-accent-soft)]"
+              : "border-[var(--admin-line)] bg-[var(--admin-input)]"
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {value && !imageError && !is3DModel && !isVideo ? (
+            <img src={value} alt="" className="absolute inset-0 h-full w-full object-contain p-2" />
+          ) : (
+            <div className="pointer-events-none px-3 text-center">
+              <UploadCloud className="mx-auto mb-1 h-6 w-6 text-[var(--admin-accent)]" />
+              <p className="text-[11px] font-medium text-[var(--admin-ink)]">Suelta la foto o haz clic</p>
+            </div>
+          )}
+          {uploading ? (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70">
+              <Loader2 className="h-6 w-6 animate-spin text-[#C7940A]" />
+            </div>
+          ) : null}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={acceptAttr}
+            onChange={handleFileInputChange}
+            disabled={uploading}
+            aria-label={label || "Subir foto del producto"}
+            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+          />
+          {value ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleClear();
+              }}
+              className="absolute right-1.5 top-1.5 z-30 rounded-md bg-black/70 p-1 text-zinc-300 hover:text-white"
+              aria-label="Quitar foto"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
+        <label className="mb-1 mt-3 block text-sm text-[var(--admin-muted)]">Enlace de la foto</label>
+        <input
+          type="url"
+          value={externalUrl}
+          onChange={(e) => handleExternalChange(e.target.value)}
+          placeholder="https://…/foto.jpg"
+          className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] focus:border-[var(--admin-accent)] focus:outline-none"
+        />
+        <div className="mt-3 space-y-2">
+          <label className="block text-sm text-[var(--admin-muted)]">Fotos del catálogo</label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nombre"
+            className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] focus:border-[var(--admin-accent)] focus:outline-none"
+          />
+          <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
+            {filteredItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectInternal(item)}
+                className={`overflow-hidden rounded-lg border text-left ${
+                  value === item.path ? "border-[var(--admin-accent)] ring-1 ring-[var(--admin-accent)]" : "border-[var(--admin-line)]"
+                }`}
+              >
+                <img src={encodeURI(item.previewUrl || item.path)} alt={item.name} className="h-16 w-full bg-[var(--admin-subtle)] object-contain" />
+                <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--admin-ink)]">{item.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -444,7 +541,7 @@ export default function MediaSelector({
             }
           }}
         >
-          <label
+          <div
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -487,17 +584,18 @@ export default function MediaSelector({
                 <span className="text-[10px] text-amber-400/80 mt-1 font-medium">
                   Se sube directamente a Supabase Storage y genera una URL permanente
                 </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={acceptAttr}
-                  onChange={handleFileInputChange}
-                  disabled={uploading}
-                  className="hidden"
-                />
               </>
             )}
-          </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={acceptAttr}
+              onChange={handleFileInputChange}
+              disabled={uploading}
+              aria-label={label || "Subir archivo"}
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+            />
+          </div>
         </div>
       )}
 

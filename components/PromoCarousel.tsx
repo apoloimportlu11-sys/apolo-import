@@ -263,7 +263,7 @@ export function PromoCarousel({
       aria-label="Carrusel de Ofertas y Novedades"
     >
       {/* Slides Container */}
-      <div className="relative w-full h-[var(--h-hero-slide)]">
+      <div className="relative w-full h-[clamp(300px,calc(100svh-var(--site-header-height,12rem)-2.75rem),780px)]">
         {activeSlides.map((slide, index) => {
           const isActive = index === currentIndex;
 
@@ -311,13 +311,13 @@ export function PromoCarousel({
                 )}
 
                 {/* Multilayer Gradient Overlays - balanced so mobile reveals the full banner graphics without hiding letters */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent sm:from-black/55 sm:via-black/35 sm:to-black/10 dark:from-black/55 dark:via-black/30 dark:to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/10 sm:from-black/80 sm:via-black/50 sm:to-black/15" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent sm:from-black/45 sm:via-black/15 sm:to-black/25" />
               </div>
 
               {/* Slide Content */}
               <div className="container mx-auto px-4 sm:px-6 lg:px-12 h-full relative z-20 flex items-center">
-                <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl text-white pb-5 sm:pb-0">
+                <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl text-white pb-5 sm:pb-0 md:pl-14">
                   {/* Badge & Tag Bar */}
                   <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1 sm:mb-4">
                     {slide.tag && (
@@ -336,12 +336,10 @@ export function PromoCarousel({
                   </div>
 
                   {/* Title */}
-                  <h2 className="text-[length:var(--fs-hero-title)] font-black uppercase tracking-tight leading-[1.1] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                  <h2 className="text-[length:var(--fs-hero-title)] font-black uppercase tracking-tight leading-[1.1] text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.95),0_1px_3px_#000]">
                     <span>{slide.title}</span>{" "}
                     {slide.titleHighlight && (
-                      <span
-                        className={`block mt-0.5 sm:mt-1 bg-gradient-to-r ${slide.accentColor || "from-red-600 via-red-500 to-amber-500"} bg-clip-text text-transparent drop-shadow-[0_2px_15px_rgba(239,68,68,0.6)]`}
-                      >
+                      <span className="mt-0.5 block text-amber-50 [text-shadow:0_2px_18px_rgba(0,0,0,0.95),0_1px_3px_#000] sm:mt-1">
                         {slide.titleHighlight}
                       </span>
                     )}

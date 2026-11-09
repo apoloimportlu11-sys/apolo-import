@@ -31,3 +31,11 @@
 - **Alternatives**: Solo README
 - **Trade-offs**: Hay que mantener docs al día
 - **Files affected**: `AGENTS.md`, `docs/*`, `.cursor/**`
+
+## [DEC-005] Sync 2026-11-09 por fast-forward
+- **Date**: 2026-11-09
+- **Choice**: `git pull --ff-only` de `0634990` a `4368cc6`. No se reintrodujo Nodemailer.
+- **Reason**: local iba 0 adelante / 2 atrás; el remoto ya reemplazó Gmail por Resend
+- **Alternatives**: merge con memoria local sin trackear, o restaurar SMTP
+- **Trade-offs**: el formulario de contacto local falla hasta configurar `RESEND_API_KEY`
+- **Files affected**: árbol completo del pull; `.env.local` no se tocó

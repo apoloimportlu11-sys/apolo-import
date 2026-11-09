@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,6 +19,7 @@ import {
   CheckCircle2,
   User,
   MapPin,
+  Phone,
 } from "lucide-react";
 import { useQuote } from "@/lib/quote-context";
 
@@ -37,15 +39,45 @@ export default function QuoteDrawer() {
 
   const [clientName, setClientName] = useState("");
   const [city, setCity] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("apolo_quote_contact");
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { clientName?: string; city?: string; phone?: string };
+      if (saved.clientName) setClientName(saved.clientName);
+      if (saved.city) setCity(saved.city);
+      if (saved.phone) setPhone(saved.phone);
+    } catch {
+      /* contacto anterior ilegible */
+    }
+  }, []);
 
   if (!isDrawerOpen) return null;
 
   const handleWhatsAppSend = async () => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 9) {
+      setPhoneError("Ingresa un celular de al menos 9 dígitos para poder contactarte.");
+      return;
+    }
+    setPhoneError("");
     setSending(true);
     try {
-      const saved = await submitQuote(clientName, city);
-      const url = generateWhatsAppUrl(clientName, city, saved?.code);
+      const saved = await submitQuote(clientName, city, phone.trim());
+      if (!saved?.code) {
+        toast.error("No se pudo registrar la cotización. Revisa el celular e inténtalo de nuevo.");
+        return;
+      }
+      try {
+        localStorage.setItem("apolo_quote_contact", JSON.stringify({ clientName, city, phone: phone.trim() }));
+      } catch {
+        /* el navegador puede bloquear el almacenamiento */
+      }
+      const url = generateWhatsAppUrl(clientName, city, saved.code, phone.trim());
       window.open(url, "_blank", "noopener,noreferrer");
     } finally {
       setSending(false);
@@ -249,8 +281,35 @@ export default function QuoteDrawer() {
               <div className="space-y-2.5 bg-card border border-border/80 rounded-xl p-3 shadow-xs">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-primary" />
-                  Datos para tu cotización (Opcional)
+                  Datos para contactarte
                 </p>
+                <div className="relative">
+                  <Phone className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      if (phoneError) setPhoneError("");
+                    }}
+                    placeholder="Celular (obligatorio)"
+                    aria-invalid={Boolean(phoneError)}
+                    aria-describedby={phoneError ? "quote-phone-error" : undefined}
+                    className={`w-full pl-8 pr-2.5 py-2 text-xs rounded-lg border bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                      phoneError ? "border-red-500 focus:border-red-500" : "border-border focus:border-primary"
+                    }`}
+                  />
+                </div>
+                {phoneError ? (
+                  <p id="quote-phone-error" className="text-[11px] font-medium text-red-500">
+                    {phoneError}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Lo usamos para llamarte o escribirte por WhatsApp.</p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="relative">
                     <User className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -259,6 +318,7 @@ export default function QuoteDrawer() {
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Tu nombre / Empresa"
+                      autoComplete="name"
                       className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg border border-border bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
@@ -269,6 +329,7 @@ export default function QuoteDrawer() {
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Ciudad / Destino"
+                      autoComplete="address-level2"
                       className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg border border-border bg-muted/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>

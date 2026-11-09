@@ -45,6 +45,7 @@ type RecentQuote = {
   id: string;
   code: string;
   client_name: string | null;
+  phone: string | null;
   status: string;
   total_items: number;
   created_at: string;
@@ -205,7 +206,7 @@ export default function AdminDashboardPage() {
           fetchLowStockProducts(supabase).catch(() => [] as InventoryProduct[]),
           supabase
             .from("quotes")
-            .select("id,code,client_name,status,total_items,created_at")
+            .select("id,code,client_name,phone,status,total_items,created_at")
             .order("created_at", { ascending: false })
             .limit(6),
         ]);
@@ -555,7 +556,10 @@ export default function AdminDashboardPage() {
                     <p className="text-sm font-semibold text-white truncate">
                       {q.client_name || "Cliente web"}
                     </p>
-                    <p className="text-[11px] text-zinc-500 font-mono truncate">{q.code}</p>
+                    <p className="text-[11px] text-zinc-500 font-mono truncate">
+                      {q.code}
+                      {q.phone ? ` · ${q.phone}` : ""}
+                    </p>
                   </div>
                   <div className="text-right shrink-0 space-y-0.5">
                     <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold text-zinc-300">

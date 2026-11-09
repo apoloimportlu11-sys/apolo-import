@@ -23,6 +23,7 @@ Monolito Next.js: UI pública + `/admin`; datos/auth en Supabase; side effects e
 
 ## Integrations
 - Supabase Auth/DB/Storage; Resend; OpenAI; Vercel Analytics; Google OAuth (vía Supabase)
+- Entorno local (`.env.local`): Supabase + OpenAI presentes. Contacto exige `RESEND_API_KEY` (aún no configurada). `GMAIL_*` quedó sin uso.
 
 ## Dependencies
 - Runtime: next, react, supabase, zod, resend, radix/shadcn, recharts, dnd-kit

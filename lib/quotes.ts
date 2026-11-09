@@ -66,7 +66,7 @@ export async function persistQuote(
       client_name: input.clientName || null,
       city: input.city || null,
       phone: input.phone || null,
-      status: input.status || "enviada",
+      status: input.status || "nueva",
       channel: "whatsapp",
       items: input.items,
       total_items,

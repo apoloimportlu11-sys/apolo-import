@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, Fragment } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, Fragment } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
 import {
@@ -104,6 +104,85 @@ const CATEGORY_DEFAULT_LINE_GROUP: Record<string, string> = {
   otros: "general-otros",
 };
 
+const PRESENTATION_PRESETS = [
+  "4 oz",
+  "8 oz",
+  "12 oz",
+  "280 ml",
+  "440 ml",
+  "1/4 gal",
+  "1 gal",
+  "1 L",
+  "5 L",
+  "Pote",
+  "Balde",
+  "Tambor",
+  "Caja",
+];
+
+const VISCOSITY_PRESETS = ["5W-30", "10W-30", "10W-40", "15W-40", "20W-50", "25W-60", "75W-90", "80W-90", "85W-140", "ISO 68"];
+
+function detectViscosity(text: string): string {
+  const sae = text.match(/\b(\d{1,2})\s*w\s*-?\s*(\d{2})\b/i);
+  if (sae) return `${sae[1]}W-${sae[2]}`;
+  const iso = text.match(/\biso\s*-?\s*(\d{2,3})\b/i);
+  if (iso) return `ISO ${iso[1]}`;
+  return "";
+}
+
+function detectPresentation(text: string): string {
+  const t = text.toLowerCase();
+  if (/1\s*\/\s*4|cuarto de gal/.test(t)) return "1/4 gal";
+  if (/\bbalde\b/.test(t)) return "Balde";
+  if (/\btambor\b/.test(t)) return "Tambor";
+  const oz = t.match(/\b(\d+)\s*oz\b/);
+  if (oz) return `${oz[1]} oz`;
+  if (/\b1\s*gal\b|gal[oó]n\b/.test(t)) return "1 gal";
+  const liters = t.match(/\b(\d+(?:[.,]\d+)?)\s*(?:l|lt|litros?)\b/);
+  if (liters) return `${liters[1].replace(",", ".")} L`;
+  return "";
+}
+
+function suggestLineFromText(text: string): string {
+  const t = text.toLowerCase();
+  if (/grasa/.test(t)) return "GRASAS";
+  if (/freno/.test(t)) return "FRENOS";
+  if (/filtro/.test(t)) return "FILTROS";
+  if (/refriger|coolant|anticongel/.test(t)) return "REFRIGERANTES";
+  if (/hidr[aá]ul/.test(t)) return "HIDRÁULICOS";
+  if (/diesel|petrol/.test(t)) return "DIESEL";
+  if (/\bmotos?\b|motocicleta|\b2t\b|\b4t\b/.test(t)) return "MOTOS";
+  if (/transmisi[oó]n|engranaje|valvulina/.test(t)) return "TRANSMISIÓN";
+  if (/aceite|lubric|sint[eé]tic/.test(t)) return "GASOLINERO";
+  return "";
+}
+
+function suggestCategory(text: string): string {
+  const t = text.toLowerCase();
+  if (/\bmotos?\b|motocicleta|\b2t\b|\b4t\b/.test(t)) return "motocicleta";
+  if (/diesel|cami[oó]n|petrolero|autob[uú]s/.test(t)) return "camiones";
+  if (/grasa|compresor|hidr[aá]ul|industrial/.test(t)) return "industrial";
+  if (/pesado|flota/.test(t)) return "vehiculo-pesado";
+  return "";
+}
+
+function explainProductSaveError(message?: string) {
+  const msg = message || "";
+  if (/duplicate key|already exists|23505/i.test(msg)) {
+    return "Ya existe un producto con esa ruta. Cambia el nombre o la presentación.";
+  }
+  if (/row-level security|permission denied|42501/i.test(msg)) {
+    return "Esta sesión no puede crear productos. Vuelve a entrar al panel.";
+  }
+  if (/invalid input syntax for type uuid/i.test(msg)) {
+    return "La base rechazó el identificador del producto. Falta aplicar la migración de productos.";
+  }
+  if (/schema cache|column .* does not exist/i.test(msg)) {
+    return `La base no tiene una columna que el formulario envía. ${msg}`;
+  }
+  return msg || "La base no confirmó el producto.";
+}
+
 const KNOWN_BRANDS = [
   "Apolo",
   "Overts",
@@ -125,7 +204,49 @@ const KNOWN_BRANDS = [
   "Yamalube",
 ];
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 40, 80] as const;
+
+type CatalogBlock = {
+  brand: string;
+  brandTotal: number;
+  lineName: string;
+  products: ProductItem[];
+};
+
+function packCatalogPages(
+  groups: { brand: string; totalProducts: number; lines: { lineName: string; products: ProductItem[] }[] }[],
+  pageSize: number
+) {
+  const pages: CatalogBlock[][] = [];
+  let current: CatalogBlock[] = [];
+  let count = 0;
+  for (const brandGroup of groups) {
+    for (const line of brandGroup.lines) {
+      const block: CatalogBlock = {
+        brand: brandGroup.brand,
+        brandTotal: brandGroup.totalProducts,
+        lineName: line.lineName,
+        products: line.products,
+      };
+      if (current.length > 0 && count + block.products.length > pageSize) {
+        pages.push(current);
+        current = [];
+        count = 0;
+      }
+      current.push(block);
+      count += block.products.length;
+    }
+  }
+  if (current.length) pages.push(current);
+  return pages;
+}
+
+function pageWindow(current: number, total: number) {
+  const wanted = [1, total, current - 2, current - 1, current, current + 1, current + 2].filter(
+    (page) => page >= 1 && page <= total
+  );
+  return [...new Set(wanted)].sort((a, b) => a - b);
+}
 const STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 const RESTORE_POINT_KEY = "apolo_admin_products_restore_point";
@@ -192,6 +313,7 @@ function SortableProductRow({
 
   return (
     <tr
+      id={`producto-${prod.id}`}
       ref={setNodeRef}
       style={style}
       className={`transition-colors duration-500 hover:bg-white/[0.03] ${
@@ -445,8 +567,14 @@ export default function ProductosPage() {
   const [onlyFeaturedFilter, setOnlyFeaturedFilter] = useState(false);
   const [onlyPlaceholderFilter, setOnlyPlaceholderFilter] = useState(false);
   const [onlyLowStock, setOnlyLowStock] = useState(false);
+  const [presentationFilter, setPresentationFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(20);
   const [focusId, setFocusId] = useState<string | null>(null);
+  const catalogTopRef = useRef<HTMLDivElement>(null);
+  const skipPageScroll = useRef(true);
+  const scrollRow = useRef<string | null>(null);
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
 
   // Restore Point State
@@ -478,8 +606,12 @@ export default function ProductosPage() {
     });
     return list;
   });
-  const [isCustomBrandInput, setIsCustomBrandInput] = useState(false);
   const [isCustomSubcategoryInput, setIsCustomSubcategoryInput] = useState(false);
+  const [brandIsCustom, setBrandIsCustom] = useState(false);
+  const [categoryTouched, setCategoryTouched] = useState(false);
+  const [isNewPresentation, setIsNewPresentation] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const detectedRef = useRef({ viscosity: "", presentation: "", line: "" });
 
   // Create / Edit Product Modal State
   const [showModal, setShowModal] = useState(false);
@@ -993,6 +1125,11 @@ export default function ProductosPage() {
         const matchesPlaceholder =
           !onlyPlaceholderFilter || Boolean(p.image_is_placeholder);
         const matchesLowStock = !onlyLowStock || (p.is_active !== false && isLowStock(p));
+        const matchesPresentation =
+          presentationFilter === "all" || (p.presentation || "").trim() === presentationFilter;
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" ? p.is_active !== false : p.is_active === false);
 
         return (
           matchesSearch &&
@@ -1000,7 +1137,9 @@ export default function ProductosPage() {
           matchesBrand &&
           matchesFeatured &&
           matchesPlaceholder &&
-          matchesLowStock
+          matchesLowStock &&
+          matchesPresentation &&
+          matchesStatus
         );
       })
       .sort((a, b) => {
@@ -1021,6 +1160,8 @@ export default function ProductosPage() {
     onlyFeaturedFilter,
     onlyPlaceholderFilter,
     onlyLowStock,
+    presentationFilter,
+    statusFilter,
   ]);
 
   // Agrupación para la tabla: Marca -> Línea de producto (misma heurística que el
@@ -1056,10 +1197,35 @@ export default function ProductosPage() {
     return rows;
   }, [groupedForTable]);
 
-  const pageCount = Math.max(1, Math.ceil(orderedRows.length / PAGE_SIZE));
+  const presentationOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const product of products) {
+      const value = (product.presentation || "").trim();
+      if (value) values.add(value);
+    }
+    return [...values].sort((a, b) => a.localeCompare(b, "es"));
+  }, [products]);
+
+  const catalogPages = useMemo(() => packCatalogPages(groupedForTable, pageSize), [groupedForTable, pageSize]);
+  const pageCount = Math.max(1, catalogPages.length);
   const safePage = Math.min(page, pageCount);
-  const pageStart = (safePage - 1) * PAGE_SIZE;
-  const visibleIds = new Set(orderedRows.slice(pageStart, pageStart + PAGE_SIZE).map((product) => product.id));
+  const pageBlocks = catalogPages[safePage - 1] || [];
+  const shownBefore = catalogPages
+    .slice(0, safePage - 1)
+    .reduce((sum, blocks) => sum + blocks.reduce((inner, block) => inner + block.products.length, 0), 0);
+  const pageTotal = pageBlocks.reduce((sum, block) => sum + block.products.length, 0);
+  const pageFrom = pageTotal === 0 ? 0 : shownBefore + 1;
+  const pageTo = shownBefore + pageTotal;
+  const pageSections: { brand: string; brandTotal: number; onPage: number; lines: CatalogBlock[] }[] = [];
+  for (const block of pageBlocks) {
+    const last = pageSections[pageSections.length - 1];
+    if (last && last.brand === block.brand) {
+      last.lines.push(block);
+      last.onPage += block.products.length;
+    } else {
+      pageSections.push({ brand: block.brand, brandTotal: block.brandTotal, onPage: block.products.length, lines: [block] });
+    }
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1070,17 +1236,40 @@ export default function ProductosPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, selectedBrandFilter, selectedCategoryFilter, onlyFeaturedFilter, onlyPlaceholderFilter, onlyLowStock]);
+  }, [searchQuery, selectedBrandFilter, selectedCategoryFilter, onlyFeaturedFilter, onlyPlaceholderFilter, onlyLowStock, presentationFilter, statusFilter, pageSize]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    if (skipPageScroll.current) {
+      skipPageScroll.current = false;
+      return;
+    }
+    const rowId = scrollRow.current;
+    if (rowId) {
+      scrollRow.current = null;
+      window.setTimeout(() => {
+        document.getElementById(`producto-${rowId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
+      return;
+    }
+    catalogTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [page]);
 
   useEffect(() => {
     if (!focusId || loading) return;
-    const index = orderedRows.findIndex((product) => product.id === focusId);
-    if (index >= 0) {
-      setPage(Math.floor(index / PAGE_SIZE) + 1);
+    const pageIndex = catalogPages.findIndex((blocks) =>
+      blocks.some((block) => block.products.some((product) => product.id === focusId))
+    );
+    if (pageIndex >= 0) {
+      scrollRow.current = focusId;
+      setPage(pageIndex + 1);
       setRecentlyUpdatedId(focusId);
     }
     setFocusId(null);
-  }, [focusId, orderedRows, loading]);
+  }, [focusId, catalogPages, loading]);
 
   function setLowStockView(next: boolean) {
     setOnlyLowStock(next);
@@ -1095,9 +1284,49 @@ export default function ProductosPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  function closeProductModal() {
+    setShowModal(false);
+    setImageUploading(false);
+  }
+
+  function updateProductName(name: string) {
+    setCurrentProduct((prev) => {
+      const next: Partial<ProductItem> = { ...prev, name };
+      const viscosity = detectViscosity(name);
+      if (!prev.viscosity || prev.viscosity === detectedRef.current.viscosity) {
+        next.viscosity = viscosity;
+        detectedRef.current.viscosity = viscosity;
+      }
+      const line = suggestLineFromText(name);
+      if (!prev.short_description || prev.short_description === detectedRef.current.line) {
+        next.short_description = line;
+        detectedRef.current.line = line;
+      }
+      const presentation = detectPresentation(name);
+      if (!prev.presentation || prev.presentation === detectedRef.current.presentation) {
+        next.presentation = presentation;
+        detectedRef.current.presentation = presentation;
+      }
+      if (!categoryTouched) {
+        const category = suggestCategory(name);
+        if (category && category !== prev.category_id) {
+          next.category_id = category;
+          next.line_group_id = CATEGORY_DEFAULT_LINE_GROUP[category] || null;
+          next.subcategory_id = "";
+          next.subcategory = "";
+        }
+      }
+      return next;
+    });
+  }
+
   function openCreateModal() {
     setIsEditing(false);
-    setIsCustomBrandInput(false);
+    setIsNewPresentation(false);
+    setBrandIsCustom(false);
+    setCategoryTouched(false);
+    setImageUploading(false);
+    detectedRef.current = { viscosity: "", presentation: "", line: "" };
     setIsCustomSubcategoryInput(false);
     setCurrentProduct({
       name: "",
@@ -1122,7 +1351,13 @@ export default function ProductosPage() {
 
   function openEditModal(prod: ProductItem) {
     setIsEditing(true);
-    setIsCustomBrandInput(false);
+    setIsNewPresentation(false);
+    setCategoryTouched(true);
+    setImageUploading(false);
+    detectedRef.current = { viscosity: "", presentation: "", line: "" };
+    setBrandIsCustom(
+      Boolean(prod.brand) && !availableBrands.some((brand) => brand.toLowerCase() === prod.brand!.toLowerCase())
+    );
     const currentSubcat = prod.subcategory || "";
     const currentSubcatId = prod.subcategory_id || prod.subcategoryId || "";
     const currentCatId = prod.category_id || "automovil";
@@ -1146,7 +1381,13 @@ export default function ProductosPage() {
 
   function openDuplicateModal(prod: ProductItem) {
     setIsEditing(false);
-    setIsCustomBrandInput(false);
+    setIsNewPresentation(true);
+    setBrandIsCustom(
+      Boolean(prod.brand) && !availableBrands.some((brand) => brand.toLowerCase() === prod.brand!.toLowerCase())
+    );
+    setCategoryTouched(true);
+    setImageUploading(false);
+    detectedRef.current = { viscosity: "", presentation: "", line: "" };
     setIsCustomSubcategoryInput(false);
     setCurrentProduct({
       name: prod.name,
@@ -1160,13 +1401,15 @@ export default function ProductosPage() {
       subcategory: prod.subcategory || "",
       description: prod.description || "",
       stock: 15,
+      stock_min: prod.stock_min ?? 0,
       is_featured: false,
       is_active: true,
       category_id: prod.category_id || "automovil",
+      line_group_id: prod.line_group_id || null,
       image_url: prod.image_url || "",
     });
     setShowModal(true);
-    toast.info(`Nueva presentación de "${prod.name}". Ingresa la cantidad/presentación.`);
+    toast.info(`Otra presentación de "${prod.name}". Indica la cantidad.`);
   }
 
   // Quick Image Modal handler
@@ -1233,6 +1476,21 @@ export default function ProductosPage() {
     e.preventDefault();
     setSaving(true);
 
+    if (imageUploading) {
+      toast.error("La foto todavía se está subiendo");
+      setSaving(false);
+      return;
+    }
+
+    const pendingImage = currentProduct.image_url?.trim() || "";
+    if (pendingImage.startsWith("data:")) {
+      toast.error("La foto no se guardó en la nube", {
+        description: "Quítala y súbela de nuevo. Una imagen local no se puede publicar.",
+      });
+      setSaving(false);
+      return;
+    }
+
     const rawName = currentProduct.name?.trim() || "Sin nombre";
     const rawPresentation = currentProduct.presentation?.trim() || null;
 
@@ -1297,8 +1555,8 @@ export default function ProductosPage() {
 
     const validated = parseProductUpsert(payloadRaw);
     if (!validated.success) {
-      toast.error("Datos de producto inválidos", {
-        description: validated.error.issues[0]?.message || "Revisa el formulario",
+      toast.error("Revisa el formulario", {
+        description: validated.error.issues[0]?.message || "Hay un dato que no se puede guardar.",
       });
       setSaving(false);
       return;
@@ -1342,7 +1600,7 @@ export default function ProductosPage() {
         if (error || !data) {
           toast.error("No se guardó el producto", {
             id: toastId,
-            description: error?.message || "La base no confirmó el producto nuevo.",
+            description: explainProductSaveError(error?.message),
           });
           setSaving(false);
           return;
@@ -1352,7 +1610,7 @@ export default function ProductosPage() {
     } catch (err: any) {
       toast.error("No se guardó el producto", {
         id: toastId,
-        description: err?.message || "No se pudo escribir el stock.",
+        description: explainProductSaveError(err?.message),
       });
       setSaving(false);
       return;
@@ -1385,7 +1643,7 @@ export default function ProductosPage() {
       duration: 3500,
     });
 
-    setShowModal(false);
+    closeProductModal();
     setSaving(false);
   }
 
@@ -1977,6 +2235,19 @@ export default function ProductosPage() {
     }
   }
 
+  const detectedProductBits = [currentProduct.viscosity, currentProduct.short_description].filter(Boolean).join(" · ");
+  const sameNameCount = currentProduct.name?.trim()
+    ? products.filter((p) => normalize(p.name) === normalize(currentProduct.name) && p.id !== currentProduct.id).length
+    : 0;
+  const productFieldClass =
+    "w-full rounded-xl border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] placeholder:text-[var(--admin-faint)] focus:border-[var(--admin-accent)] focus:outline-none";
+  const choiceClass = (active: boolean) =>
+    `rounded-lg border px-2.5 py-1.5 text-xs ${
+      active
+        ? "border-[var(--admin-accent)] bg-[var(--admin-accent)] text-white"
+        : "border-[var(--admin-line)] bg-[var(--admin-input)] text-[var(--admin-ink)] hover:border-[var(--admin-accent)]"
+    }`;
+
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Header */}
@@ -2122,7 +2393,7 @@ export default function ProductosPage() {
           <span suppressHydrationWarning className="text-[11px] text-zinc-500 lowercase">
             {orderedRows.length === 0
               ? "0 productos"
-              : `Página ${safePage} de ${pageCount} · ${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, orderedRows.length)} de ${orderedRows.length}`}
+              : `${pageFrom}–${pageTo} de ${orderedRows.length}`}
           </span>
         </div>
 
@@ -2224,6 +2495,7 @@ export default function ProductosPage() {
           <select
             value={selectedCategoryFilter}
             onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+            aria-label="Filtrar por categoría"
             className="rounded-xl border border-white/10 bg-[#141414] px-3.5 py-2.5 text-xs text-white focus:border-[#C7940A] focus:outline-none"
           >
             <option value="all">Todas las Categorías</option>
@@ -2232,6 +2504,29 @@ export default function ProductosPage() {
                 {cat.name}
               </option>
             ))}
+          </select>
+          <select
+            value={presentationFilter}
+            onChange={(e) => setPresentationFilter(e.target.value)}
+            aria-label="Filtrar por presentación"
+            className="max-w-[220px] rounded-xl border border-white/10 bg-[#141414] px-3.5 py-2.5 text-xs text-white focus:border-[#C7940A] focus:outline-none"
+          >
+            <option value="all">Todas las presentaciones</option>
+            {presentationOptions.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "paused")}
+            aria-label="Filtrar por estado"
+            className="rounded-xl border border-white/10 bg-[#141414] px-3.5 py-2.5 text-xs text-white focus:border-[#C7940A] focus:outline-none"
+          >
+            <option value="all">Activos y pausados</option>
+            <option value="active">Solo activos</option>
+            <option value="paused">Solo pausados</option>
           </select>
           <button
             type="button"
@@ -2270,7 +2565,7 @@ export default function ProductosPage() {
           <p className="text-lg font-bold text-white">
             {onlyLowStock
               ? "Ningún producto está bajo el mínimo."
-              : searchQuery || selectedBrandFilter !== "all"
+              : searchQuery || selectedBrandFilter !== "all" || selectedCategoryFilter !== "all" || presentationFilter !== "all" || statusFilter !== "all" || onlyFeaturedFilter || onlyPlaceholderFilter
                 ? "Ningún producto coincide con la búsqueda."
                 : "No hay productos en el catálogo."}
           </p>
@@ -2286,6 +2581,8 @@ export default function ProductosPage() {
               setSelectedCategoryFilter("all");
               setOnlyFeaturedFilter(false);
               setOnlyPlaceholderFilter(false);
+              setPresentationFilter("all");
+              setStatusFilter("all");
               setLowStockView(false);
             }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-white border border-white/10 cursor-pointer"
@@ -2295,6 +2592,17 @@ export default function ProductosPage() {
           </button>
         </div>
       ) : (
+        <div ref={catalogTopRef} className="space-y-3">
+        <CatalogPager
+          page={safePage}
+          pageCount={pageCount}
+          from={pageFrom}
+          to={pageTo}
+          total={orderedRows.length}
+          pageSize={pageSize}
+          onPage={setPage}
+          onPageSize={setPageSize}
+        />
         <div className="rounded-2xl border border-white/10 bg-[#141414] overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -2311,25 +2619,18 @@ export default function ProductosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-zinc-300">
-                {groupedForTable.map((brandGroup) => {
-                  const visibleLines = brandGroup.lines
-                    .map((lineGroup) => ({
-                      ...lineGroup,
-                      visible: lineGroup.products.filter((product) => visibleIds.has(product.id)),
-                    }))
-                    .filter((lineGroup) => lineGroup.visible.length > 0);
-                  if (visibleLines.length === 0) return null;
-                  return (
+                {pageSections.map((brandGroup) => (
                   <Fragment key={brandGroup.brand}>
                     <tr className="bg-white/[0.04]">
                       <td colSpan={8} className="px-5 py-2.5 text-xs font-semibold text-[#C7940A]">
                         {brandGroup.brand}{" "}
                         <span className="font-normal text-zinc-500">
-                          ({brandGroup.totalProducts} {brandGroup.totalProducts === 1 ? "producto" : "productos"})
+                          ({brandGroup.onPage} en esta página
+                          {brandGroup.brandTotal !== brandGroup.onPage ? ` · ${brandGroup.brandTotal} en la marca` : ""})
                         </span>
                       </td>
                     </tr>
-                    {visibleLines.map((lineGroup) => (
+                    {brandGroup.lines.map((lineGroup) => (
                       <Fragment key={`${brandGroup.brand}-${lineGroup.lineName}`}>
                         <tr className="bg-white/[0.015]">
                           <td colSpan={8} className="py-2 pl-9 pr-5 text-[11px] font-medium text-zinc-400">
@@ -2348,10 +2649,10 @@ export default function ProductosPage() {
                           }}
                         >
                           <SortableContext
-                            items={lineGroup.visible.map((p) => p.id)}
+                            items={lineGroup.products.map((p) => p.id)}
                             strategy={verticalListSortingStrategy}
                           >
-                            {lineGroup.visible.map((prod) => (
+                            {lineGroup.products.map((prod) => (
                               <SortableProductRow
                                 key={`admin-prod-${prod.id}-${prod.slug || ""}`}
                                 prod={prod}
@@ -2371,33 +2672,28 @@ export default function ProductosPage() {
                       </Fragment>
                     ))}
                   </Fragment>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-
-      {!loading && orderedRows.length > 0 && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-zinc-400">20 productos por página. Arrastrar reordena dentro de la línea completa.</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => setPage(safePage - 1)} disabled={safePage <= 1} className="h-9 rounded-full border border-white/15 px-3 text-sm text-zinc-100 disabled:opacity-40">
-              Anterior
-            </button>
-            <span className="text-sm text-zinc-300">{safePage} / {pageCount}</span>
-            <button type="button" onClick={() => setPage(safePage + 1)} disabled={safePage >= pageCount} className="h-9 rounded-full border border-white/15 px-3 text-sm text-zinc-100 disabled:opacity-40">
-              Siguiente
-            </button>
-          </div>
+        <CatalogPager
+          page={safePage}
+          pageCount={pageCount}
+          from={pageFrom}
+          to={pageTo}
+          total={orderedRows.length}
+          pageSize={pageSize}
+          onPage={setPage}
+          onPageSize={setPageSize}
+        />
         </div>
       )}
 
       {/* MODAL: Opciones de Restauración del Catálogo */}
       {showRestoreModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#161616] p-6 space-y-5 shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[var(--admin-surface)] text-[var(--admin-ink)] p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
@@ -2503,7 +2799,7 @@ export default function ProductosPage() {
       {/* MODAL 1: Cambiar Imagen Directamente */}
       {imageModalProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#161616] p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[var(--admin-surface)] text-[var(--admin-ink)] p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-[#C7940A]/10 text-[#C7940A]">
@@ -2559,447 +2855,500 @@ export default function ProductosPage() {
         </div>
       )}
 
-      {/* MODAL 2: Crear / Editar Producto Completo */}
+      {/* MODAL 2: Crear / Editar Producto */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#161616] p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-[#C7940A]/10 text-[#C7940A]">
-                  <Package className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">
-                    {isEditing
-                      ? "Editar Producto"
-                      : currentProduct.name
-                      ? `Nueva Presentación: ${currentProduct.name}`
-                      : "Nuevo Producto"}
-                  </h3>
-                  {!isEditing && currentProduct.name && (
-                    <p className="text-xs text-amber-400/90 font-medium">
-                      Se agregará como un producto independiente en el catálogo con su propia presentación e imagen.
-                    </p>
-                  )}
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+          <div className="custom-scrollbar max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-5 text-[var(--admin-ink)] shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-[var(--admin-ink)]">
+                  {isEditing ? "Editar producto" : isNewPresentation ? "Otra presentación" : "Nuevo producto"}
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
+                  {isEditing
+                    ? "Los cambios se publican al guardar."
+                    : isNewPresentation
+                    ? "Misma ficha, otra cantidad y su propia foto."
+                    : "Nombre, marca y foto. La viscosidad y la línea se completan solas."}
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
-                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/5 cursor-pointer"
+                onClick={closeProductModal}
+                className="rounded-lg p-1 text-zinc-400 hover:bg-white/5 hover:text-white"
+                aria-label="Cerrar"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="space-y-4">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[11px] font-bold text-[#C7940A] uppercase tracking-widest whitespace-nowrap">
-                  Identificación
-                </span>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
+            <form onSubmit={handleSaveProduct} className="mt-4 space-y-4">
+              <div className="grid items-start gap-5 lg:grid-cols-[300px_1fr]">
+                <MediaSelector
+                  compact
+                  label="Foto"
+                  categoryFilter="products"
+                  value={currentProduct.image_url || ""}
+                  onUploadingChange={setImageUploading}
+                  onChange={(url) => setCurrentProduct((prev) => ({ ...prev, image_url: url }))}
+                />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                    Nombre del Producto
-                  </label>
-                  <input
-                    type="text"
-                    value={currentProduct.name || ""}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, name: e.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                    placeholder="Ej: Calcio Rojo, Sintético 5W-30"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                      Marca del Producto
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="product-name" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Nombre
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomBrandInput(!isCustomBrandInput)}
-                      className="text-[11px] text-[#C7940A] hover:underline cursor-pointer font-medium"
-                    >
-                      {isCustomBrandInput ? "← Elegir de la lista" : "+ Escribir otra marca"}
-                    </button>
-                  </div>
-
-                  {isCustomBrandInput ? (
                     <input
+                      id="product-name"
                       type="text"
-                      value={currentProduct.brand || ""}
-                      onChange={(e) => setCurrentProduct({ ...currentProduct, brand: e.target.value })}
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                      placeholder="Ej: 3BSI, Castrol, Mobil..."
+                      value={currentProduct.name || ""}
+                      onChange={(e) => updateProductName(e.target.value)}
+                      className={productFieldClass}
+                      placeholder="Calcio Rojo 15W-40"
+                      autoFocus={!isNewPresentation}
                       required
                     />
-                  ) : (
-                    <select
-                      value={currentProduct.brand || "Apolo"}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setIsCustomBrandInput(true);
-                          setCurrentProduct({ ...currentProduct, brand: "" });
-                        } else {
-                          setCurrentProduct({ ...currentProduct, brand: e.target.value });
-                        }
-                      }}
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                    >
-                      {availableBrands.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                      <option value="__custom__">+ Otra marca (escribir)...</option>
-                    </select>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-1">
-                <span className="text-[11px] font-bold text-[#C7940A] uppercase tracking-widest whitespace-nowrap">
-                  Clasificación en el Catálogo
-                </span>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                    Categoría
-                  </label>
-                  <select
-                    value={currentProduct.category_id || "automovil"}
-                    onChange={(e) => {
-                      const newCatId = e.target.value;
-                      setCurrentProduct({
-                        ...currentProduct,
-                        category_id: newCatId,
-                        subcategory_id: "",
-                        subcategory: "",
-                        // Sugiere una línea de catálogo acorde a la categoría, solo si aún no hay ninguna elegida
-                        line_group_id: currentProduct.line_group_id || CATEGORY_DEFAULT_LINE_GROUP[newCatId] || null,
-                      });
-                      setIsCustomSubcategoryInput(false);
-                    }}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                  >
-                    {CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                      Subcategoría / Texto Superior
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomSubcategoryInput(!isCustomSubcategoryInput)}
-                      className="text-[11px] text-[#C7940A] hover:underline cursor-pointer font-medium"
-                    >
-                      {isCustomSubcategoryInput ? "← Elegir de la lista" : "+ Escribir texto libre"}
-                    </button>
                   </div>
 
-                  {isCustomSubcategoryInput ? (
-                    <input
-                      type="text"
-                      value={currentProduct.subcategory || ""}
-                      onChange={(e) =>
-                        setCurrentProduct({
-                          ...currentProduct,
-                          subcategory: e.target.value,
-                          subcategory_id: e.target.value ? e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "",
-                        })
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                      placeholder="Ej: Aerosol, Cadena, etc. (o dejar vacío)"
-                    />
-                  ) : (
+                  <div>
+                    <label htmlFor="product-brand" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Marca
+                    </label>
                     <select
-                      value={
-                        currentProduct.subcategory_id ||
-                        (availableSubcategories.find(
-                          (s) => s.name.toLowerCase() === (currentProduct.subcategory || "").toLowerCase()
-                        )?.id ?? "")
-                      }
+                      id="product-brand"
+                      value={brandIsCustom ? "__custom__" : currentProduct.brand || "Apolo"}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "__custom__") {
-                          setIsCustomSubcategoryInput(true);
-                        } else if (val === "") {
-                          setCurrentProduct({
-                            ...currentProduct,
-                            subcategory_id: "",
-                            subcategory: "",
-                          });
+                        if (e.target.value === "__custom__") {
+                          setBrandIsCustom(true);
+                          setCurrentProduct((prev) => ({ ...prev, brand: "" }));
                         } else {
-                          const found = availableSubcategories.find((s) => s.id === val);
-                          setCurrentProduct({
-                            ...currentProduct,
-                            subcategory_id: val,
-                            subcategory: found ? found.name : val,
-                          });
+                          setBrandIsCustom(false);
+                          setCurrentProduct((prev) => ({ ...prev, brand: e.target.value }));
                         }
                       }}
-                      className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
+                      className={productFieldClass}
+                      required={!brandIsCustom}
                     >
-                      <option value="">-- Ninguno (dejar vacío / sin texto) --</option>
-                      {availableSubcategories.map((sub) => (
-                        <option key={sub.id} value={sub.id}>
-                          {sub.name}
+                      {availableBrands.map((brand) => (
+                        <option key={brand} value={brand}>
+                          {brand}
                         </option>
                       ))}
-                      <option value="__custom__">+ Otro texto personalizado (escribir)...</option>
+                      <option value="__custom__">Otra marca…</option>
                     </select>
-                  )}
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    Controla la palabra que aparece en la esquina superior derecha (ej. &ldquo;Aceites de motor&rdquo;). Si no deseas texto, elige &ldquo;Ninguno&rdquo;.
-                  </p>
+                    {brandIsCustom ? (
+                      <input
+                        type="text"
+                        value={currentProduct.brand || ""}
+                        onChange={(e) => setCurrentProduct((prev) => ({ ...prev, brand: e.target.value }))}
+                        className={`${productFieldClass} mt-2`}
+                        placeholder="Nombre de la marca nueva"
+                        autoComplete="off"
+                        required
+                      />
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <label htmlFor="product-presentation" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Presentación
+                    </label>
+                    <input
+                      id="product-presentation"
+                      type="text"
+                      value={currentProduct.presentation || ""}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, presentation: e.target.value }))}
+                      className={productFieldClass}
+                      placeholder="1 gal, balde, 4 oz"
+                      autoFocus={isNewPresentation}
+                    />
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {PRESENTATION_PRESETS.map((preset) => {
+                        const active = (currentProduct.presentation || "").toLowerCase() === preset.toLowerCase();
+                        return (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setCurrentProduct((prev) => ({ ...prev, presentation: preset }))}
+                            className={choiceClass(active)}
+                          >
+                            {preset}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[88px_1fr] gap-3">
+                    <div>
+                      <label htmlFor="product-stock" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                        Stock
+                      </label>
+                      <input
+                        id="product-stock"
+                        type="number"
+                        min="0"
+                        value={currentProduct.stock ?? 15}
+                        onChange={(e) =>
+                          setCurrentProduct((prev) => ({ ...prev, stock: parseInt(e.target.value, 10) || 0 }))
+                        }
+                        className={productFieldClass}
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-1 text-sm text-[var(--admin-muted)]">Categoría</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CATEGORY_OPTIONS.map((cat) => {
+                          const active = (currentProduct.category_id || "automovil") === cat.id;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                setCategoryTouched(true);
+                                setIsCustomSubcategoryInput(false);
+                                setCurrentProduct((prev) => ({
+                                  ...prev,
+                                  category_id: cat.id,
+                                  subcategory_id: "",
+                                  subcategory: "",
+                                  line_group_id: CATEGORY_DEFAULT_LINE_GROUP[cat.id] || null,
+                                }));
+                              }}
+                              className={choiceClass(active)}
+                            >
+                              {cat.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {detectedProductBits ? (
+                    <p className="text-[11px] text-zinc-400">
+                      Se completó: <span className="text-[#C7940A]">{detectedProductBits}</span>
+                    </p>
+                  ) : null}
+                  {!isEditing && !isNewPresentation && sameNameCount > 0 ? (
+                    <p className="text-[11px] text-zinc-400">
+                      Ya hay {sameNameCount} con este nombre. Esta queda como otra presentación.
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                    Línea del Producto
-                  </label>
-                  <input
-                    type="text"
-                    value={currentProduct.short_description || ""}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, short_description: e.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                    placeholder="Ej: FRENOS, GRASAS, GASOLINERO"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-3 border-t border-[var(--admin-line)] pt-4 sm:grid-cols-2">
+                <p className="sm:col-span-2 text-sm font-medium text-[var(--admin-ink)]">Dónde aparece en el catálogo</p>
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <label className="text-sm text-[var(--admin-muted)]">Texto superior</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomSubcategoryInput(!isCustomSubcategoryInput)}
+                        className="text-[11px] text-[#C7940A] hover:underline"
+                      >
+                        {isCustomSubcategoryInput ? "Elegir de la lista" : "Escribir otro"}
+                      </button>
+                    </div>
+                    {isCustomSubcategoryInput ? (
+                      <input
+                        type="text"
+                        value={currentProduct.subcategory || ""}
+                        onChange={(e) =>
+                          setCurrentProduct((prev) => ({
+                            ...prev,
+                            subcategory: e.target.value,
+                            subcategory_id: e.target.value
+                              ? e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+                              : "",
+                          }))
+                        }
+                        className={productFieldClass}
+                        placeholder="Vacío si no lleva texto"
+                      />
+                    ) : (
+                      <select
+                        value={
+                          currentProduct.subcategory_id ||
+                          (availableSubcategories.find(
+                            (s) => s.name.toLowerCase() === (currentProduct.subcategory || "").toLowerCase()
+                          )?.id ?? "")
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__custom__") {
+                            setIsCustomSubcategoryInput(true);
+                          } else if (val === "") {
+                            setCurrentProduct((prev) => ({ ...prev, subcategory_id: "", subcategory: "" }));
+                          } else {
+                            const found = availableSubcategories.find((s) => s.id === val);
+                            setCurrentProduct((prev) => ({
+                              ...prev,
+                              subcategory_id: val,
+                              subcategory: found ? found.name : val,
+                            }));
+                          }
+                        }}
+                        className={productFieldClass}
+                      >
+                        <option value="">Sin texto</option>
+                        {availableSubcategories.map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </option>
+                        ))}
+                        <option value="__custom__">Otro texto…</option>
+                      </select>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                    <span>Línea de Catálogo (agrupación)</span>
-                    <span className="text-[10px] text-[#C7940A] font-medium normal-case">(Separador en tabla)</span>
-                  </label>
-                  <select
-                    value={currentProduct.line_group_id || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({ ...currentProduct, line_group_id: e.target.value || null })
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                  >
-                    <option value="">Automático (detectar por "Línea del producto")</option>
-                    {lineGroupsList
-                      .filter((g) => g.is_active)
-                      .sort((a, b) => a.sort_order - b.sort_order)
-                      .map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
+                  <div>
+                    <label htmlFor="product-line" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Línea
+                    </label>
+                    <input
+                      id="product-line"
+                      type="text"
+                      value={currentProduct.short_description || ""}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, short_description: e.target.value }))}
+                      className={productFieldClass}
+                      placeholder="GASOLINERO, GRASAS, FRENOS"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="product-viscosity" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Viscosidad
+                    </label>
+                    <input
+                      id="product-viscosity"
+                      type="text"
+                      value={currentProduct.viscosity || ""}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, viscosity: e.target.value }))}
+                      className={productFieldClass}
+                      placeholder="15W-40"
+                    />
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {VISCOSITY_PRESETS.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setCurrentProduct((prev) => ({ ...prev, viscosity: preset }))}
+                          className={choiceClass((currentProduct.viscosity || "").toLowerCase() === preset.toLowerCase())}
+                        >
+                          {preset}
+                        </button>
                       ))}
-                  </select>
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    Se sugiere sola según la categoría, pero puedes elegir otra.
-                  </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="product-type" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Subtítulo
+                    </label>
+                    <input
+                      id="product-type"
+                      type="text"
+                      value={currentProduct.type || ""}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, type: e.target.value }))}
+                      className={productFieldClass}
+                      placeholder="Lubricante Especializado"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="product-line-group" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Grupo del catálogo
+                    </label>
+                    <select
+                      id="product-line-group"
+                      value={currentProduct.line_group_id || ""}
+                      onChange={(e) =>
+                        setCurrentProduct((prev) => ({ ...prev, line_group_id: e.target.value || null }))
+                      }
+                      className={productFieldClass}
+                    >
+                      <option value="">Según la línea</option>
+                      {lineGroupsList
+                        .filter((g) => g.is_active)
+                        .sort((a, b) => a.sort_order - b.sort_order)
+                        .map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="product-description" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Descripción
+                    </label>
+                    <textarea
+                      id="product-description"
+                      value={currentProduct.description || ""}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, description: e.target.value }))}
+                      className={`${productFieldClass} h-20 resize-none`}
+                      placeholder="Normas, uso y especificaciones"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="product-stock-min" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Stock mínimo
+                    </label>
+                    <input
+                      id="product-stock-min"
+                      type="number"
+                      min="0"
+                      value={currentProduct.stock_min ?? 0}
+                      onChange={(e) =>
+                        setCurrentProduct((prev) => ({
+                          ...prev,
+                          stock_min: parseInt(e.target.value, 10) || 0,
+                        }))
+                      }
+                      className={productFieldClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="product-slug" className="mb-1 block text-sm text-[var(--admin-muted)]">
+                      Ruta
+                    </label>
+                    <input
+                      id="product-slug"
+                      type="text"
+                      value={currentProduct.slug || ""}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, slug: e.target.value }))}
+                      className={`${productFieldClass} font-mono text-xs`}
+                      placeholder="Se arma con el nombre"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2.5 pt-1">
-                <span className="text-[11px] font-bold text-[#C7940A] uppercase tracking-widest whitespace-nowrap">
-                  Contenido de la Tarjeta
-                </span>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                    <span>Presentación / Cantidad</span>
-                    <span className="text-[10px] text-[#C7940A] font-medium normal-case">(Etiqueta del Card)</span>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-line)] pt-3">
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-xs text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={currentProduct.is_active !== undefined ? currentProduct.is_active : true}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, is_active: e.target.checked }))}
+                      className="h-4 w-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
+                    />
+                    Activo
                   </label>
-                  <input
-                    type="text"
-                    value={currentProduct.presentation || ""}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, presentation: e.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                    placeholder="Ej: 4 oz, 8 oz, 1 Gal, Balde"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                    <span>Viscosidad / Grado</span>
-                    <span className="text-[10px] text-[#C7940A] font-medium normal-case">(Badge en Tarjeta)</span>
+                  <label className="flex items-center gap-2 text-xs text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={currentProduct.is_featured || false}
+                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, is_featured: e.target.checked }))}
+                      className="h-4 w-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
+                    />
+                    Destacado
                   </label>
-                  <input
-                    type="text"
-                    value={currentProduct.viscosity || ""}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, viscosity: e.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                    placeholder="Ej: 20W-50, Multigrado, ISO 68 (o dejar vacío)"
-                    list="viscosity-suggestions"
-                  />
-                  <datalist id="viscosity-suggestions">
-                    <option value="Multigrado" />
-                    <option value="Monogrado" />
-                    <option value="20W-50" />
-                    <option value="15W-40" />
-                    <option value="10W-30" />
-                    <option value="10W-40" />
-                    <option value="5W-30" />
-                    <option value="75W-90" />
-                    <option value="80W-90" />
-                    <option value="85W-140" />
-                    <option value="ISO 68" />
-                  </datalist>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Tipo de Producto / Subtítulo</span>
-                  <span className="text-[10px] text-[#C7940A] font-medium normal-case">(Subtítulo en Tarjeta)</span>
-                </label>
-                <input
-                  type="text"
-                  value={currentProduct.type !== undefined ? currentProduct.type || "" : ""}
-                  onChange={(e) => setCurrentProduct({ ...currentProduct, type: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                  placeholder="Ej: Lubricante Especializado, Grasa Automotriz..."
-                />
-                <p className="text-[11px] text-zinc-500 mt-1">
-                  Controla el texto que sale debajo del nombre (ej. &ldquo;Lubricante Especializado&rdquo;).
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                  Descripción Detallada / Especificaciones
-                </label>
-                <textarea
-                  value={currentProduct.description || ""}
-                  onChange={(e) => setCurrentProduct({ ...currentProduct, description: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2 text-sm text-white focus:border-[#C7940A] focus:outline-none h-20 resize-none"
-                  placeholder="Detalles sobre viscosidad, normas API, aplicaciones recomendadas..."
-                />
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-1">
-                <span className="text-[11px] font-bold text-[#C7940A] uppercase tracking-widest whitespace-nowrap">
-                  Inventario y Publicación
-                </span>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                    Stock Disponible
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={currentProduct.stock ?? 15}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, stock: parseInt(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                  />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={closeProductModal}
+                    disabled={saving}
+                    className="rounded-xl border border-white/10 px-4 py-2 text-xs font-medium text-zinc-400 hover:bg-white/5"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || imageUploading}
+                    className="flex items-center gap-2 rounded-xl bg-[#C7940A] px-5 py-2 text-xs font-semibold text-black hover:bg-[#d9a311] disabled:opacity-50"
+                  >
+                    {(saving || imageUploading) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>
+                      {imageUploading ? "Subiendo foto…" : isEditing ? "Guardar" : "Crear producto"}
+                    </span>
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                    Stock mínimo (alerta)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={currentProduct.stock_min ?? 0}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        stock_min: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
-                    Ruta personalizada (Slug - Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={currentProduct.slug || ""}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, slug: e.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-xs font-mono text-white focus:border-[#C7940A] focus:outline-none"
-                    placeholder="apl-gra-cal"
-                  />
-                </div>
-              </div>
-
-              {/* Universal Media Selector for Product Image */}
-              <div className="pt-2 border-t border-white/5">
-                <MediaSelector
-                  label="Imagen del Producto"
-                  description="Selecciona una imagen del almacenamiento interno, pega una URL externa o sube un archivo."
-                  value={currentProduct.image_url || ""}
-                  onChange={(url) => setCurrentProduct({ ...currentProduct, image_url: url })}
-                  categoryFilter="products"
-                />
-              </div>
-
-              <div className="flex items-center gap-6 pt-2 border-t border-white/5">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-200">
-                  <input
-                    type="checkbox"
-                    checked={currentProduct.is_featured || false}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, is_featured: e.target.checked })}
-                    className="w-4 h-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
-                  />
-                  <span>¿Marcar como Destacado?</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-200">
-                  <input
-                    type="checkbox"
-                    checked={currentProduct.is_active !== undefined ? currentProduct.is_active : true}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, is_active: e.target.checked })}
-                    className="w-4 h-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
-                  />
-                  <span>¿Producto Activo?</span>
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  disabled={saving}
-                  className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-400 hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-xl bg-[#C7940A] px-6 py-2.5 text-xs font-bold text-black hover:bg-[#d9a311] shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isEditing ? "Guardar Cambios" : "Crear Producto"}</span>
-                </button>
               </div>
             </form>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CatalogPager({
+  page,
+  pageCount,
+  from,
+  to,
+  total,
+  pageSize,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pageCount: number;
+  from: number;
+  to: number;
+  total: number;
+  pageSize: number;
+  onPage: (page: number) => void;
+  onPageSize: (size: (typeof PAGE_SIZE_OPTIONS)[number]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] px-3 py-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-[var(--admin-muted)]">
+          {from}–{to} de {total}
+        </p>
+        <label className="flex items-center gap-2 text-xs text-[var(--admin-muted)]">
+          Por página
+          <select
+            value={pageSize}
+            onChange={(event) => onPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}
+            aria-label="Productos por página"
+            className="h-9 rounded-full border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 text-sm text-[var(--admin-ink)]"
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button type="button" onClick={() => onPage(1)} disabled={page <= 1} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
+          Primera
+        </button>
+        <button type="button" onClick={() => onPage(page - 1)} disabled={page <= 1} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
+          Anterior
+        </button>
+        {pageWindow(page, pageCount).map((number, index, list) => {
+          const previous = list[index - 1];
+          return (
+            <span key={number} className="flex items-center gap-1.5">
+              {previous && number - previous > 1 && <span className="px-1 text-[var(--admin-faint)]">…</span>}
+              <button
+                type="button"
+                onClick={() => onPage(number)}
+                aria-current={number === page ? "page" : undefined}
+                className={`h-9 min-w-9 rounded-full px-3 text-sm ${number === page ? "bg-[var(--admin-accent)] text-[#ffffff]" : "border border-[var(--admin-line)] text-[var(--admin-ink)]"}`}
+              >
+                {number}
+              </button>
+            </span>
+          );
+        })}
+        <button type="button" onClick={() => onPage(page + 1)} disabled={page >= pageCount} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
+          Siguiente
+        </button>
+        <button type="button" onClick={() => onPage(pageCount)} disabled={page >= pageCount} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
+          Última
+        </button>
+      </div>
     </div>
   );
 }

@@ -34,14 +34,13 @@ import {
   monthDay,
   repeatsYearly,
   scheduleLabel,
-  scheduleState,
   todayKey,
   type FestiveEffectType,
   type FestiveTheme,
 } from "@/lib/festive-theme";
 
 const inputClass =
-  "w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]";
+  "w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] placeholder:text-[var(--admin-faint)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--admin-accent)]";
 
 const GRADIENTS = [
   { label: "Pino", value: "from-[#0F382A] via-[#1B4332] to-[#2D6A4F]" },
@@ -152,7 +151,6 @@ export default function TematicasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceKey]);
 
-  const published = getThemeById(config, config.activeThemeId);
   const dirty = Boolean(draft && source && snapshot(draft) !== snapshot(source));
   const effectDetail = EFFECTS.find((effect) => effect.id === draft?.effectType)?.detail || "";
   const percent = Math.round(clampIntensity(draft?.effectIntensity) * 100);
@@ -171,12 +169,10 @@ export default function TematicasPage() {
   const lede = !ready || !today
     ? "Cargando la configuración guardada."
     : !config.globalEnabled
-      ? "La tienda está en su diseño formal."
+      ? "La tienda está en su diseño formal. Activa una temática para verla en el inicio."
       : activeTheme
-        ? `La tienda muestra ${activeTheme.name}.`
-        : published
-          ? `${published.name} está publicada. ${scheduleLabel(published, today)}. Hasta esa fecha la tienda sigue formal.`
-          : "Elige una temática y publícala.";
+        ? `El inicio muestra ${activeTheme.name}.`
+        : "Elige una temática y actívala.";
 
   function patch(partial: Partial<FestiveTheme>) {
     setDraft((current) => (current ? { ...current, ...partial } : current));
@@ -224,11 +220,7 @@ export default function TematicasPage() {
       return;
     }
     const theme = getThemeById(config, config.activeThemeId);
-    if (theme && (scheduleState(theme, today) === "waiting" || scheduleState(theme, today) === "closed")) {
-      toast.message("Modo festivo encendido", { description: scheduleLabel(theme, today) });
-      return;
-    }
-    toast.success(theme ? `La tienda muestra ${theme.name}.` : "Modo festivo encendido.");
+    toast.success(theme ? `El inicio muestra ${theme.name}.` : "Modo festivo encendido.");
   }
 
   async function saveDraft(theme: FestiveTheme) {
@@ -265,13 +257,7 @@ export default function TematicasPage() {
     const ok = await selectActiveTheme(next.id);
     setBusy(null);
     if (!ok) return;
-    const when = today || todayKey();
-    const state = scheduleState(next, when);
-    if (state === "open" || state === "undated") {
-      toast.success("Publicada. La tienda ya la muestra.");
-    } else {
-      toast.success("Publicada y programada.", { description: scheduleLabel(next, when) });
-    }
+    toast.success("Activada. Ya se ve en el inicio.");
   }
 
   async function turnOff() {
@@ -345,26 +331,23 @@ export default function TematicasPage() {
   }
 
   const liveHere = Boolean(draft && config.globalEnabled && config.activeThemeId === draft.id && activeTheme?.id === draft.id);
-  const scheduledHere = Boolean(
-    draft && today && config.globalEnabled && config.activeThemeId === draft.id && !activeTheme
-  );
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-16">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-heading text-3xl text-white">Temáticas</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-300">{lede}</p>
+          <h1 className="font-heading text-3xl text-[var(--admin-ink)]">Temáticas</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--admin-muted)]">{lede}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/"
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-sm text-zinc-100 hover:border-white/30"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface)] px-4 text-sm text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)]"
           >
             Ver la tienda
             <ExternalLink className="size-3.5" />
           </Link>
-          <Label htmlFor="festive-global" className="text-sm text-zinc-200">
+          <Label htmlFor="festive-global" className="text-sm text-[var(--admin-ink)]">
             Modo festivo
           </Label>
           <Switch
@@ -372,7 +355,7 @@ export default function TematicasPage() {
             checked={config.globalEnabled}
             onCheckedChange={(checked) => void toggleGlobal(checked)}
             aria-label="Modo festivo en la tienda"
-            className="data-[state=checked]:bg-[#C7940A] data-[state=unchecked]:bg-white/20"
+            className="data-[state=checked]:bg-[var(--admin-accent)] data-[state=unchecked]:bg-[var(--admin-line)]"
           />
         </div>
       </header>
@@ -380,24 +363,22 @@ export default function TematicasPage() {
       {draft ? (
         <FestivePreview theme={draft} />
       ) : (
-        <div className="grid h-[340px] place-items-center rounded-2xl border border-white/10 bg-[#141414] text-sm text-zinc-300">
+        <div className="grid h-[340px] place-items-center rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] text-sm text-[var(--admin-muted)]">
           Elige una temática para ver sus efectos.
         </div>
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
-        <section className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-5" aria-label="Ajustes de la temática">
+        <section className="rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-4 shadow-sm sm:p-5" aria-label="Ajustes de la temática">
           {draft ? (
             <div className="flex flex-col gap-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-heading text-xl text-white">{draft.name}</h2>
-                  <p className="mt-1 text-sm text-zinc-300" role="status">
+                  <h2 className="font-heading text-xl text-[var(--admin-ink)]">{draft.name}</h2>
+                  <p className="mt-1 text-sm text-[var(--admin-muted)]" role="status">
                     {liveHere
-                      ? "Visible ahora en la tienda."
-                      : scheduledHere
-                        ? `Programada. ${scheduleLabel(draft, today)}`
-                        : "En vista previa, dentro de esta pantalla."}
+                      ? "Visible ahora en el inicio."
+                      : "En vista previa, dentro de esta pantalla."}
                     {dirty ? " Hay cambios sin guardar." : ""}
                   </p>
                 </div>
@@ -406,7 +387,7 @@ export default function TematicasPage() {
                     type="button"
                     onClick={() => void save()}
                     disabled={!dirty || busy !== null}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-sm text-white enabled:hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] enabled:hover:bg-[var(--admin-canvas)] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {busy === "save" && <Loader2 className="size-4 animate-spin" />}
                     Guardar ajustes
@@ -415,16 +396,16 @@ export default function TematicasPage() {
                     type="button"
                     onClick={() => void publish(false)}
                     disabled={busy !== null}
-                    className="inline-flex h-10 items-center rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black enabled:hover:bg-[#E4C36A] disabled:opacity-50"
+                    className="inline-flex h-10 items-center rounded-full bg-[var(--admin-accent)] px-4 text-sm font-semibold text-[#ffffff] enabled:hover:brightness-110 disabled:opacity-50"
                   >
                     {busy === "publish" && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    Publicar en la tienda
+                    Activar en el inicio
                   </button>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm text-zinc-200">
+                <label className="block text-sm text-[var(--admin-ink)]">
                   Frase del aviso
                   <input
                     className={`${inputClass} mt-1.5`}
@@ -432,7 +413,7 @@ export default function TematicasPage() {
                     onChange={(event) => patch({ tagline: event.target.value })}
                   />
                 </label>
-                <label className="block text-sm text-zinc-200">
+                <label className="block text-sm text-[var(--admin-ink)]">
                   Insignia
                   <input
                     className={`${inputClass} mt-1.5`}
@@ -440,7 +421,7 @@ export default function TematicasPage() {
                     onChange={(event) => patch({ badgeText: event.target.value, showBadge: event.target.value.trim().length > 0 })}
                   />
                 </label>
-                <label className="block text-sm text-zinc-200">
+                <label className="block text-sm text-[var(--admin-ink)]">
                   Texto del botón
                   <input
                     className={`${inputClass} mt-1.5`}
@@ -448,7 +429,7 @@ export default function TematicasPage() {
                     onChange={(event) => patch({ buttonText: event.target.value })}
                   />
                 </label>
-                <label className="block text-sm text-zinc-200">
+                <label className="block text-sm text-[var(--admin-ink)]">
                   Enlace del botón
                   <input
                     className={`${inputClass} mt-1.5`}
@@ -456,7 +437,7 @@ export default function TematicasPage() {
                     onChange={(event) => patch({ buttonLink: event.target.value })}
                   />
                 </label>
-                <label className="block text-sm text-zinc-200">
+                <label className="block text-sm text-[var(--admin-ink)]">
                   Icono
                   <input
                     className={`${inputClass} mt-1.5`}
@@ -465,7 +446,7 @@ export default function TematicasPage() {
                     onChange={(event) => patch({ icon: event.target.value })}
                   />
                 </label>
-                <label className="block text-sm text-zinc-200">
+                <label className="block text-sm text-[var(--admin-ink)]">
                   Efecto
                   <select
                     className={`${inputClass} mt-1.5`}
@@ -483,11 +464,11 @@ export default function TematicasPage() {
                   </select>
                 </label>
               </div>
-              <p className="text-sm text-zinc-300">{effectDetail}</p>
+              <p className="text-sm text-[var(--admin-muted)]">{effectDetail}</p>
 
-              <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+              <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-canvas)] p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="effects-enabled" className="text-sm text-zinc-100">
+                  <Label htmlFor="effects-enabled" className="text-sm text-[var(--admin-ink)]">
                     Efectos en la tienda
                   </Label>
                   <Switch
@@ -496,11 +477,11 @@ export default function TematicasPage() {
                     disabled={draft.effectType === "none"}
                     onCheckedChange={(checked) => patch({ effectsEnabled: checked })}
                     aria-label="Activar efectos visuales"
-                    className="data-[state=checked]:bg-[#C7940A] data-[state=unchecked]:bg-white/20"
+                    className="data-[state=checked]:bg-[var(--admin-accent)] data-[state=unchecked]:bg-[var(--admin-line)]"
                   />
                 </div>
                 <div className="mt-4">
-                  <div className="mb-2 flex items-center justify-between text-sm text-zinc-200">
+                  <div className="mb-2 flex items-center justify-between text-sm text-[var(--admin-ink)]">
                     <label htmlFor="effect-intensity">Intensidad</label>
                     <span>
                       {intensityLabel(percent / 100)} · {percent}%
@@ -519,17 +500,17 @@ export default function TematicasPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-zinc-100">
-                  <CalendarRange className="size-4 text-[#E4C36A]" />
+              <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-canvas)] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-[var(--admin-ink)]">
+                  <CalendarRange className="size-4 text-[var(--admin-accent)]" />
                   Calendario
                 </div>
-                <p className="mt-1 text-sm text-zinc-300">
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">
                   {today ? scheduleLabel(draft, today) : "Calculando la fecha de hoy."}
-                  {repeatsYearly(draft) ? " Se repite cada año." : ""}
+                  {repeatsYearly(draft) ? " Se repite cada año." : " Activarla la muestra en el inicio aunque la fecha no haya llegado."}
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className="block text-sm text-zinc-200">
+                  <label className="block text-sm text-[var(--admin-ink)]">
                     Empieza
                     <input
                       type="date"
@@ -538,7 +519,7 @@ export default function TematicasPage() {
                       onChange={(event) => onDate("startDate", event.target.value)}
                     />
                   </label>
-                  <label className="block text-sm text-zinc-200">
+                  <label className="block text-sm text-[var(--admin-ink)]">
                     Termina
                     <input
                       type="date"
@@ -549,7 +530,7 @@ export default function TematicasPage() {
                   </label>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-3">
-                  <Label htmlFor="repeat-yearly" className="text-sm text-zinc-200">
+                  <Label htmlFor="repeat-yearly" className="text-sm text-[var(--admin-ink)]">
                     Repetir cada año
                   </Label>
                   <Switch
@@ -557,32 +538,22 @@ export default function TematicasPage() {
                     checked={repeatsYearly(draft)}
                     onCheckedChange={setYearly}
                     aria-label="Repetir la temática cada año"
-                    className="data-[state=checked]:bg-[#C7940A] data-[state=unchecked]:bg-white/20"
+                    className="data-[state=checked]:bg-[var(--admin-accent)] data-[state=unchecked]:bg-[var(--admin-line)]"
                   />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="h-10 rounded-full border border-white/15 px-4 text-sm text-zinc-100 hover:border-white/30"
+                    className="h-10 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)]"
                     onClick={() => patch({ startDate: "", endDate: "", repeatYearly: false })}
                   >
                     Borrar fechas
                   </button>
-                  {today && (scheduleState(draft, today) === "waiting" || scheduleState(draft, today) === "closed") && (
-                    <button
-                      type="button"
-                      disabled={busy !== null}
-                      onClick={() => void publish(true)}
-                      className="h-10 rounded-full border border-[#C7940A]/50 px-4 text-sm text-[#E4C36A] hover:bg-[#C7940A]/10 disabled:opacity-50"
-                    >
-                      Publicar ya, sin esperar la fecha
-                    </button>
-                  )}
                 </div>
               </div>
 
               <div>
-                <p className="text-sm text-zinc-200">Fondo del aviso</p>
+                <p className="text-sm text-[var(--admin-ink)]">Fondo del aviso</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {GRADIENTS.map((gradient) => (
                     <button
@@ -591,10 +562,10 @@ export default function TematicasPage() {
                       aria-label={gradient.label}
                       aria-pressed={draft.bannerBgGradient === gradient.value}
                       onClick={() => patch({ bannerBgGradient: gradient.value })}
-                      className={`h-8 w-14 rounded-full bg-gradient-to-r ${gradient.value} ring-offset-2 ring-offset-[#141414] ${draft.bannerBgGradient === gradient.value ? "ring-2 ring-[#E4C36A]" : ""}`}
+                      className={`h-8 w-14 rounded-full bg-gradient-to-r ${gradient.value} ring-offset-2 ring-offset-[var(--admin-surface)] ${draft.bannerBgGradient === gradient.value ? "ring-2 ring-[var(--admin-accent)]" : "ring-1 ring-[var(--admin-line)]"}`}
                     />
                   ))}
-                  <label className="inline-flex items-center gap-2 text-xs text-zinc-300">
+                  <label className="inline-flex items-center gap-2 text-xs text-[var(--admin-muted)]">
                     Texto
                     <input
                       type="color"
@@ -604,7 +575,7 @@ export default function TematicasPage() {
                       className="size-8 cursor-pointer rounded bg-transparent"
                     />
                   </label>
-                  <label className="inline-flex items-center gap-2 text-xs text-zinc-300">
+                  <label className="inline-flex items-center gap-2 text-xs text-[var(--admin-muted)]">
                     Partículas
                     <input
                       type="color"
@@ -614,7 +585,7 @@ export default function TematicasPage() {
                       className="size-8 cursor-pointer rounded bg-transparent"
                     />
                   </label>
-                  <label className="inline-flex items-center gap-2 text-xs text-zinc-300">
+                  <label className="inline-flex items-center gap-2 text-xs text-[var(--admin-muted)]">
                     Acento
                     <input
                       type="color"
@@ -627,13 +598,13 @@ export default function TematicasPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-[var(--admin-line)] pt-4">
                 {config.globalEnabled && config.activeThemeId === draft.id && (
                   <button
                     type="button"
                     onClick={() => void turnOff()}
                     disabled={busy !== null}
-                    className="inline-flex h-10 items-center rounded-full border border-white/15 px-4 text-sm text-white hover:border-white/30 disabled:opacity-50"
+                    className="inline-flex h-10 items-center rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)] disabled:opacity-50"
                   >
                     {busy === "off" && <Loader2 className="mr-2 size-4 animate-spin" />}
                     Apagar en la tienda
@@ -644,7 +615,7 @@ export default function TematicasPage() {
                     type="button"
                     onClick={() => void restore()}
                     disabled={busy !== null}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-sm text-zinc-100 hover:border-white/30 disabled:opacity-50"
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)] disabled:opacity-50"
                   >
                     {busy === "restore" ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
                     Restaurar original
@@ -654,7 +625,7 @@ export default function TematicasPage() {
                   <button
                     type="button"
                     onClick={() => setPendingDelete(draft)}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-red-500/40 px-4 text-sm text-red-200 hover:bg-red-500/10"
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 px-4 text-sm text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="size-4" />
                     Eliminar
@@ -663,17 +634,17 @@ export default function TematicasPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-zinc-300">Selecciona una temática de la lista.</p>
+            <p className="text-sm text-[var(--admin-muted)]">Selecciona una temática de la lista.</p>
           )}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-5" aria-label="Lista de temáticas">
+        <section className="rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-4 shadow-sm sm:p-5" aria-label="Lista de temáticas">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-heading text-xl text-white">Festividades</h2>
+            <h2 className="font-heading text-xl text-[var(--admin-ink)]">Festividades</h2>
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-black"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-[var(--admin-accent)] px-3 text-sm font-semibold text-[#ffffff]"
             >
               <Plus className="size-4" />
               Nueva
@@ -701,7 +672,7 @@ export default function TematicasPage() {
                 role="tab"
                 aria-selected={filter === key}
                 onClick={() => setFilter(key)}
-                className={`h-8 rounded-full px-3 text-xs ${filter === key ? "bg-[#C7940A] text-black" : "bg-white/10 text-zinc-200"}`}
+                className={`h-8 rounded-full px-3 text-xs ${filter === key ? "bg-[var(--admin-accent)] text-[#ffffff]" : "bg-[var(--admin-canvas)] text-[var(--admin-muted)]"}`}
               >
                 {label}
               </button>
@@ -709,7 +680,7 @@ export default function TematicasPage() {
           </div>
           <div className="mt-3 flex max-h-[640px] flex-col gap-2 overflow-y-auto pr-1" role="listbox" aria-label="Temáticas">
             {visibleThemes.length === 0 && (
-              <p className="py-6 text-sm text-zinc-300">Ninguna temática coincide con la búsqueda.</p>
+              <p className="py-6 text-sm text-[var(--admin-muted)]">Ninguna temática coincide con la búsqueda.</p>
             )}
             {visibleThemes.map((theme) => {
               const selected = theme.id === selectedId;
@@ -725,17 +696,17 @@ export default function TematicasPage() {
                     picked.current = true;
                     setSelectedId(theme.id);
                   }}
-                  className={`rounded-xl border px-3 py-3 text-left ${selected ? "border-[#C7940A] bg-white/5" : "border-white/10 hover:border-white/25"}`}
+                  className={`rounded-xl border px-3 py-3 text-left ${selected ? "border-[var(--admin-accent)] bg-[var(--admin-accent-soft)]" : "border-[var(--admin-line)] hover:bg-[var(--admin-canvas)]"}`}
                 >
                   <span className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-[var(--admin-ink)]">
                       <span className="mr-2" aria-hidden="true">{theme.icon}</span>
                       {theme.name}
                     </span>
-                    {onAir && <span className="shrink-0 rounded-full bg-[#C7940A] px-2 py-0.5 text-[11px] font-semibold text-black">En tienda</span>}
-                    {waiting && <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-zinc-100">Programada</span>}
+                    {onAir && <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">En el inicio</span>}
+                    {waiting && <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">Pausada</span>}
                   </span>
-                  <span className="mt-1 block text-xs text-zinc-300">
+                  <span className="mt-1 block text-xs text-[var(--admin-muted)]">
                     {today ? scheduleLabel(theme, today) : "Calendario"}
                     {" · "}
                     {EFFECTS.find((effect) => effect.id === theme.effectType)?.label || "Efecto"}
@@ -748,28 +719,28 @@ export default function TematicasPage() {
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="border-white/10 bg-[#161616] text-white sm:max-w-md">
+        <DialogContent className="border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nueva temática</DialogTitle>
-            <DialogDescription className="text-zinc-300">
-              Queda guardada y lista para previsualizar. La tienda cambia cuando la publiques.
+            <DialogDescription className="text-[var(--admin-muted)]">
+              Queda guardada y lista para previsualizar. El inicio cambia cuando la activas.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={(event) => void createTheme(event)} className="grid gap-3">
-            <label className="text-sm text-zinc-200">
+            <label className="text-sm text-[var(--admin-ink)]">
               Nombre
               <input name="name" required className={`${inputClass} mt-1.5`} placeholder="Campaña de aniversario" />
             </label>
-            <label className="text-sm text-zinc-200">
+            <label className="text-sm text-[var(--admin-ink)]">
               Frase del aviso
               <input name="tagline" required className={`${inputClass} mt-1.5`} placeholder="Una frase corta para el cintillo" />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm text-zinc-200">
+              <label className="text-sm text-[var(--admin-ink)]">
                 Icono
                 <input name="icon" defaultValue="✨" maxLength={8} className={`${inputClass} mt-1.5`} />
               </label>
-              <label className="text-sm text-zinc-200">
+              <label className="text-sm text-[var(--admin-ink)]">
                 Grupo
                 <select name="category" defaultValue="custom" className={`${inputClass} mt-1.5`}>
                   <option value="custom">Propia</option>
@@ -778,7 +749,7 @@ export default function TematicasPage() {
                 </select>
               </label>
             </div>
-            <label className="text-sm text-zinc-200">
+            <label className="text-sm text-[var(--admin-ink)]">
               Efecto
               <select name="effectType" defaultValue="custom_particles" className={`${inputClass} mt-1.5`}>
                 {EFFECTS.map((effect) => (
@@ -788,7 +759,7 @@ export default function TematicasPage() {
                 ))}
               </select>
             </label>
-            <button type="submit" className="mt-2 h-10 rounded-full bg-[#C7940A] text-sm font-semibold text-black">
+            <button type="submit" className="mt-2 h-10 rounded-full bg-[var(--admin-accent)] text-sm font-semibold text-[#ffffff]">
               Crear y previsualizar
             </button>
           </form>
@@ -796,16 +767,16 @@ export default function TematicasPage() {
       </Dialog>
 
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <AlertDialogContent className="border-white/10 bg-[#161616] text-white">
+        <AlertDialogContent className="border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar {pendingDelete?.name}</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-300">
-              Se borra de la configuración guardada. Si estaba publicada, la tienda pasa a Día de la Bandera cuando esa fecha esté vigente.
+            <AlertDialogDescription className="text-[var(--admin-muted)]">
+              Se borra de la configuración guardada. Si estaba activa, el inicio vuelve al diseño formal.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/15 bg-transparent text-white hover:bg-white/10">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmDelete()} className="bg-red-600 text-white hover:bg-red-500">
+            <AlertDialogCancel className="border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmDelete()} className="bg-red-600 text-[#ffffff] hover:bg-red-700">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

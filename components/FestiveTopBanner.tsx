@@ -6,20 +6,15 @@ import { useFestiveTheme } from "@/hooks/useFestiveTheme";
 import { X, Sparkles, ArrowRight } from "lucide-react";
 
 export default function FestiveTopBanner() {
-  const { isFestiveActive, activeTheme } = useFestiveTheme();
+  const { isFestiveActive, activeTheme, config } = useFestiveTheme();
   const [dismissed, setDismissed] = useState(false);
 
   // Comprobar si el usuario descartó el banner en la sesión actual
   useEffect(() => {
-    if (activeTheme) {
-      const isDismissed = sessionStorage.getItem(`apolo_festive_banner_dismissed_${activeTheme.id}`);
-      if (isDismissed === "true") {
-        setDismissed(true);
-      } else {
-        setDismissed(false);
-      }
-    }
-  }, [activeTheme]);
+    if (!activeTheme) return;
+    const stamp = sessionStorage.getItem("apolo_festive_banner_dismissed");
+    setDismissed(stamp === `${activeTheme.id}:${config.updatedAt || 0}`);
+  }, [activeTheme, config.updatedAt]);
 
   if (!isFestiveActive || !activeTheme || dismissed) {
     return null;
@@ -28,7 +23,7 @@ export default function FestiveTopBanner() {
   const handleDismiss = () => {
     setDismissed(true);
     if (activeTheme) {
-      sessionStorage.setItem(`apolo_festive_banner_dismissed_${activeTheme.id}`, "true");
+      sessionStorage.setItem("apolo_festive_banner_dismissed", `${activeTheme.id}:${config.updatedAt || 0}`);
     }
   };
 
@@ -58,7 +53,7 @@ export default function FestiveTopBanner() {
             </span>
             <div className="flex items-center gap-2 truncate">
               <Sparkles className="w-4 h-4 text-amber-300 shrink-0 animate-pulse hidden sm:inline-block" />
-              <span className="truncate font-black tracking-wide text-sm sm:text-base drop-shadow-xs">
+              <span className="truncate font-black tracking-wide text-sm sm:text-base [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]">
                 {activeTheme.tagline}
               </span>
               <Sparkles className="w-4 h-4 text-amber-300 shrink-0 animate-pulse hidden md:inline-block" />

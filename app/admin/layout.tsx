@@ -4,6 +4,7 @@ import React, { useEffect, useLayoutEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
+import { QuoteInboxProvider } from "@/components/QuoteInboxProvider";
 import { applyAdminTheme, readAdminThemeChoice, releaseAdminTheme } from "@/lib/admin-theme";
 
 export default function AdminLayout({
@@ -51,6 +52,7 @@ export default function AdminLayout({
   }, [menuOpen]);
 
   return (
+    <QuoteInboxProvider>
     <div className="admin-layout-root flex h-screen min-h-screen w-full overflow-hidden bg-[var(--admin-canvas)] text-[var(--admin-ink)]">
       <AdminSidebar collapsible className="hidden lg:flex" />
       {menuOpen && (
@@ -73,5 +75,6 @@ export default function AdminLayout({
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">{children}</main>
       </div>
     </div>
+    </QuoteInboxProvider>
   );
 }

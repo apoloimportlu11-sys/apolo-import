@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         client_name: clientName || null,
         city: city || null,
         phone: phone || null,
-        status: "enviada",
+        status: "nueva",
         channel: "whatsapp",
         items,
         total_items,

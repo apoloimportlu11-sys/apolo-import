@@ -48,13 +48,24 @@ describe("calendario de temáticas", () => {
     expect(scheduleState(theme, "2026-11-20")).toBe("closed");
   });
 
-  it("no publica la temática si el modo festivo está apagado o la fecha no llegó", () => {
+  it("muestra la temática activada aunque su fecha todavía no llegue", () => {
     const off = getActiveTheme(config({ globalEnabled: false, activeThemeId: "navidad" }), "2026-12-10");
     expect(off).toBeNull();
-    const early = getActiveTheme(config({ activeThemeId: "navidad" }), "2026-11-07");
-    expect(early).toBeNull();
-    const live = getActiveTheme(config({ activeThemeId: "navidad" }), "2026-12-10");
-    expect(live?.id).toBe("navidad");
+    const early = getActiveTheme(config({ activeThemeId: "navidad" }), "2026-11-09");
+    expect(early?.id).toBe("navidad");
+    const paused = getActiveTheme(
+      config({
+        activeThemeId: "navidad",
+        customThemes: [
+          {
+            ...getAllThemes(DEFAULT_FESTIVE_CONFIG).find((item) => item.id === "navidad")!,
+            enabled: false,
+          },
+        ],
+      }),
+      "2026-12-10"
+    );
+    expect(paused).toBeNull();
   });
 
   it("un ajuste guardado pisa la temática original sin duplicarla", () => {

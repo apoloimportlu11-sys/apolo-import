@@ -8,6 +8,7 @@ export type InventoryProduct = {
   stock: number;
   stock_min: number;
   image_url?: string | null;
+  is_active?: boolean;
 };
 
 export function isLowStock(p: { stock?: number | null; stock_min?: number | null }) {

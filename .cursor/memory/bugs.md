@@ -13,5 +13,14 @@
 - **Files**: `next.config.mjs`
 - **Workaround**: revisar tipos localmente / CI no tipa estricto vía tsc
 
+### [BUG-003] Contacto local sin Resend
+- **Symptom**: `POST /api/contact` responde 500 si falta `RESEND_API_KEY`
+- **Root cause**: el remoto reemplazó Nodemailer/Gmail por Resend (`5c476ac`); `.env.local` aún tiene `GMAIL_USER` / `GMAIL_APP_PASSWORD` y no tiene `RESEND_*`
+- **Files**: `app/api/contact/route.ts`, `.env.local`
+- **Workaround**: definir `RESEND_API_KEY` y, si aplica, `RESEND_FROM_EMAIL` / `RESEND_CONTACT_TEMPLATE_ID`
+
 ## Fixed
 - (ninguno registrado en bootstrap de memoria)
+- Hydration admin y URLs viejas de Supabase en detalle de producto (2026-11-05, historial local)
+- Alta de producto: al terminar la subida, la foto reescribía el formulario con el estado viejo y una imagen `data:` fallaba la validación (máx. 2000). Ahora la URL llega con el estado actual y, si el almacén rechaza el archivo, se avisa sin guardar un base64 (2026-11-09). `app/admin/productos/page.tsx`, `components/MediaSelector.tsx`
+- Formularios admin en negro y letras del banner ilegibles en tema claro: `#161616` y los inputs `bg-black/*` no seguían el tema, y `text-white` se pintaba oscuro sobre las fotos. Superficies de formulario usan el tema; el texto del banner queda blanco con sombra (2026-11-09). `app/globals.css`, `app/admin/banners/page.tsx`, `components/PromoCarousel.tsx`

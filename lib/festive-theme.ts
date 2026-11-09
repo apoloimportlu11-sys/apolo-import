@@ -507,11 +507,11 @@ export function getThemeById(config: FestiveConfig, id: string): FestiveTheme | 
   return getAllThemes(config).find((theme) => theme.id === id) || null;
 }
 
-/** Temática publicada solo si el interruptor global está activo y hoy cae en su calendario. */
-export function getActiveTheme(config: FestiveConfig, today = todayKey()): FestiveTheme | null {
+/** La temática elegida se muestra en cuanto el modo festivo está encendido.
+ *  El calendario sigue informando la temporada, pero no esconde una activación manual. */
+export function getActiveTheme(config: FestiveConfig, _today = todayKey()): FestiveTheme | null {
   if (!config.globalEnabled) return null;
   const selected = getThemeById(config, config.activeThemeId);
-  if (!selected) return null;
-  if (!isThemeInWindow(selected, today)) return null;
+  if (!selected || selected.enabled === false) return null;
   return selected;
 }

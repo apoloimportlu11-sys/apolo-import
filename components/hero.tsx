@@ -5,6 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { ChevronRight } from "lucide-react";
 import { PromoCarousel } from "./PromoCarousel";
+import { SloganBar } from "./header";
 import { useCarouselLogos } from "@/lib/carousel-logos";
 import { useCarouselItems } from "@/lib/carousel-items";
 import { useHomeContent } from "@/lib/home-content";
@@ -101,8 +102,9 @@ export function Hero() {
 
   return (
     <section className="relative w-full">
-      {/* Carrusel Principal de Ofertas y Novedades (4 Diapositivas para Imágenes / Videos) */}
+      {/* Carrusel principal: ocupa el resto de la primera pantalla, justo bajo la barra de marcas */}
       <PromoCarousel />
+      <SloganBar />
 
       {/* "Encuentra el lubricante" Banner */}
       <div className="relative py-[var(--space-section-y-sm)] bg-background overflow-hidden border-b border-border dark:border-primary/25 transition-colors">

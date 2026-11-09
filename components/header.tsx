@@ -531,7 +531,13 @@ export function Header() {
       />
     </header>
 
-    {/* Slogan bar - Fila temática automotriz con eslogan y animación que se desplaza fluidamente */}
+    {pathname !== "/" ? <SloganBar /> : null}
+    </>
+  );
+}
+
+export function SloganBar() {
+  return (
     <div className="relative overflow-hidden bg-gradient-to-r from-neutral-950 via-zinc-900 to-neutral-950 border-t border-red-900/60 border-b border-black/80 shadow-md">
       {/* Efecto de barrido de haz de luz / faro de velocidad */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -567,6 +573,5 @@ export function Header() {
         </div>
       </div>
     </div>
-    </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Monitor, Moon, Sun, Menu, ExternalLink } from "lucide-react";
+import { Monitor, Moon, Sun, Menu, ExternalLink, Bell } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import {
@@ -11,6 +11,7 @@ import {
   writeAdminTheme,
   type AdminThemeChoice,
 } from "@/lib/admin-theme";
+import { useQuoteInbox } from "@/components/QuoteInboxProvider";
 
 const themeOptions: { id: AdminThemeChoice; label: string; icon: typeof Sun }[] = [
   { id: "light", label: "Claro", icon: Sun },
@@ -21,6 +22,8 @@ const themeOptions: { id: AdminThemeChoice; label: string; icon: typeof Sun }[] 
 export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const supabase = createBrowserSupabase();
   const { settings } = useBusinessSettings();
+  const { count, quotes } = useQuoteInbox();
+  const [inboxOpen, setInboxOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [theme, setTheme] = useState<AdminThemeChoice>("light");
 
@@ -62,6 +65,54 @@ export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void })
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="relative">
+          <button
+            type="button"
+            aria-label={count === 1 ? "1 cotización nueva" : count > 0 ? `${count} cotizaciones nuevas` : "Cotizaciones nuevas"}
+            aria-expanded={inboxOpen}
+            onClick={() => setInboxOpen((open) => !open)}
+            className="relative inline-flex size-9 items-center justify-center rounded-lg border border-[var(--admin-line)] text-[var(--admin-ink)]"
+          >
+            <Bell className="size-4" />
+            {count > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--admin-accent)] px-1 text-[10px] font-semibold text-[#ffffff]">
+                {count > 9 ? "9+" : count}
+              </span>
+            )}
+          </button>
+          {inboxOpen && (
+            <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-2 shadow-lg">
+              <p className="px-2 py-1 text-xs font-semibold text-[var(--admin-muted)]">
+                {count === 0 ? "No hay cotizaciones nuevas" : count === 1 ? "1 en estado Nueva" : `${count} en estado Nueva`}
+              </p>
+              <ul className="max-h-64 overflow-y-auto">
+                {quotes.map((quote) => (
+                  <li key={quote.id}>
+                    <Link
+                      href={`/admin/cotizaciones/${quote.code}`}
+                      onClick={() => setInboxOpen(false)}
+                      className="block rounded-lg px-2 py-2 hover:bg-[var(--admin-canvas)]"
+                    >
+                      <p className="font-mono text-sm font-semibold text-[var(--admin-ink)]">{quote.code}</p>
+                      <p className="text-xs text-[var(--admin-muted)]">
+                        {quote.client_name || "Cliente web"}
+                        {quote.phone ? ` · ${quote.phone}` : ""}
+                        {quote.city ? ` · ${quote.city}` : ""}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/admin/cotizaciones?estado=nueva"
+                onClick={() => setInboxOpen(false)}
+                className="mt-1 block rounded-lg px-2 py-2 text-sm font-medium text-[var(--admin-accent)] hover:bg-[var(--admin-canvas)]"
+              >
+                Ver todas las nuevas
+              </Link>
+            </div>
+          )}
+        </div>
         <div
           role="radiogroup"
           aria-label="Tema del panel"

@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
   client_name text,
   city text,
   phone text,
-  status text NOT NULL DEFAULT 'enviada'
+  status text NOT NULL DEFAULT 'nueva'
     CHECK (status IN ('nueva','enviada','cerrada','perdida')),
   channel text NOT NULL DEFAULT 'whatsapp',
   items jsonb NOT NULL DEFAULT '[]'::jsonb,

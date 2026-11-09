@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { ADMIN_SIDEBAR_KEY } from "@/lib/admin-theme";
+import { useQuoteInbox } from "@/components/QuoteInboxProvider";
 
 type NavItem = {
   href: string;
@@ -87,6 +88,7 @@ export default function AdminSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createBrowserSupabase();
+  const { count: newQuotes } = useQuoteInbox();
   const [collapsed, setCollapsed] = useState(false);
 
   useLayoutEffect(() => {
@@ -189,6 +191,11 @@ export default function AdminSidebar({
                     >
                       <Icon className="size-4 shrink-0" aria-hidden />
                       <span className={compact ? "sr-only" : "truncate"}>{item.label}</span>
+                      {item.href === "/admin/cotizaciones" && newQuotes > 0 && (
+                        <span className={`flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-accent)] px-1 text-[10px] font-semibold text-[#ffffff] ${compact ? "absolute -top-1 -right-1" : "ml-auto"}`}>
+                          {newQuotes > 9 ? "9+" : newQuotes}
+                        </span>
+                      )}
                       {compact && (
                         <span
                           role="tooltip"

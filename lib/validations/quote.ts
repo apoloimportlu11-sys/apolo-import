@@ -12,10 +12,17 @@ export const quoteItemSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(9999),
 });
 
+const phoneSchema = z
+  .string()
+  .trim()
+  .min(6, "Ingresa tu número de celular")
+  .max(40)
+  .refine((value) => value.replace(/\D/g, "").length >= 9, "El celular debe tener al menos 9 dígitos");
+
 export const quoteCreateSchema = z.object({
   clientName: z.string().trim().min(1).max(160).optional(),
   city: z.string().trim().max(120).optional(),
-  phone: z.string().trim().max(40).optional(),
+  phone: phoneSchema,
   notes: z.string().trim().max(2000).optional(),
   items: z.array(quoteItemSchema).min(1, "La cotización está vacía"),
 });

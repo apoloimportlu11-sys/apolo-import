@@ -29,8 +29,8 @@ interface QuoteContextType {
   setIsDrawerOpen: (open: boolean) => void;
   openDrawer: () => void;
   closeDrawer: () => void;
-  generateWhatsAppUrl: (clientName?: string, city?: string, quoteCode?: string) => string;
-  submitQuote: (clientName?: string, city?: string) => Promise<{ code: string } | null>;
+  generateWhatsAppUrl: (clientName?: string, city?: string, quoteCode?: string, phone?: string) => string;
+  submitQuote: (clientName?: string, city?: string, phone?: string) => Promise<{ code: string } | null>;
 }
 
 const QuoteContext = createContext<QuoteContextType | null>(null);
@@ -184,7 +184,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
   // Generate WhatsApp formatted URL
   const generateWhatsAppUrl = useCallback(
-    (clientName?: string, city?: string, quoteCode?: string) => {
+    (clientName?: string, city?: string, quoteCode?: string, phone?: string) => {
       const cleanPhone = (settings.whatsapp || settings.phone || "51958400028").replace(/[^0-9]/g, "");
 
       if (items.length === 0) {
@@ -225,6 +225,9 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
       if (clientName && clientName.trim()) {
         message += `👤 *Cliente / Empresa:* ${clientName.trim()}\n`;
       }
+      if (phone && phone.trim()) {
+        message += `📱 *Celular:* ${phone.trim()}\n`;
+      }
       if (city && city.trim()) {
         message += `📍 *Ciudad / Destino:* ${city.trim()}\n`;
       }
@@ -237,8 +240,10 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
   );
 
   const submitQuote = useCallback(
-    async (clientName?: string, city?: string) => {
+    async (clientName?: string, city?: string, phone?: string) => {
       if (items.length === 0) return null;
+      const cleanPhone = phone?.trim() || "";
+      if (cleanPhone.replace(/\D/g, "").length < 9) return null;
       try {
         const res = await fetch("/api/quotes", {
           method: "POST",
@@ -246,6 +251,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             clientName: clientName?.trim() || undefined,
             city: city?.trim() || undefined,
+            phone: cleanPhone,
             items,
           }),
         });

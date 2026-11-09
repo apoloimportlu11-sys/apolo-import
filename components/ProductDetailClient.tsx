@@ -65,7 +65,7 @@ export function ProductDetailClient({
     const nCode = normalizeKey(initialProduct?.code);
     return Boolean((nId && KNOWN_DELETED.has(nId)) || (nCode && KNOWN_DELETED.has(nCode)));
   });
-  const { addItem, openDrawer, generateWhatsAppUrl } = useQuote();
+  const { addItem, openDrawer } = useQuote();
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const supabase = createBrowserSupabase();
@@ -129,8 +129,7 @@ export function ProductDetailClient({
       },
       quantity
     );
-    const url = generateWhatsAppUrl();
-    window.open(url, "_blank", "noopener,noreferrer");
+    openDrawer();
   };
 
   // Find all presentation variants of this same product name

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import {
   fetchQuotes,
@@ -9,8 +10,16 @@ import {
   type QuoteRow,
   type QuoteStatus,
 } from "@/lib/quotes";
-import { ExternalLink, FileText, Loader2, RefreshCw } from "lucide-react";
+import { FileText, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useQuoteInbox } from "@/components/QuoteInboxProvider";
+
+const STATUS_LABEL: Record<QuoteStatus, string> = {
+  nueva: "Nueva",
+  enviada: "Enviada",
+  cerrada: "Cerrada",
+  perdida: "Perdida",
+};
 
 const STATUSES: Array<QuoteStatus | "all"> = [
   "all",
@@ -22,8 +31,13 @@ const STATUSES: Array<QuoteStatus | "all"> = [
 
 export default function CotizacionesPage() {
   const supabase = createBrowserSupabase();
+  const params = useSearchParams();
+  const { revision } = useQuoteInbox();
+  const requested = params.get("estado");
   const [rows, setRows] = useState<QuoteRow[]>([]);
-  const [status, setStatus] = useState<QuoteStatus | "all">("all");
+  const [status, setStatus] = useState<QuoteStatus | "all">(
+    requested && STATUSES.includes(requested as QuoteStatus | "all") ? (requested as QuoteStatus | "all") : "all"
+  );
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -42,8 +56,13 @@ export default function CotizacionesPage() {
   }, [supabase, status]);
 
   useEffect(() => {
+    const next = params.get("estado");
+    if (next && STATUSES.includes(next as QuoteStatus | "all")) setStatus(next as QuoteStatus | "all");
+  }, [params]);
+
+  useEffect(() => {
     load();
-  }, [load]);
+  }, [load, revision]);
 
   async function onStatusChange(id: string, next: QuoteStatus) {
     try {
@@ -86,7 +105,7 @@ export default function CotizacionesPage() {
                 : "bg-[#141414] border-white/10 text-zinc-400"
             }`}
           >
-            {s === "all" ? "Todas" : s}
+            {s === "all" ? "Todas" : STATUS_LABEL[s]}
           </button>
         ))}
       </div>
@@ -110,7 +129,10 @@ export default function CotizacionesPage() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-sm text-[#C7940A] font-bold">{q.code}</span>
+                  <span className="font-mono text-sm font-bold text-[var(--admin-accent)]">{q.code}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${q.status === "nueva" ? "bg-amber-100 text-amber-900" : "bg-[var(--admin-canvas)] text-[var(--admin-muted)]"}`}>
+                    {STATUS_LABEL[q.status]}
+                  </span>
                   <span className="text-xs text-zinc-500">
                     {new Date(q.created_at).toLocaleString("es-EC")}
                   </span>
@@ -120,6 +142,14 @@ export default function CotizacionesPage() {
                   {q.city ? ` · ${q.city}` : ""}
                 </p>
                 <p className="text-xs text-zinc-400 mt-1">
+                  {q.phone ? (
+                    <a href={`tel:${q.phone.replace(/[^\d+]/g, "")}`} className="font-medium text-[var(--admin-accent)]">
+                      {q.phone}
+                    </a>
+                  ) : (
+                    "Sin celular"
+                  )}
+                  {" · "}
                   {q.total_items} unidades · {Array.isArray(q.items) ? q.items.length : 0} ítems
                 </p>
               </div>
@@ -129,18 +159,16 @@ export default function CotizacionesPage() {
                   onChange={(e) => onStatusChange(q.id, e.target.value as QuoteStatus)}
                   className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white"
                 >
-                  <option value="nueva">nueva</option>
-                  <option value="enviada">enviada</option>
-                  <option value="cerrada">cerrada</option>
-                  <option value="perdida">perdida</option>
+                  <option value="nueva">Nueva</option>
+                  <option value="enviada">Enviada</option>
+                  <option value="cerrada">Cerrada</option>
+                  <option value="perdida">Perdida</option>
                 </select>
                 <Link
-                  href={`/cotizacion/${q.code}`}
-                  target="_blank"
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:text-white"
+                  href={`/admin/cotizaciones/${q.code}`}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)]"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Ver
+                  Ver seguimiento
                 </Link>
               </div>
             </div>

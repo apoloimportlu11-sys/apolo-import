@@ -9,13 +9,14 @@ Cotización UI → QuoteProvider
 QuoteProvider → POST /api/quotes
 Quotes API → customers/quotes tables
 Contacto → POST /api/contact
-Contact API → Resend
+Contact API → Resend (`RESEND_API_KEY`; Gmail SMTP retirado)
 Chat Artemisa → POST /api/chat
 Chat API → OpenAI
 
 ## Admin
 Admin layout → AdminSidebar/AdminHeader
 Admin productos → products/brands/pages
+Alta de producto → modal compacto + MediaSelector (foto en Storage, sin data URL)
 Admin marcas → brands
 Admin inventario → products + inventory_movements
 Admin cotizaciones → quotes

@@ -173,8 +173,8 @@ export function useFestiveTheme() {
       return updateConfig((prev) => ({
         ...prev,
         customThemes: prev.customThemes.filter((t) => t.id !== themeId),
-        activeThemeId:
-          prev.activeThemeId === themeId ? "dia-de-la-bandera" : prev.activeThemeId,
+        activeThemeId: prev.activeThemeId === themeId ? "dia-de-la-bandera" : prev.activeThemeId,
+        globalEnabled: prev.activeThemeId === themeId ? false : prev.globalEnabled,
       }));
     },
     [updateConfig]
