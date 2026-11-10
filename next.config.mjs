@@ -6,7 +6,7 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  outputFileTracingRoot: path.join(__dirname, '../'),
+  outputFileTracingRoot: __dirname,
 
   // Compression & security headers
   compress: process.env.NODE_ENV === "production",
