@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase-client";
@@ -30,6 +30,21 @@ const STATUSES: Array<QuoteStatus | "all"> = [
 ];
 
 export default function CotizacionesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20 text-zinc-400 gap-2">
+          <Loader2 className="w-5 h-5 animate-spin text-[#C7940A]" />
+          Cargando...
+        </div>
+      }
+    >
+      <CotizacionesList />
+    </Suspense>
+  );
+}
+
+function CotizacionesList() {
   const supabase = createBrowserSupabase();
   const params = useSearchParams();
   const { revision } = useQuoteInbox();
