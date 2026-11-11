@@ -51,26 +51,32 @@ export function ThemeProvider({
   const [systemTheme, setSystemTheme] = React.useState<'dark' | 'light'>('dark')
   const [mounted, setMounted] = React.useState(false)
 
-  React.useEffect(() => {
-    setMounted(true)
-    setSystemTheme(getSystemTheme())
+  React.useLayoutEffect(() => {
+    const system = getSystemTheme()
+    setSystemTheme(system)
 
+    let next: Theme = forcedTheme || defaultTheme
     if (!forcedTheme) {
       try {
         const stored = localStorage.getItem('apolo-theme') as Theme | null
         if (stored === 'dark' || stored === 'light' || stored === 'system') {
-          setThemeState(stored)
+          next = stored
         }
       } catch {
         // ignore
       }
     }
 
+    setThemeState(next)
+    const resolved = next === 'system' ? system : (next as 'dark' | 'light')
+    applyThemeClass(resolved)
+    setMounted(true)
+
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = () => setSystemTheme(mq.matches ? 'dark' : 'light')
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
-  }, [forcedTheme])
+  }, [forcedTheme, defaultTheme])
 
   const resolvedTheme: 'dark' | 'light' = forcedTheme
     ? forcedTheme === 'system'

@@ -93,7 +93,7 @@ export default function FloatingWhatsApp() {
   if (pathname.startsWith("/admin")) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-auto">
+    <div className="pointer-events-auto fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
       {isAssistantOpen && (
         <div className="w-[22rem] max-w-[calc(100vw-2rem)] h-[28rem] rounded-2xl border border-border bg-card text-foreground shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/30">
@@ -182,14 +182,14 @@ export default function FloatingWhatsApp() {
           setIsAssistantOpen(!isAssistantOpen);
           if (!isAssistantOpen) setIsOpen(false);
         }}
-        className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl shadow-primary/40 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
+        className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-colors duration-200 hover:bg-red-500 cursor-pointer"
         aria-label="Abrir a Artemisa, asistente virtual"
       >
         <span className="absolute -top-1 -right-1 flex h-4 w-4">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
         </span>
-        <Bot className="h-7 w-7 transition-transform group-hover:rotate-12" />
+        <Bot className="h-5 w-5" />
       </button>
 
       {isOpen && (
@@ -250,7 +250,7 @@ export default function FloatingWhatsApp() {
         </div>
       )}
 
-      <div className="relative flex items-center gap-3">
+      <div className="relative flex flex-col items-end gap-2">
         {!isOpen && hasPrompted && (
           <button
             type="button"
@@ -267,14 +267,14 @@ export default function FloatingWhatsApp() {
             setIsOpen(!isOpen);
             if (!isOpen) setIsAssistantOpen(false);
           }}
-          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-900/50 transition-all duration-300 hover:scale-110 hover:bg-emerald-500 active:scale-95 cursor-pointer"
+          className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 transition-colors duration-200 hover:bg-emerald-500 cursor-pointer"
           aria-label="Abrir chat de WhatsApp"
         >
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
           </span>
-          <WhatsAppIcon className="h-7 w-7 transition-transform group-hover:rotate-12" />
+          <WhatsAppIcon className="h-5 w-5" />
         </button>
       </div>
     </div>

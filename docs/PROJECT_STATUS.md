@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-08**. Panel admin con tema claro, oscuro y sistema, y menú contraíble.
+Última revisión de documentación: **2026-11-11**. Local alineado con `origin/main` (`3285e84`) + pulido home (Lenis, tema claro corporativo, catálogos magazine, vitrinas).
 
 ## Qué es
 
@@ -9,8 +9,8 @@ Sitio comercial + backoffice de **Apolo Lubricantes**: catálogo, cotizaciones W
 ## Implementado (verificado en código)
 
 - Storefront: home, productos/detalle, nosotros, contacto, seguimiento cotización por código
-- Carrito/cotización cliente (`quote-context`, drawer, botón flotante, WhatsApp)
-- Admin completo por rutas en `AdminSidebar` (dashboard, reportes, banners, temáticas, config, marcas, líneas, productos, inventario, cotizaciones, proveedores, páginas, usuarios)
+- Carrito/cotización cliente (`quote-context`, drawer, botón flotante, WhatsApp); celular obligatorio al enviar
+- Admin completo por rutas en `AdminSidebar` (dashboard, reportes, banners, temáticas, config, marcas, líneas, productos, inventario, cotizaciones + detalle `[code]` e inbox de nuevas, proveedores, páginas, usuarios)
 - Auth email/password + Google OAuth + cookies de sesión
 - API: quotes, contact (Resend), chat (OpenAI), set-cookie
 - Schema SQL + scripts bootstrap/RLS/seed/migración MySQL
@@ -40,7 +40,7 @@ Sitio comercial + backoffice de **Apolo Lubricantes**: catálogo, cotizaciones W
 
 ## Enfoque actual de agentes
 
-Memoria persistente y docs en `docs/` + `.cursor/rules/` + `.cursor/memory/` (esta tarea). No hay feature de producto en curso documentada aquí.
+Home storefront 2026-11-11: el modo claro usa blanco, rojo `#C90012`, grafito `#171A20`, gris `#F2F3F5` y oro `#FFD000`. La estructura del inicio no cambia. El oscuro conserva el escenario de las tres vitrinas. Cotización, WhatsApp, Artemisa y admin no se tocan.
 
 ## Cómo actualizar este archivo
 

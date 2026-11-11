@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useHomeContent } from "@/lib/home-content";
+import { ScrollReveal } from "@/components/home/scroll-reveal";
+import { LightAtmosphere } from "@/components/home/light-atmosphere";
 
 export interface BrandItem {
   logo: string;
@@ -93,6 +94,53 @@ interface BrandsCarouselProps {
   className?: string;
 }
 
+function MarqueeRow({
+  items,
+  reverse,
+  paused,
+  onPick,
+}: {
+  items: BrandItem[];
+  reverse?: boolean;
+  paused: boolean;
+  onPick: (item: BrandItem) => void;
+}) {
+  const doubled = items.concat(items);
+
+  return (
+    <div className="marquee-fade relative w-full overflow-hidden py-3 sm:py-5">
+      <div
+        className={`flex w-max items-center gap-10 sm:gap-14 ${
+          reverse ? "animate-marquee-reverse" : "animate-marquee"
+        } ${paused ? "paused" : "pause-on-hover"}`}
+      >
+        {doubled.map((item, i) => (
+          <div
+            key={`${reverse ? "r" : "f"}-${item.name}-${i}`}
+            role="button"
+            tabIndex={0}
+            className="flex h-10 w-28 shrink-0 items-center justify-center sm:h-12 sm:w-36"
+            onClick={() => onPick(item)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onPick(item);
+              }
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.logo}
+              alt={item.name}
+              className="h-10 w-auto max-w-full object-contain opacity-70 grayscale transition-[opacity,filter] duration-300 hover:opacity-100 hover:grayscale-0 focus-visible:opacity-100 focus-visible:grayscale-0 sm:h-12"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BrandsCarousel({
   showTitle = true,
   className = "",
@@ -104,12 +152,9 @@ export default function BrandsCarousel({
     name?: string;
   } | null>(null);
 
-  // Close modal on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setActiveProduct(null);
-      }
+      if (e.key === "Escape") setActiveProduct(null);
     };
     if (activeProduct) {
       window.addEventListener("keydown", handleKeyDown);
@@ -121,150 +166,37 @@ export default function BrandsCarousel({
     };
   }, [activeProduct]);
 
+  const pick = (item: BrandItem) =>
+    setActiveProduct({ product: item.product, logo: item.logo, name: item.name });
+
   return (
     <section
-      className={`relative w-full py-[var(--space-section-y-sm)] overflow-hidden bg-background border-b border-border dark:border-primary/25 transition-colors ${className}`}
+      className={`section-brands relative w-full overflow-hidden border-y border-[color:color-mix(in_oklab,var(--gold)_35%,transparent)] bg-[#EAF1FF] py-[var(--space-section-y-sm)] text-foreground dark:border-white/10 dark:bg-[#141414] dark:text-white ${className}`}
     >
-      {/* Efecto de brillo superior adaptativo */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.08),transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.18),transparent_55%)] pointer-events-none" />
+      <LightAtmosphere seam="red" variant="diagonal" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,162,39,0.12),transparent_55%)]" />
 
-      {/* Hexágonos fondo adaptativos */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.14] transition-opacity">
-        <svg className="w-full h-full text-red-600 dark:text-red-500">
-          <pattern
-            id="hexagons-brands-section"
-            width="40"
-            height="40"
-            patternUnits="userSpaceOnUse"
-          >
-            <polygon
-              points="20,0 40,10 40,30 20,40 0,30 0,10"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-          </pattern>
-          <rect width="100%" height="100%" fill="url(#hexagons-brands-section)" />
-        </svg>
-      </div>
-
-      <div className="w-full space-y-8 lg:space-y-12">
-        {/* Título de sección */}
+      <div className="relative z-10 w-full space-y-8 lg:space-y-10">
         {showTitle && (
-          <div className="relative z-10 text-center px-4">
+          <ScrollReveal className="px-4 text-center">
             <div className="flex items-center justify-center gap-3 sm:gap-5">
-              <div className="w-12 sm:w-20 lg:w-28 h-[2px] glow-line-r rounded-full" />
-              <h2 className="text-[length:var(--fs-h2)] font-extrabold italic text-foreground text-center tracking-wider uppercase">
-                <span className="text-primary drop-shadow-[0_0_12px_rgba(239,68,68,0.6)] drop-shadow-[0_0_24px_rgba(220,38,38,0.4)]">
-                  {homeContent.brandsSection.highlight}
-                </span>{" "}
+              <div className="oil-streak oil-streak-r hidden h-px w-12 sm:block sm:w-20 lg:w-28" />
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl">
+                <span className="title-heat text-primary">{homeContent.brandsSection.highlight}</span>{" "}
                 {homeContent.brandsSection.rest}
               </h2>
-              <div className="w-12 sm:w-20 lg:w-28 h-[2px] glow-line-l rounded-full" />
+              <div className="oil-streak oil-streak-l hidden h-px w-12 sm:block sm:w-20 lg:w-28" />
             </div>
-
-            <p className="mt-3 sm:mt-4 text-[length:var(--fs-body)] text-muted-foreground font-medium">
+            <p className="mt-3 text-pretty text-base text-zinc-500 dark:text-zinc-400 sm:mt-4">
               {homeContent.brandsSection.subtitle}
             </p>
-          </div>
+          </ScrollReveal>
         )}
 
-        {/* Carrusel 1 → izquierda a derecha */}
-        <div className="relative w-full overflow-hidden py-4 sm:py-6">
-          {/* Sombras difuminadas laterales */}
-          <div className="pointer-events-none absolute left-0 top-0 h-full w-20 sm:w-32 lg:w-44 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
-          <div className="pointer-events-none absolute right-0 top-0 h-full w-20 sm:w-32 lg:w-44 bg-gradient-to-l from-background via-background/80 to-transparent z-10" />
-
-          <div
-            className={`flex w-max animate-marquee gap-8 sm:gap-12 lg:gap-16 items-center ${
-              activeProduct ? "paused" : "pause-on-hover"
-            }`}
-          >
-            {brands.concat(brands).map((item, i) => (
-              <div
-                key={`b1-${i}`}
-                role="button"
-                tabIndex={0}
-                className="w-44 h-20 sm:w-52 sm:h-24 lg:w-60 lg:h-28 flex-shrink-0 flex items-center justify-center p-2 cursor-pointer transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary/40 rounded-xl"
-                onClick={() =>
-                  setActiveProduct({
-                    product: item.product,
-                    logo: item.logo,
-                    name: item.name,
-                  })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setActiveProduct({
-                      product: item.product,
-                      logo: item.logo,
-                      name: item.name,
-                    });
-                  }
-                }}
-              >
-                <img
-                  src={item.logo}
-                  alt={item.name}
-                  className="w-full h-full object-contain
-                    drop-shadow-[0_0_2px_rgba(255,255,255,0.9)]
-                    drop-shadow-[0_0_6px_rgba(255,255,255,0.5)]
-                    hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.9)]
-                    transition-all duration-300"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Carrusel 2 → derecha a izquierda */}
-        <div className="relative w-full overflow-hidden py-3 sm:py-4">
-          {/* Sombras difuminadas laterales */}
-          <div className="pointer-events-none absolute left-0 top-0 h-full w-20 sm:w-32 lg:w-44 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
-          <div className="pointer-events-none absolute right-0 top-0 h-full w-20 sm:w-32 lg:w-44 bg-gradient-to-l from-background via-background/80 to-transparent z-10" />
-
-          <div
-            className={`flex w-max animate-marquee-reverse gap-8 sm:gap-12 lg:gap-16 items-center ${
-              activeProduct ? "paused" : "pause-on-hover"
-            }`}
-          >
-            {brands.concat(brands).map((item, i) => (
-              <div
-                key={`b2-${i}`}
-                role="button"
-                tabIndex={0}
-                className="w-44 h-20 sm:w-52 sm:h-24 lg:w-60 lg:h-28 flex-shrink-0 flex items-center justify-center p-2 cursor-pointer transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary/40 rounded-xl"
-                onClick={() =>
-                  setActiveProduct({
-                    product: item.product,
-                    logo: item.logo,
-                    name: item.name,
-                  })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setActiveProduct({
-                      product: item.product,
-                      logo: item.logo,
-                      name: item.name,
-                    });
-                  }
-                }}
-              >
-                <img
-                  src={item.logo}
-                  alt={item.name}
-                  className="w-full h-full object-contain grayscale hover:grayscale-0 transition-all duration-300"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+        <MarqueeRow items={brands} paused={Boolean(activeProduct)} onPick={pick} />
+        <MarqueeRow items={brands} reverse paused={Boolean(activeProduct)} onPick={pick} />
       </div>
 
-      {/* MODAL DE PRODUCTO DESTACADO */}
       {activeProduct && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
@@ -272,53 +204,43 @@ export default function BrandsCarousel({
           aria-modal="true"
           aria-label="Producto Destacado"
         >
-          {/* Overlay oscuro con blur */}
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-md transition-opacity duration-300"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={() => setActiveProduct(null)}
           />
-
-          {/* Tarjeta modal */}
-          <div className="relative w-full max-w-sm sm:max-w-md rounded-2xl overflow-hidden shadow-2xl animate-fade-in bg-card border border-border">
+          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:max-w-md">
             <div className="p-6 sm:p-8">
-              {/* BOTÓN CERRAR */}
               <button
                 onClick={() => setActiveProduct(null)}
-                className="absolute top-3 right-3 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-muted text-foreground hover:bg-primary hover:text-white transition cursor-pointer z-10"
+                className="absolute top-3 right-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-muted text-foreground hover:bg-primary hover:text-white sm:h-9 sm:w-9"
                 aria-label="Cerrar ventana"
               >
                 ✕
               </button>
-
-              {/* LOGO DE LA MARCA */}
-              <div className="flex justify-center mb-4">
+              <div className="mb-4 flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={activeProduct.logo}
-                  className="h-10 sm:h-12 object-contain"
+                  className="h-10 object-contain sm:h-12"
                   alt={activeProduct.name || "Marca"}
                 />
               </div>
-
-              {/* IMAGEN DEL PRODUCTO DESTACADO */}
               <div className="flex justify-center py-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={activeProduct.product}
-                  className="max-h-56 sm:max-h-64 lg:max-h-72 object-contain drop-shadow-xl transition-transform duration-300 hover:scale-105"
+                  className="max-h-56 object-contain drop-shadow-xl sm:max-h-64 lg:max-h-72"
                   alt={`Producto destacado ${activeProduct.name || ""}`}
                 />
               </div>
-
-              {/* TEXTO INFORMATIVO */}
-              <div className="mt-4 sm:mt-6 flex flex-col items-center text-center">
-                <span className="text-[10px] sm:text-[11px] tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground uppercase font-semibold">
+              <div className="mt-4 flex flex-col items-center text-center sm:mt-6">
+                <span className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase sm:text-[11px]">
                   Selección especial
                 </span>
-
-                <h4 className="mt-1 text-xl sm:text-2xl font-extrabold text-foreground drop-shadow-sm">
-                  PRODUCTO DESTACADO
+                <h4 className="mt-1 font-display text-xl font-semibold text-foreground sm:text-2xl">
+                  Producto destacado
                 </h4>
-
-                <div className="mt-2 w-12 sm:w-16 h-[2px] sm:h-[3px] bg-gradient-to-r from-red-500 via-rose-500 to-red-600 rounded-full" />
+                <div className="mt-2 h-[2px] w-12 rounded-full bg-gradient-to-r from-primary via-[color:var(--gold)] to-primary sm:w-16" />
               </div>
             </div>
           </div>

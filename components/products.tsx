@@ -19,6 +19,7 @@ import {
   Layers,
   Package,
   FileText,
+  Droplets,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,8 +38,17 @@ import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
 import { useQuote } from "@/lib/quote-context";
 import { VehicleVectorDecor } from "@/components/VehicleVectorDecor";
-import { groupProductsByLine as groupProductsByLineShared, getProductLineCategory, type ProductLineGroup } from "@/lib/product-grouping";
+import { groupProductsByLine as groupProductsByLineShared, getProductLineCategory, resolveLineFilterToken, type ProductLineGroup } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
+import { CatalogPagination } from "@/components/catalog/catalog-pagination";
+import { ProductQuickView } from "@/components/catalog/product-quick-view";
+import { scrollCatalogIntoView } from "@/lib/lenis-lock";
+
+const PAGE_SIZE = 24;
+
+function brandEquals(a?: string | null, b?: string | null) {
+  return Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
+}
 
 function formatViscosityBadge(visc?: string | null): string | null {
   if (!visc) return null;
@@ -71,8 +81,11 @@ export function Products() {
   const [viscosityOpen, setViscosityOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showAllProducts, setShowAllProducts] = useState(true);
-  const [showMoreBrandTabs, setShowMoreBrandTabs] = useState(false);
   const [brandFilterSearch, setBrandFilterSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const [adminCacheVersion, setAdminCacheVersion] = useState(0);
   const hasWarnedFetchError = useRef(false);
@@ -113,6 +126,24 @@ export function Products() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const apply = () => {
+      document.documentElement.style.setProperty(
+        "--catalog-toolbar-height",
+        `${el.offsetHeight}px`
+      );
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--catalog-toolbar-height");
+    };
   }, []);
 
   const mapRowToProduct = (item: any): Product => ({
@@ -551,7 +582,8 @@ export function Products() {
     }
 
     if (lineParam) {
-      setSelectedLines([lineParam.toUpperCase()]);
+      const resolved = resolveLineFilterToken(lineParam, lineGroupsById);
+      setSelectedLines([resolved.toUpperCase()]);
       setShowAllProducts(false);
     }
 
@@ -569,7 +601,7 @@ export function Products() {
         }
       }
     }
-  }, [searchParams]);
+  }, [searchParams, lineGroupsById]);
 
   // Filtrado de productos con soporte para tildes y búsqueda robusta 100% libre de errores
   const filteredProducts = useMemo(() => {
@@ -671,9 +703,10 @@ export function Products() {
     }
 
     if (selectedViscosities.length > 0) {
-      filtered = filtered.filter(
-        (p) => p.viscosity && selectedViscosities.includes(p.viscosity)
-      );
+      filtered = filtered.filter((p) => {
+        const visc = (p.viscosity || "").trim();
+        return visc && selectedViscosities.some((v) => v.trim() === visc);
+      });
     }
 
     // Ordenamiento seguro
@@ -696,6 +729,35 @@ export function Products() {
     lineGroupsById,
   ]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [
+    searchQuery,
+    selectedBrands,
+    selectedLines,
+    selectedCategory,
+    selectedSubcategory,
+    selectedViscosities,
+    sortBy,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedProducts = useMemo(
+    () =>
+      filteredProducts.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+      ),
+    [filteredProducts, currentPage]
+  );
+
+  const goToPage = (next: number) => {
+    const clamped = Math.min(Math.max(1, next), totalPages);
+    setPage(clamped);
+    if (gridRef.current) scrollCatalogIntoView(gridRef.current);
+  };
+
   type BrandGroup = {
     brand: string;
     totalProducts: number;
@@ -713,7 +775,7 @@ export function Products() {
     const groups: BrandGroup[] = [];
     const map = new Map<string, Product[]>();
 
-    filteredProducts.forEach((p) => {
+    pagedProducts.forEach((p) => {
       const b = p.brand?.trim() || "Otras Marcas";
       if (!map.has(b)) {
         map.set(b, []);
@@ -748,7 +810,7 @@ export function Products() {
     });
 
     return groups;
-  }, [filteredProducts, availableBrands, sortBy, lineGroupsById]);
+  }, [pagedProducts, availableBrands, sortBy, lineGroupsById]);
 
   // Lista dinámica de líneas de productos
   const availableLines = useMemo(() => {
@@ -756,8 +818,8 @@ export function Products() {
     let productsToCheck = allMergedProducts;
 
     if (selectedBrands.length > 0) {
-      productsToCheck = productsToCheck.filter(
-        (p) => p.brand && selectedBrands.includes(p.brand)
+      productsToCheck = productsToCheck.filter((p) =>
+        selectedBrands.some((brand) => brandEquals(p.brand, brand))
       );
     }
 
@@ -778,8 +840,8 @@ export function Products() {
     let productsToCheck = allMergedProducts;
 
     if (selectedBrands.length > 0) {
-      productsToCheck = productsToCheck.filter(
-        (p) => p.brand && selectedBrands.includes(p.brand)
+      productsToCheck = productsToCheck.filter((p) =>
+        selectedBrands.some((brand) => brandEquals(p.brand, brand))
       );
     }
 
@@ -808,7 +870,11 @@ export function Products() {
       if (p.viscosity && p.viscosity.trim()) viscs.add(p.viscosity.trim());
     });
 
-    return viscosities.filter((v) => viscs.has(v));
+    const known = viscosities.filter((v) => viscs.has(v));
+    const extra = Array.from(viscs)
+      .filter((v) => !viscosities.includes(v))
+      .sort((a, b) => a.localeCompare(b));
+    return [...known, ...extra];
   }, [allMergedProducts, selectedBrands, selectedLines, selectedCategory, selectedSubcategory, lineGroupsById]);
 
   const handleBrandToggle = (brand: string) => {
@@ -1024,12 +1090,14 @@ export function Products() {
                 </div>
               )}
 
-              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1.5 custom-scrollbar">
+              <div className="space-y-1.5 pr-0.5">
                 {displayedBrands.map((brand) => {
-                  const count = allMergedProducts.filter(
-                    (p) => p.brand === brand
+                  const count = allMergedProducts.filter((p) =>
+                    brandEquals(p.brand, brand)
                   ).length;
-                  const isChecked = selectedBrands.includes(brand);
+                  const isChecked = selectedBrands.some((item) =>
+                    brandEquals(item, brand)
+                  );
 
                   const isApolo = brand.toLowerCase() === "apolo";
                   const isOverts = brand.toLowerCase() === "overts";
@@ -1143,7 +1211,7 @@ export function Products() {
             </button>
 
             {lineOpen && (
-              <div className="mt-3 space-y-1.5 max-h-52 overflow-y-auto pr-1.5 custom-scrollbar">
+              <div className="mt-3 space-y-1.5 pr-0.5">
                 {availableLines.map((line) => {
                   const count = allMergedProducts.filter((p) => {
                     const cat = getProductLineCategory(p, lineGroupsById);
@@ -1196,6 +1264,71 @@ export function Products() {
           </div>
         )}
 
+        {/* FILTRO POR VISCOSIDAD */}
+        {availableViscosities.length > 0 && (
+          <div className="border-b border-border pb-5">
+            <button
+              type="button"
+              onClick={() => setViscosityOpen(!viscosityOpen)}
+              className="flex w-full items-center justify-between py-2 font-semibold text-foreground group cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-primary" />
+                VISCOSIDAD
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform group-hover:text-foreground ${
+                  viscosityOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {viscosityOpen && (
+              <div className="mt-3 space-y-1.5 pr-0.5">
+                {availableViscosities.map((viscosity) => {
+                  const count = allMergedProducts.filter(
+                    (p) => (p.viscosity || "").trim() === viscosity
+                  ).length;
+                  const isChecked = selectedViscosities.includes(viscosity);
+                  return (
+                    <label
+                      key={viscosity}
+                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-2 transition-all duration-200 ${
+                        isChecked
+                          ? "border-primary/40 bg-primary/10 shadow-xs"
+                          : "border-transparent bg-muted/40 hover:border-border hover:bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => handleViscosityToggle(viscosity)}
+                          className="border-muted-foreground/60 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                        />
+                        <span
+                          className={`text-sm font-medium ${
+                            isChecked ? "font-bold text-primary" : "text-foreground/90"
+                          }`}
+                        >
+                          {viscosity}
+                        </span>
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isChecked
+                            ? "bg-primary text-white"
+                            : "border border-border/60 bg-card text-muted-foreground"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* FILTRO POR CATEGORÍAS */}
         <div className="pb-2">
           <button
@@ -1214,7 +1347,7 @@ export function Products() {
           </button>
 
           {categoryOpen && (
-            <div className="mt-3 space-y-1 max-h-56 overflow-y-auto pr-1.5 custom-scrollbar">
+            <div className="mt-3 space-y-1 pr-0.5">
               <button
                 onClick={handleShowAllProducts}
                 className={`w-full text-left px-2.5 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
@@ -1336,8 +1469,9 @@ export function Products() {
           <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-5 hover:border-primary/60 transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-primary/5">
             <div className="flex flex-col sm:flex-row gap-5">
               {/* Imagen con fallback limpio */}
-              <Link
-                href={`/productos/${product.id}`}
+              <button
+                type="button"
+                onClick={() => setQuickViewProduct(product)}
                 className="w-full sm:w-44 h-52 sm:h-44 flex-shrink-0 bg-white rounded-xl overflow-hidden border border-border/40 p-3 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-200"
               >
                 {hasValidImage ? (
@@ -1354,14 +1488,18 @@ export function Products() {
                   </div>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50 rounded-lg p-3 text-center border border-dashed border-zinc-200">
-                    <Package className="w-10 h-10 text-[#C7940A] opacity-70 mb-1" />
+                    <Package className="w-10 h-10 text-[#FFD000] opacity-70 mb-1" />
                     <span className="text-[11px] font-medium text-zinc-500">Sin imagen</span>
                   </div>
                 )}
-              </Link>
+              </button>
 
               <div className="flex-1 min-w-0 flex flex-col justify-between">
-                <Link href={`/productos/${product.id}`} className="block">
+                <button
+                  type="button"
+                  onClick={() => setQuickViewProduct(product)}
+                  className="block w-full text-left"
+                >
                   {/* Badges de Marca y Categoría */}
                   <div className="flex flex-wrap items-center gap-2 mb-2.5">
                     <span
@@ -1400,16 +1538,17 @@ export function Products() {
                   <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2 break-words leading-relaxed">
                     {product.type || product.description}
                   </p>
-                </Link>
+                </button>
 
                 <div className="mt-4 pt-3.5 border-t border-border/40 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={`/productos/${product.id}`}
+                    <button
+                      type="button"
+                      onClick={() => setQuickViewProduct(product)}
                       className="text-primary hover:underline text-sm font-bold flex items-center gap-1"
                     >
                       Ver ficha y detalles →
-                    </Link>
+                    </button>
                     <button
                       type="button"
                       onClick={handleQuoteClick}
@@ -1453,7 +1592,18 @@ export function Products() {
           />
 
           <div className="p-5 flex flex-col h-full">
-            <Link href={`/productos/${product.id}`} className="contents">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setQuickViewProduct(product)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setQuickViewProduct(product);
+                }
+              }}
+              className="cursor-pointer text-left"
+            >
               {/* Header de la tarjeta: Marca y Categoría */}
               <div className="flex items-center justify-between gap-2 mb-3.5">
                 <span
@@ -1497,7 +1647,7 @@ export function Products() {
                   </div>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50 rounded-lg p-4 text-center border border-dashed border-zinc-200">
-                    <Package className="w-12 h-12 text-[#C7940A] opacity-70 mb-2" />
+                    <Package className="w-12 h-12 text-[#FFD000] opacity-70 mb-2" />
                     <span className="text-xs font-medium text-zinc-500">Sin imagen asignada</span>
                   </div>
                 )}
@@ -1516,15 +1666,16 @@ export function Products() {
                   {product.type || product.description}
                 </p>
               </div>
-            </Link>
+            </div>
 
             <div className="mt-5 pt-3.5 border-t border-border/40 flex items-center justify-between gap-2">
-              <Link
-                href={`/productos/${product.id}`}
+              <button
+                type="button"
+                onClick={() => setQuickViewProduct(product)}
                 className="text-primary hover:underline text-xs sm:text-sm font-bold"
               >
                 Detalles →
-              </Link>
+              </button>
 
               <div className="flex items-center gap-2">
                 {product.presentation && (
@@ -1566,8 +1717,15 @@ export function Products() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-5 lg:px-6 relative z-10">
+        <Breadcrumb />
+
+        <div
+          ref={toolbarRef}
+          className="sticky z-30 -mx-4 mb-6 space-y-3 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur-md sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6"
+          style={{ top: "var(--site-header-height, 6rem)" }}
+        >
         {/* Barra de Búsqueda Mejorada */}
-        <div className="max-w-3xl mx-auto mb-6 md:mb-8">
+        <div className="max-w-3xl mx-auto">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
 
@@ -1592,14 +1750,14 @@ export function Products() {
         </div>
 
         {/* PESTAÑAS RÁPIDAS DE MARCAS (SEPARADOR / SELECTOR SUPERIOR) */}
-        <div className="flex flex-col items-center mb-6 gap-2.5">
+        <div className="flex flex-col items-center gap-2.5">
           {/* Fila destacada: Todas las marcas + marcas oficiales (Apolo, Overts, Valtrom) */}
-          <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-card border border-border rounded-2xl shadow-xs">
+          <div className="flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto p-1.5 bg-card border border-border rounded-2xl shadow-xs custom-scrollbar sm:justify-center">
             <button
               onClick={() => handleBrandQuickSelect("all")}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 selectedBrands.length === 0
-                  ? "bg-primary text-white shadow-sm shadow-primary/20 scale-[1.02]"
+                  ? "bg-primary text-white shadow-sm shadow-primary/20"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
@@ -1622,11 +1780,11 @@ export function Products() {
                 ["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
               )
               .map((brand) => {
-                const count = allMergedProducts.filter(
-                  (p) => p.brand === brand
+                const count = allMergedProducts.filter((p) =>
+                  brandEquals(p.brand, brand)
                 ).length;
                 const isSelected =
-                  selectedBrands.length === 1 && selectedBrands[0] === brand;
+                  selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
                 const isApolo = brand.toLowerCase() === "apolo";
                 const isOverts = brand.toLowerCase() === "overts";
 
@@ -1645,7 +1803,7 @@ export function Products() {
                   <button
                     key={brand}
                     onClick={() => handleBrandQuickSelect(brand)}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center gap-2 scale-[1.02] ${
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center gap-2 ${
                       isSelected ? activeClasses : idleClasses
                     }`}
                   >
@@ -1673,41 +1831,35 @@ export function Products() {
               })}
           </div>
 
-          {/* Otras marcas: colapsadas por defecto para no saturar la pantalla */}
           {(() => {
             const otherBrands = availableBrands.filter(
               (brand) => !["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
             );
             if (otherBrands.length === 0) return null;
 
-            const visibleCount = 6;
-            const visibleBrands = showMoreBrandTabs
-              ? otherBrands
-              : otherBrands.slice(0, visibleCount);
-
             return (
-              <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-3xl">
-                {visibleBrands.map((brand) => {
-                  const count = allMergedProducts.filter(
-                    (p) => p.brand === brand
+              <div className="flex max-w-4xl items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+                {otherBrands.map((brand) => {
+                  const count = allMergedProducts.filter((p) =>
+                    brandEquals(p.brand, brand)
                   ).length;
                   const isSelected =
-                    selectedBrands.length === 1 && selectedBrands[0] === brand;
+                    selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
 
                   return (
                     <button
                       key={brand}
                       onClick={() => handleBrandQuickSelect(brand)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                      className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
                         isSelected
                           ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60 bg-muted/30"
+                          : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-200" : "bg-blue-400"}`} />
+                      <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-blue-200" : "bg-blue-400"}`} />
                       <span>{brand}</span>
                       <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        className={`rounded-full px-1.5 text-[10px] ${
                           isSelected
                             ? "bg-white/25 text-white"
                             : "bg-muted text-muted-foreground"
@@ -1718,28 +1870,14 @@ export function Products() {
                     </button>
                   );
                 })}
-
-                {otherBrands.length > visibleCount && (
-                  <button
-                    type="button"
-                    onClick={() => setShowMoreBrandTabs((v) => !v)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                  >
-                    {showMoreBrandTabs
-                      ? "Ver menos marcas ▲"
-                      : `+${otherBrands.length - visibleCount} marcas más ▾`}
-                  </button>
-                )}
               </div>
             );
           })()}
         </div>
 
-        <Breadcrumb />
-
         {/* CHIPS DE FILTROS ACTIVOS */}
         {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-card border border-border rounded-xl shadow-xs">
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-card border border-border rounded-xl shadow-xs">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 mr-1">
               <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
               Filtros activos:
@@ -1806,6 +1944,22 @@ export function Products() {
               </span>
             )}
 
+            {selectedViscosities.map((viscosity) => (
+              <span
+                key={viscosity}
+                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/30 font-medium"
+              >
+                Viscosidad: <strong>{viscosity}</strong>
+                <button
+                  onClick={() => handleViscosityToggle(viscosity)}
+                  className="hover:bg-primary/20 rounded p-0.5 transition-colors"
+                  aria-label={`Quitar viscosidad ${viscosity}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+
             {searchQuery.trim() && (
               <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-muted/80 text-foreground border border-border font-medium">
                 Búsqueda: <strong>&ldquo;{searchQuery}&rdquo;</strong>
@@ -1827,10 +1981,12 @@ export function Products() {
             </button>
           </div>
         )}
+        </div>
 
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
           {/* SIDEBAR DESKTOP */}
           <aside
+            data-lenis-prevent
             className="
               hidden lg:block
               w-72 min-w-72 max-w-72 flex-shrink-0
@@ -1839,9 +1995,10 @@ export function Products() {
               shadow-sm
               rounded-2xl
               p-4
-              sticky top-[calc(var(--site-header-height,6rem)+1rem)]
-              max-h-[calc(100vh-var(--site-header-height,6rem)-2rem)]
+              sticky top-[calc(var(--site-header-height,6rem)+var(--catalog-toolbar-height,0px)+0.75rem)]
+              max-h-[calc(100dvh-var(--site-header-height,6rem)-var(--catalog-toolbar-height,0px)-1.5rem)]
               overflow-y-auto
+              overscroll-contain
               custom-scrollbar
             "
           >
@@ -1875,7 +2032,7 @@ export function Products() {
               </div>
 
               {/* BARRA DE HERRAMIENTAS (Filtros móvil, Ordenar, Vista) */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border py-2.5 px-4 border-l-4 border-l-primary rounded-xl shadow-xs">
+              <div className="sticky z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border border-l-4 border-l-primary bg-card/95 px-4 py-2.5 shadow-xs backdrop-blur-md" style={{ top: "calc(var(--site-header-height, 6rem) + var(--catalog-toolbar-height, 0px) + 0.5rem)" }}>
                 <button
                   onClick={() => setMobileSidebarOpen(true)}
                   className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-muted/80 border border-border rounded-lg text-foreground text-xs sm:text-sm font-medium"
@@ -1883,15 +2040,19 @@ export function Products() {
                   <SlidersHorizontal className="h-4 w-4 text-primary" />
                   <span>Filtros</span>
                   {selectedBrands.length +
+                    selectedLines.length +
                     (selectedCategory ? 1 : 0) +
                     (selectedSubcategory ? 1 : 0) +
-                    selectedViscosities.length >
+                    selectedViscosities.length +
+                    (searchQuery.trim() ? 1 : 0) >
                     0 && (
                     <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
                       {selectedBrands.length +
+                        selectedLines.length +
                         (selectedCategory ? 1 : 0) +
                         (selectedSubcategory ? 1 : 0) +
-                        selectedViscosities.length}
+                        selectedViscosities.length +
+                        (searchQuery.trim() ? 1 : 0)}
                     </span>
                   )}
                 </button>
@@ -1964,6 +2125,7 @@ export function Products() {
             </div>
 
             {/* LISTADO DE PRODUCTOS (CON SEPARADORES POR MARCA Y SUBTÍTULOS POR LÍNEA) */}
+            <div ref={gridRef}>
             {filteredProducts.length > 0 ? (
               shouldShowBrandDividers ? (
                 // VISTA AGRUPADA POR MARCA CON SUBTÍTULOS POR LÍNEA DE PRODUCTO
@@ -2075,7 +2237,7 @@ export function Products() {
               ) : (
                 // VISTA CUANDO SE FILTRA POR UNA SOLA MARCA O BÚSQUEDA (TAMBIÉN CON SUBTÍTULOS POR LÍNEA)
                 <div className="space-y-8">
-                  {groupProductsByLine(filteredProducts).map((lineGroup) => (
+                  {groupProductsByLine(pagedProducts).map((lineGroup) => (
                     <div key={lineGroup.lineName} className="space-y-4">
                       {/* SUBTÍTULO DE LÍNEA DE PRODUCTO */}
                       <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-card/60 backdrop-blur-xs border border-border/60 shadow-2xs">
@@ -2133,6 +2295,16 @@ export function Products() {
                 </div>
               </div>
             )}
+            {filteredProducts.length > 0 ? (
+              <CatalogPagination
+                page={currentPage}
+                totalPages={totalPages}
+                total={filteredProducts.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={goToPage}
+              />
+            ) : null}
+            </div>
           </div>
         </div>
 
@@ -2144,7 +2316,10 @@ export function Products() {
               onClick={() => setMobileSidebarOpen(false)}
             />
 
-            <div className="absolute right-0 top-0 h-full w-[88vw] max-w-sm bg-card border-l border-border shadow-2xl overflow-y-auto">
+            <div
+              data-lenis-prevent
+              className="absolute right-0 top-0 h-full w-[88vw] max-w-sm overflow-y-auto overscroll-contain border-l border-border bg-card shadow-2xl custom-scrollbar"
+            >
               <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-card">
                 <span className="font-bold text-foreground text-base flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4 text-primary" />
@@ -2162,6 +2337,13 @@ export function Products() {
             </div>
           </div>
         )}
+
+        <ProductQuickView
+          product={quickViewProduct}
+          catalog={allMergedProducts}
+          onClose={() => setQuickViewProduct(null)}
+          onSelectProduct={setQuickViewProduct}
+        />
       </div>
     </section>
   );

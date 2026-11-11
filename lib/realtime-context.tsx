@@ -104,31 +104,51 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
   const applyThemeColors = useCallback((s: BusinessSettings) => {
     if (typeof document !== "undefined" && s) {
       const root = document.documentElement;
-      if (s.primary_color) {
-        root.style.setProperty("--primary", s.primary_color);
-        root.style.setProperty("--primary-foreground", getContrastColor(s.primary_color));
-        root.style.setProperty("--sidebar-primary", s.primary_color);
-        root.style.setProperty("--sidebar-primary-foreground", getContrastColor(s.primary_color));
-        root.style.setProperty("--ring", s.primary_color);
-        root.style.setProperty("--chart-1", s.primary_color);
-        root.style.setProperty("--brand-primary", s.primary_color);
-      }
-      if (s.accent_color) {
-        root.style.setProperty("--accent", s.accent_color);
-        root.style.setProperty("--accent-foreground", getContrastColor(s.accent_color));
-        root.style.setProperty("--sb-accent", s.accent_color);
-        root.style.setProperty("--chart-2", s.accent_color);
-        root.style.setProperty("--brand-accent", s.accent_color);
-      }
-      if (s.secondary_color) {
-        root.style.setProperty("--secondary", s.secondary_color);
-        root.style.setProperty("--secondary-foreground", getContrastColor(s.secondary_color));
-        root.style.setProperty("--brand-secondary", s.secondary_color);
+      const isAdminRoute = window.location.pathname.startsWith("/admin");
+
+      const cmsColorVars = [
+        "--primary",
+        "--primary-foreground",
+        "--sidebar-primary",
+        "--sidebar-primary-foreground",
+        "--ring",
+        "--chart-1",
+        "--brand-primary",
+        "--accent",
+        "--accent-foreground",
+        "--sb-accent",
+        "--chart-2",
+        "--brand-accent",
+      ];
+
+      if (isAdminRoute) {
+        if (s.primary_color) {
+          root.style.setProperty("--primary", s.primary_color);
+          root.style.setProperty("--primary-foreground", getContrastColor(s.primary_color));
+          root.style.setProperty("--sidebar-primary", s.primary_color);
+          root.style.setProperty("--sidebar-primary-foreground", getContrastColor(s.primary_color));
+          root.style.setProperty("--ring", s.primary_color);
+          root.style.setProperty("--chart-1", s.primary_color);
+          root.style.setProperty("--brand-primary", s.primary_color);
+        }
+        if (s.accent_color) {
+          root.style.setProperty("--accent", s.accent_color);
+          root.style.setProperty("--accent-foreground", getContrastColor(s.accent_color));
+          root.style.setProperty("--sb-accent", s.accent_color);
+          root.style.setProperty("--chart-2", s.accent_color);
+          root.style.setProperty("--brand-accent", s.accent_color);
+        }
+        if (s.secondary_color) {
+          root.style.setProperty("--secondary", s.secondary_color);
+          root.style.setProperty("--secondary-foreground", getContrastColor(s.secondary_color));
+          root.style.setProperty("--brand-secondary", s.secondary_color);
+        }
+      } else {
+        cmsColorVars.forEach((name) => root.style.removeProperty(name));
       }
 
       // Tamaño de letra y tipografía: solo en el sitio público, nunca dentro de /admin
       // (para que el panel de gestión no cambie de tamaño mientras el admin trabaja ahí).
-      const isAdminRoute = window.location.pathname.startsWith("/admin");
       if (isAdminRoute) {
         document.documentElement.style.fontSize = "";
         document.body.style.fontFamily = "";

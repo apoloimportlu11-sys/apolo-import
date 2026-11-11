@@ -111,6 +111,19 @@ function resolveManagedLineName(
   return CANONICAL_DEFAULT_NAMES[mappedId] || defaultFallback || idOrLegacyName;
 }
 
+/** Convierte un token de URL o banner (`GASOLINERO`, `GRASAS`) al nombre canónico de línea. */
+export function resolveLineFilterToken(
+  token: string,
+  lineGroupsById?: Map<string, ManagedLineGroup>
+): string {
+  const raw = (token || "").trim();
+  if (!raw) return "";
+  return getProductLineCategory(
+    { line: raw, name: raw, short_description: raw },
+    lineGroupsById
+  );
+}
+
 export function getProductLineCategory(
   p: LineCategorizable,
   lineGroupsById?: Map<string, ManagedLineGroup>

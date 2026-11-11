@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  Package,
   ImageOff,
   ShoppingBag,
   ArrowRight,
@@ -20,6 +19,7 @@ import { realtimeBus } from "@/lib/realtime-bus";
 import { products as BASE_PRODUCTS } from "@/lib/products-data";
 import { useQuote } from "@/lib/quote-context";
 import { useHomeContent } from "@/lib/home-content";
+import { LightAtmosphere } from "@/components/home/light-atmosphere";
 
 const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
@@ -110,12 +110,12 @@ function ProductCardImage({
   }
 
   return (
-    <div className="w-full h-48 sm:h-52 bg-white/5 dark:bg-black/40 flex items-center justify-center p-4 border-b border-border/40 relative overflow-hidden">
+    <div className="relative flex h-52 items-center justify-center overflow-hidden border-b border-border/40 bg-[radial-gradient(circle_at_50%_20%,rgba(201,162,39,0.16),transparent_60%)] p-4 sm:h-56">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={cleanUrl}
         alt={productName}
-        className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-500 ease-out"
+        className="h-full w-full object-contain drop-shadow-md transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]"
         loading="lazy"
         onError={() => setHasError(true)}
       />
@@ -189,7 +189,7 @@ export function FeaturedProductsCarousel() {
           description: item.description || item.short_description || "",
           image: item.image_url || "",
           image_url: item.image_url || "",
-          stock: item.stock ?? 15,
+          stock: typeof item.stock === "number" ? item.stock : undefined,
           is_featured: true,
           is_active: true,
           category_id: item.category_id,
@@ -304,15 +304,27 @@ export function FeaturedProductsCarousel() {
       );
     };
 
+    const uniqueByKey = (list: FeaturedProductItem[]) => {
+      const seen = new Set<string>();
+      return list.filter((p) => {
+        const key = normalize(p.id) || normalize(p.slug) || normalize(p.code);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+
     if (isDbLoaded && dbFeatured.length > 0) {
-      return dbFeatured
-        .filter((p) => !isDeleted(p.id, p.slug, p.code) && p.is_active !== false)
-        .map((p) => ({
-          ...p,
-          image: p.image_url || p.image || "",
-          image_url: p.image_url || p.image || "",
-          is_featured: true,
-        }));
+      return uniqueByKey(
+        dbFeatured
+          .filter((p) => !isDeleted(p.id, p.slug, p.code) && p.is_active !== false)
+          .map((p) => ({
+            ...p,
+            image: p.image_url || p.image || "",
+            image_url: p.image_url || p.image || "",
+            is_featured: true,
+          }))
+      );
     }
 
     if (isDbLoaded) return [];
@@ -331,49 +343,39 @@ export function FeaturedProductsCarousel() {
         viscosity: p.viscosity || "",
         image: p.image || "",
         image_url: p.image || "",
-        stock: 15,
+        stock: undefined,
         is_featured: true,
         is_active: p.is_active !== false,
         category_id: p.categoryId,
       }));
 
-    return baseFeatured;
+    return uniqueByKey(baseFeatured);
   }, [mounted, cacheVersion, dbFeatured, dbInactiveKeys, isDbLoaded]);
 
-  // Base list ensured to have at least 8 items for seamless stepping
-  const baseList = useMemo(() => {
-    if (featuredProducts.length === 0) return [];
-    let list = [...featuredProducts];
-    while (list.length < 8) {
-      list = [...list, ...featuredProducts];
-    }
-    return list;
-  }, [featuredProducts]);
+  const baseList = featuredProducts;
 
   const baseCount = baseList.length;
+  const canLoop = baseCount > itemsPerView;
 
-  // Render list with clones: [prefixClones, ...baseList, ...suffixClones]
-  // prefixClones count = itemsPerView
-  // suffixClones count = itemsPerView + 2
   const renderedList = useMemo(() => {
     if (baseCount === 0) return [];
+    if (!canLoop) return baseList;
     const prefix = baseList.slice(-itemsPerView);
     const suffix = baseList.slice(0, itemsPerView + 4);
     return [...prefix, ...baseList, ...suffix];
-  }, [baseList, baseCount, itemsPerView]);
+  }, [baseList, baseCount, itemsPerView, canLoop]);
 
   // Index points into renderedList; starts at itemsPerView (the first real item)
   const [currentIndex, setCurrentIndex] = useState(itemsPerView);
   const [enableTransition, setEnableTransition] = useState(true);
 
-  // Sync initial index if itemsPerView changes
   useEffect(() => {
-    setCurrentIndex(itemsPerView);
-  }, [itemsPerView]);
+    setCurrentIndex(canLoop ? itemsPerView : 0);
+  }, [itemsPerView, canLoop]);
 
   // Handle circular wrap on transition end
   const handleTransitionEnd = useCallback(() => {
-    if (baseCount === 0) return;
+    if (baseCount === 0 || !canLoop) return;
 
     if (currentIndex >= itemsPerView + baseCount) {
       // Snapped back into the real range
@@ -384,7 +386,7 @@ export function FeaturedProductsCarousel() {
       setEnableTransition(false);
       setCurrentIndex((prev) => prev + baseCount);
     }
-  }, [currentIndex, itemsPerView, baseCount]);
+  }, [currentIndex, itemsPerView, baseCount, canLoop]);
 
   // Re-enable transition after snap
   useEffect(() => {
@@ -412,7 +414,7 @@ export function FeaturedProductsCarousel() {
 
   // Constant moderate auto-movement: advance 2 by 2 every 3.8 seconds
   useEffect(() => {
-    if (isPaused || isHovered || baseCount === 0) return;
+    if (isPaused || isHovered || baseCount === 0 || !canLoop) return;
 
     const interval = setInterval(() => {
       handleNext();
@@ -459,12 +461,13 @@ export function FeaturedProductsCarousel() {
   };
 
   return (
-    <section className="relative py-16 md:py-24 bg-background overflow-hidden border-b border-border dark:border-primary/25 transition-colors">
+    <section className="section-featured relative overflow-hidden border-b border-zinc-200 bg-background py-16 text-foreground transition-colors dark:border-white/10 md:py-24">
+      <LightAtmosphere seam="gold" />
       {/* Glow ambient background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.12),transparent_55%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.22),transparent_60%)] pointer-events-none" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.12),transparent_55%)]" />
 
       {/* Hexagonal pattern background */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.14] transition-opacity">
+      <div className="hex-field pointer-events-none absolute inset-0 opacity-[0.05] transition-opacity dark:opacity-[0.14]">
         <svg className="w-full h-full text-red-600 dark:text-red-500">
           <pattern
             id="hexagons-featured"
@@ -495,14 +498,14 @@ export function FeaturedProductsCarousel() {
             <div className="w-10 sm:w-16 lg:w-24 h-[2px] glow-line-l rounded-full" />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black italic tracking-wide text-foreground uppercase">
-            <span className="text-primary drop-shadow-[0_0_12px_rgba(239,68,68,0.6)] drop-shadow-[0_0_24px_rgba(220,38,38,0.4)]">
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
+            <span className="title-heat text-primary">
               {homeContent.featuredSection.highlight}
             </span>{" "}
             {homeContent.featuredSection.rest}
           </h2>
 
-          <p className="text-muted-foreground mt-3 text-sm sm:text-base max-w-2xl font-medium">
+          <p className="mt-3 max-w-2xl text-sm font-normal text-pretty text-muted-foreground sm:text-base">
             {homeContent.featuredSection.subtitle}
           </p>
 
@@ -515,11 +518,11 @@ export function FeaturedProductsCarousel() {
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
 
-            {/* Indicator / Pause button */}
+            {canLoop ? (
             <button
               type="button"
               onClick={() => setIsPaused(!isPaused)}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 transition-all cursor-pointer shadow-sm"
+              className="carousel-pause inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 transition-all cursor-pointer shadow-sm"
               title={isPaused ? "Reanudar movimiento constante" : "Pausar movimiento"}
             >
               {isPaused ? (
@@ -530,41 +533,59 @@ export function FeaturedProductsCarousel() {
               ) : (
                 <>
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                   </span>
                   <Pause className="w-3 h-3 text-zinc-400" />
                   <span className="text-[11px] text-zinc-400">Pausar</span>
                 </>
               )}
             </button>
+            ) : null}
           </div>
         </div>
 
+        {baseCount === 0 && isDbLoaded ? (
+          <div className="mx-auto flex max-w-lg flex-col items-center rounded-3xl border border-border bg-card px-6 py-16 text-center">
+            <Star className="mb-4 h-10 w-10 text-[color:var(--gold)]" />
+            <p className="font-display text-xl font-semibold">Pronto productos destacados</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Estamos seleccionando las referencias de esta vitrina.
+            </p>
+            <Link
+              href="/productos"
+              className="mt-6 inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-white hover:bg-red-500"
+            >
+              Ver catálogo
+            </Link>
+          </div>
+        ) : null}
+
         {/* Carousel Container */}
         <div
-          className="relative px-2 sm:px-4"
+          className={`relative px-2 sm:px-4 ${baseCount === 0 ? "hidden" : ""}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Navigation Controls (Floating Arrows) */}
-          <button
-            type="button"
-            onClick={handlePrev}
-            aria-label="Retroceder 2 productos"
-            className="absolute -left-2 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-red-600/40 text-foreground hover:text-primary hover:border-primary hover:scale-110 shadow-lg shadow-black/40 backdrop-blur-sm flex items-center justify-center transition-all duration-200 cursor-pointer"
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleNext}
-            aria-label="Avanzar 2 productos"
-            className="absolute -right-2 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-red-600/40 text-foreground hover:text-primary hover:border-primary hover:scale-110 shadow-lg shadow-black/40 backdrop-blur-sm flex items-center justify-center transition-all duration-200 cursor-pointer"
-          >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
+          {canLoop ? (
+            <>
+              <button
+                type="button"
+                onClick={handlePrev}
+                aria-label="Retroceder 2 productos"
+                className="absolute -left-2 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-red-600/40 text-foreground hover:text-primary hover:border-primary hover:-translate-y-[calc(50%+2px)] shadow-lg shadow-black/20 backdrop-blur-sm flex items-center justify-center transition-[transform,border-color,color] duration-300 cursor-pointer"
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label="Avanzar 2 productos"
+                className="absolute -right-2 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-red-600/40 text-foreground hover:text-primary hover:border-primary hover:-translate-y-[calc(50%+2px)] shadow-lg shadow-black/20 backdrop-blur-sm flex items-center justify-center transition-[transform,border-color,color] duration-300 cursor-pointer"
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </>
+          ) : null}
 
           {/* Masked Track */}
           <div
@@ -595,24 +616,31 @@ export function FeaturedProductsCarousel() {
                   product.slug ||
                   product.code ||
                   product.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                const zone = !canLoop
+                  ? "only"
+                  : idx < itemsPerView
+                    ? "pre"
+                    : idx >= itemsPerView + baseCount
+                      ? "suf"
+                      : "mid";
 
                 return (
                   <div
-                    key={`${product.id}-${idx}`}
+                    key={`${product.id}-${zone}-${idx}`}
                     className="flex-shrink-0 px-2 sm:px-3"
                     style={{ width: `${100 / itemsPerView}%` }}
                   >
-                    <div className="group h-full bg-card/90 dark:bg-zinc-950/85 rounded-2xl border border-red-600/25 hover:border-red-500/80 shadow-lg hover:shadow-2xl hover:shadow-red-950/40 transition-all duration-300 flex flex-col overflow-hidden backdrop-blur-sm relative">
+                    <div className="featured-card group relative flex h-full flex-col overflow-hidden rounded-2xl border border-red-600/25 bg-card shadow-lg backdrop-blur-sm transition-[transform,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:border-[color:var(--gold)]/70 hover:shadow-xl hover:shadow-red-950/20">
                       {/* Top Badges */}
                       <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border shadow-sm ${
                             isApolo
-                              ? "bg-red-600 text-white border-red-500"
+                              ? "badge-apolo bg-red-600 text-white border-red-500"
                               : isOverts
-                              ? "bg-amber-500 text-white border-amber-400"
+                              ? "badge-overts bg-amber-500 text-white border-amber-400"
                               : isValtrom
-                              ? "bg-purple-600 text-white border-purple-500"
+                              ? "badge-valtrom bg-purple-600 text-white border-purple-500"
                               : "bg-zinc-900/90 text-zinc-200 border-zinc-700"
                           }`}
                         >
@@ -620,7 +648,7 @@ export function FeaturedProductsCarousel() {
                           {product.brand || "Apolo"}
                         </span>
 
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md">
+                        <span className="featured-flag inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md">
                           <Star className="w-2.5 h-2.5 fill-amber-300 text-amber-300" />
                           Destacado
                         </span>
@@ -643,7 +671,7 @@ export function FeaturedProductsCarousel() {
                           {/* Presentation & Line */}
                           <div className="flex items-center gap-2 flex-wrap mb-1.5">
                             {product.presentation && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/5 dark:bg-white/10 text-zinc-300 border border-white/10">
+                              <span className="chip-meta px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/5 text-zinc-300 border border-white/10 dark:bg-white/10">
                                 {product.presentation}
                               </span>
                             )}
@@ -672,18 +700,7 @@ export function FeaturedProductsCarousel() {
                           )}
                         </div>
 
-                        {/* Card Footer: Stock & Actions */}
                         <div className="mt-4 pt-3 border-t border-border/50 flex flex-col gap-2.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                              Disponible
-                            </span>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              Stock: {product.stock ?? 15}
-                            </span>
-                          </div>
-
                           <div className="grid grid-cols-2 gap-2">
                             <Link
                               href={`/productos/${productSlug}`}
@@ -702,7 +719,7 @@ export function FeaturedProductsCarousel() {
                               className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer ${
                                 isAdded
                                   ? "bg-emerald-600 text-white border border-emerald-500 scale-95"
-                                  : "bg-red-600 hover:bg-red-700 text-white shadow-red-600/20 active:scale-95"
+                                  : "btn-brand bg-red-600 hover:bg-red-700 text-white shadow-red-600/20 active:scale-95"
                               }`}
                             >
                               {isAdded ? (

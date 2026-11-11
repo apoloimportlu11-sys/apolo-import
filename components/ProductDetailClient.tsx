@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileText, Plus, Minus, MessageCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { ProductGallery } from "@/components/ProductGallery";
+import { ProductDetailBody } from "@/components/catalog/product-detail-body";
 import { products as catalogProducts, type Product } from "@/lib/products-data";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
-import { useQuote } from "@/lib/quote-context";
 
 interface ProductDetailClientProps {
   initialProduct: Product;
@@ -65,9 +64,7 @@ export function ProductDetailClient({
     const nCode = normalizeKey(initialProduct?.code);
     return Boolean((nId && KNOWN_DELETED.has(nId)) || (nCode && KNOWN_DELETED.has(nCode)));
   });
-  const { addItem, openDrawer } = useQuote();
-  const [quantity, setQuantity] = useState(1);
-  const [addedAnimation, setAddedAnimation] = useState(false);
+  const router = useRouter();
   const supabase = createBrowserSupabase();
 
   useEffect(() => {
@@ -98,48 +95,10 @@ export function ProductDetailClient({
     }
   }, [productId, initialProduct?.code, product?.code]);
 
-  const handleAddToQuote = () => {
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        brand: product.brand || "Apolo",
-        line: product.line,
-        presentation: product.presentation || "Estándar",
-        image: product.image,
-        viscosity: product.viscosity,
-      },
-      quantity
-    );
-    setAddedAnimation(true);
-    setTimeout(() => setAddedAnimation(false), 2000);
-    openDrawer();
-  };
-
-  const handleDirectWhatsApp = () => {
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        brand: product.brand || "Apolo",
-        line: product.line,
-        presentation: product.presentation || "Estándar",
-        image: product.image,
-        viscosity: product.viscosity,
-      },
-      quantity
-    );
-    openDrawer();
-  };
-
-  // Find all presentation variants of this same product name
-  const variants = useMemo(() => {
-    const normCurrentName = normalizeKey(product.name || initialProduct.name);
-    if (!normCurrentName) return [];
-    return catalogProducts.filter(
-      (p) => normalizeKey(p.name) === normCurrentName && p.presentation
-    );
-  }, [product.name, initialProduct.name]);
+  const catalog = useMemo(() => {
+    if (catalogProducts.some((item) => item.id === product.id)) return catalogProducts;
+    return [product, ...catalogProducts];
+  }, [product]);
 
   const syncProductData = async () => {
     const normId = normalizeKey(productId);
@@ -360,211 +319,12 @@ export function ProductDetailClient({
           </Link>
         </Button>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Product Gallery */}
-          <ProductGallery
-            name={product.name}
-            images={product.images}
-            fallbackImage={product.image}
-          />
-
-          {/* Product Info */}
-          <div
-            className="relative rounded-2xl
-              bg-card text-card-foreground
-              border border-border
-              shadow-xs
-              p-6 lg:p-8
-              space-y-8"
-          >
-            <div className="space-y-2">
-              <Badge variant="secondary" className="w-fit bg-primary/10 text-primary border-primary/20 font-semibold">
-                {product.line}
-              </Badge>
-
-              <h1 className="text-3xl font-bold tracking-tight">
-                {product.name}
-              </h1>
-
-              <p className="text-sm text-muted-foreground">
-                Código: {product.code}
-              </p>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Descripción
-              </h3>
-              <p className="text-sm leading-relaxed text-muted-foreground ml-2">
-                {product.description}
-              </p>
-            </div>
-
-            {/* Specifications */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Especificaciones
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div className="flex ml-2">
-                  <span className="text-muted-foreground pr-4">Marca:</span>
-                  <span className="font-medium">{product.brand}</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center ml-2 gap-2 sm:col-span-2">
-                  <span className="text-muted-foreground pr-2 shrink-0">
-                    Presentación:
-                  </span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-foreground px-3 py-1 rounded-lg bg-primary/15 border border-primary/30 text-primary text-xs shadow-xs">
-                      {product.presentation || "Estándar"}
-                    </span>
-                    {variants.length > 1 &&
-                      variants
-                        .filter(
-                          (v) =>
-                            v.id !== product.id &&
-                            normalizeKey(v.presentation) !== normalizeKey(product.presentation)
-                        )
-                        .map((v) => (
-                          <Link
-                            key={v.id}
-                            href={`/productos/${v.id}`}
-                            className="text-xs font-semibold px-3 py-1 rounded-lg border border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:border-primary/60 hover:bg-card transition-all shadow-xs"
-                            title={`Ver presentación ${v.presentation}`}
-                          >
-                            {v.presentation}
-                          </Link>
-                        ))}
-                  </div>
-                </div>
-
-                {product.type && (
-                  <div className="flex ml-2">
-                    <span className="text-muted-foreground pr-4">Tipo:</span>
-                    <span className="font-medium">{product.type}</span>
-                  </div>
-                )}
-
-                {product.viscosity && (
-                  <div className="flex ml-2">
-                    <span className="text-muted-foreground pr-4">
-                      Viscosidad:
-                    </span>
-                    <span className="font-medium">{product.viscosity}</span>
-                  </div>
-                )}
-
-                {product.specification && (
-                  <div className="flex ml-2">
-                    <span className="text-muted-foreground pr-4">
-                      Especificación:
-                    </span>
-                    <span className="font-medium">
-                      {product.specification}
-                    </span>
-                  </div>
-                )}
-
-                {product.baseType && (
-                  <div className="flex ml-2">
-                    <span className="text-muted-foreground pr-4">Base:</span>
-                    <span className="font-medium">{product.baseType}</span>
-                  </div>
-                )}
-
-                {product.color && (
-                  <div className="flex ml-2">
-                    <span className="text-muted-foreground pr-4">Color:</span>
-                    <span className="font-medium">{product.color}</span>
-                  </div>
-                )}
-
-                {product.aroma && (
-                  <div className="flex ml-2">
-                    <span className="text-muted-foreground pr-4">Aroma:</span>
-                    <span className="font-medium">{product.aroma}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Documents */}
-            {product.tdsUrl && product.tdsUrl.trim() && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Documentos</h3>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button asChild className="flex-1">
-                    <a href={product.tdsUrl} download>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Descargar TDS
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Quotation CTA Box */}
-            <div className="p-5 rounded-2xl bg-muted/40 border border-border/80 space-y-4 shadow-xs">
-              <div>
-                <h4 className="text-base font-bold text-foreground flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-emerald-500" />
-                  Cotizar este Producto
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Añádelo a tu lista de cotización para consultar precios y disponibilidad en tu zona.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {/* Stepper */}
-                <div className="flex items-center justify-between border border-border bg-background rounded-xl p-1 w-full sm:w-36 h-11 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                    aria-label="Disminuir cantidad"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="font-bold text-sm text-foreground px-2">
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                    aria-label="Aumentar cantidad"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Botón Añadir a Cotización */}
-                <Button
-                  type="button"
-                  onClick={handleAddToQuote}
-                  className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>{addedAnimation ? "¡Añadido a Cotización!" : "Añadir a Cotización"}</span>
-                </Button>
-              </div>
-
-              {/* Botón directo WhatsApp */}
-              <button
-                type="button"
-                onClick={handleDirectWhatsApp}
-                className="w-full h-11 flex items-center justify-center gap-2 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm shadow-xs transition-colors cursor-pointer"
-              >
-                <MessageCircle className="h-4 w-4 fill-white" />
-                <span>Cotizar directo por WhatsApp</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <ProductDetailBody
+          key={product.id}
+          product={product}
+          catalog={catalog}
+          onSelectProduct={(next) => router.push(`/productos/${next.id}`)}
+        />
 
         {/* Contact card */}
         <Card className="mt-12">

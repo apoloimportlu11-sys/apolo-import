@@ -20,6 +20,7 @@
 - **Workaround**: definir `RESEND_API_KEY` y, si aplica, `RESEND_FROM_EMAIL` / `RESEND_CONTACT_TEMPLATE_ID`
 
 ## Fixed
+- Build Next 16 en `/admin/cotizaciones`: `useSearchParams` sin `Suspense` rompía el prerender; envuelto en `Suspense` (2026-11-09)
 - (ninguno registrado en bootstrap de memoria)
 - Hydration admin y URLs viejas de Supabase en detalle de producto (2026-11-05, historial local)
 - Alta de producto: al terminar la subida, la foto reescribía el formulario con el estado viejo y una imagen `data:` fallaba la validación (máx. 2000). Ahora la URL llega con el estado actual y, si el almacén rechaza el archivo, se avisa sin guardar un base64 (2026-11-09). `app/admin/productos/page.tsx`, `components/MediaSelector.tsx`

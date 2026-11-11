@@ -4,6 +4,95 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-11 — Paleta clara blanco, rojo y grafito
+
+- El modo claro usa blanco, rojo `#C90012`, grafito `#171A20`, gris `#F2F3F5` / `#8A8F98` y oro `#FFD000` en botones, textos y fondos
+- La estructura del inicio no cambia. El modo oscuro, los logotipos y el admin quedan igual
+- La etiqueta de Valtrom conserva su violeta
+- Salen del inicio los dibujos de engranaje y líquido que iban de fondo
+
+## 2026-11-11 — Modo claro con color y profundidad
+
+- El tema claro deja los pasteles y usa la paleta medida de los logos: rojo `#E30B15`, oro `#C6973A` / `#F7D579`, azul `#27549B` y violeta `#673984`
+- Cada bloque del inicio tiene su degradado, sombra de color y corte curvo; el modo oscuro y el admin no cambian
+- En claro, la barra del menú pasa de crema a un degradado rojo Apolo hacia negro, con enlaces en blanco y el botón Cotizar en oro
+
+## 2026-11-11 — Modo claro con la paleta de las marcas
+
+- El fondo claro deja el blanco plano y toma rojo Apolo, dorado Overts y azul y violeta Valtrom
+- Líneas, protección, experiencia, cotización y marcas llevan un lavado distinto; los engranajes y el líquido de `Animacion` quedan de fondo
+- El panel admin conserva sus tokens
+
+## 2026-11-11 — Vitrinas en un escenario
+
+- Lo más vendido, lo más popular y lo recomendado pasan a tres tarjetas sobre una base iluminada, en un solo bloque oscuro
+- Cada tarjeta rota sus productos reales y enlaza al catálogo
+
+## 2026-11-11 — Home despejada
+
+- La barra de líneas, protección, operación y soporte queda debajo del hero, y el párrafo y los botones del slide se leen enteros
+- Cotización, Artemisa y WhatsApp forman una columna más chica; el dorado grueso sale del menú y de las secciones y se queda en las vitrinas
+- Las tres vitrinas cambian de silueta: envase grande, fila baja y envase al centro
+
+## 2026-11-11 — Animaciones de scroll en la home
+
+- El hero se desplaza y pierde opacidad al salir de pantalla
+- Cada bloque entra con recorrido visible, línea dorada y escalonado; las fotos de líneas, protección y experiencia tienen paralaje
+- Si el sistema pide menos movimiento, las entradas quedan quietas
+
+## 2026-11-11 — Home más clara y con más presencia
+
+- Tema claro en blanco, rojo y dorado; el panel admin conserva sus tokens
+- Logos del navbar con altura óptica distinta para el isotipo y las wordmarks
+- Líneas, vitrinas, protección, bento, CTA y marcas sin fondos grises ni escala agresiva
+
+## 2026-11-11 — MCP y skills de diseño
+
+- MCP del proyecto en `.cursor/mcp.json`: shadcn, Playwright, Figma, 21st.dev, Context7 y Motion. Magic UI sigue en la config global
+- Skills de proyecto: Motion, accesibilidad WCAG, Web Interface Guidelines (Vercel) y las de 21st.dev
+
+## 2026-11-11 — Modal de producto compacto
+
+- Quick view más pequeño (`max-w-[52rem]`, ~640px de alto): botella a la izquierda, ficha densa a la derecha, tira de misma marca y barra de cotizar fijas
+
+## 2026-11-11 — Catálogo funcional
+
+- Buscador, chips de marca y filtros quedan fijos al scrollear; paginación de 24 productos
+- Filtro de viscosidad en el aside; `?line=` de banners resuelve a la línea canónica
+- “Detalles” abre una ventana en `/productos` con recomendaciones de la misma marca (medidas/viscosidades)
+
+## 2026-11-11 — Protección animada y vitrinas destacadas
+
+- Foto de protección sin etiquetas HUD; velo, brillo y Ken Burns (se desactivan con `prefers-reduced-motion`)
+- Vitrinas Lo más vendido / popular / recomendamos con autoplay, shine, glow y cambio 3D del envase
+
+## 2026-11-11 — Vitrinas banco de trabajo
+
+- Lo más vendido, popular y recomendados: envase completo + lista con nombre y CTA
+
+## 2026-11-11 — Pulido home (Lenis, tema claro, catálogos)
+
+- Scroll Lenis en storefront con `prefers-reduced-motion` y pausa al abrir el drawer de cotización
+- Hero y secciones más compactos (`~68vh`, títulos `lg:text-5xl`, logos 56–64 px)
+- Hidratación del carrusel promo y script `apolo-theme` antes de paint; el storefront ya no pisa `--primary`/`--accent` con el CMS
+- Tema claro corporativo (`#FAFAF8`, rojo `#DC2626`, gold `#C9A227`); header blanco semitransparente
+- Catálogos magazine 7+5 columnas y vitrinas de populares con `layoutId`, marcas de agua y dedupe entre filas
+
+## 2026-11-11 — Rediseño completo home automotive premium
+
+- Paleta negro/rojo/dorado, Oswald display, textura carbono y líneas de velocidad; se quitó `html { zoom: 0.75 }`
+- Header full-bleed en 3 zonas, logos alineados, compacto al scroll y sheet móvil
+- Hero a pantalla completa con Ken Burns, indicadores fuera de los CTAs y stats glass superpuestos
+- Líneas inmersivas con tilt 3D; Protección con SVG draw y sin CTA duplicado
+- Vitrinas (protagonista + tira) en lugar del anillo 3D; bento parallax; un solo bloque CTA + mapa
+- Marquee de marcas grayscale→color; destacados sin duplicar ni mostrar stock; footer de 4 columnas
+- Tema claro/oscuro con tokens (se dejó de forzar `#0A0A0A` en la home)
+
+## 2026-11-09 — Sync GitHub + cotizaciones
+
+- Incorporado `3285e84` desde `origin/main`: inbox de cotizaciones nuevas, detalle `/admin/cotizaciones/[code]`, celular obligatorio, estado por defecto `nueva`, mejoras en inventario/productos/proveedores/banners
+- `/admin/cotizaciones` envuelve `useSearchParams` en `Suspense` para que el build de Next 16 no falle al prerender
+
 ## 2026-11-07 — Resumen de mejoras y rediseño
 
 - Añadido `docs/RESUMEN_MEJORAS.md`: vista corta de migración Supabase, panel comercial, rediseño UX admin, storefront y pendientes

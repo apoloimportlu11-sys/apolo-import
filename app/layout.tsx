@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
-import { Montserrat, Inter, Roboto } from 'next/font/google'
+import { Montserrat, Inter, Roboto, Oswald } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { BusinessSettingsProvider } from '@/lib/realtime-context'
@@ -11,6 +11,7 @@ import QuoteDrawer from '@/components/QuoteDrawer'
 import FloatingQuoteButton from '@/components/FloatingQuoteButton'
 import ImageProtection from '@/components/ImageProtection'
 import FestiveEffects from '@/components/FestiveEffects'
+import { SmoothScroll } from '@/components/smooth-scroll'
 import './globals.css'
 
 const montserrat = Montserrat({
@@ -31,6 +32,13 @@ const roboto = Roboto({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   variable: '--font-roboto',
+  display: 'swap',
+});
+
+const oswald = Oswald({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: '--font-oswald',
   display: 'swap',
 });
 
@@ -79,10 +87,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`dark ${montserrat.variable} ${inter.variable} ${roboto.variable}`} suppressHydrationWarning>
+    <html lang="es" className={`dark ${montserrat.variable} ${inter.variable} ${roboto.variable} ${oswald.variable}`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <Script id="apolo-theme" strategy="beforeInteractive">
+          {`(function(){try{var p=location.pathname;if(p==="/admin"||p.indexOf("/admin/")===0)return;var t=localStorage.getItem("apolo-theme")||"dark";var dark=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.remove("light","dark");document.documentElement.classList.add(dark?"dark":"light");document.documentElement.style.colorScheme=dark?"dark":"light";}catch(e){}})();`}
+        </Script>
         <Script id="apolo-admin-theme" strategy="beforeInteractive">
           {`(function(){try{var p=location.pathname;if(!(p==="/admin"||p.indexOf("/admin/")===0))return;var t=localStorage.getItem("apolo-admin-theme")||"light";var dark=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.remove("admin-tone-light","admin-tone-dark");document.documentElement.classList.add(dark?"admin-tone-dark":"admin-tone-light");document.documentElement.setAttribute("data-admin-theme",t);document.documentElement.style.colorScheme=dark?"dark":"light";}catch(e){}})();`}
         </Script>
@@ -93,6 +105,7 @@ export default function RootLayout({
           <FestiveEffects />
           <BusinessSettingsProvider>
             <QuoteProvider>
+              <SmoothScroll />
               {children}
               <FloatingWhatsApp />
               <FloatingQuoteButton />
