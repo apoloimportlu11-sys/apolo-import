@@ -19,6 +19,10 @@ import {
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  isProtectedOwnerAdmin,
+  OWNER_ADMIN_EMAIL,
+} from "@/lib/protected-admins";
 
 export interface UserProfile {
   id: string;
@@ -139,13 +143,29 @@ export default function UsuariosPage() {
     e.preventDefault();
     setSaving(true);
 
+    const editingProtected =
+      isEditing && isProtectedOwnerAdmin(currentUser.email);
     const payload = {
       name: currentUser.name?.trim() || "Usuario",
-      email: currentUser.email?.trim().toLowerCase() || "",
-      role: currentUser.role || "admin",
-      is_active: currentUser.is_active !== undefined ? currentUser.is_active : true,
+      email: editingProtected
+        ? OWNER_ADMIN_EMAIL
+        : currentUser.email?.trim().toLowerCase() || "",
+      role: editingProtected ? ("admin" as const) : currentUser.role || "admin",
+      is_active: editingProtected
+        ? true
+        : currentUser.is_active !== undefined
+          ? currentUser.is_active
+          : true,
       updated_at: new Date().toISOString(),
     };
+
+    if (
+      !isEditing &&
+      isProtectedOwnerAdmin(payload.email) &&
+      payload.role !== "admin"
+    ) {
+      payload.role = "admin";
+    }
 
     const toastId = toast.loading(
       isEditing ? "Guardando perfil de usuario en tiempo real..." : "Creando usuario..."
@@ -203,6 +223,14 @@ export default function UsuariosPage() {
   }
 
   async function handleDelete(id: string, name: string) {
+    const target = users.find((u) => u.id === id);
+    if (isProtectedOwnerAdmin(target?.email)) {
+      toast.error("Cuenta protegida", {
+        description: "No se puede eliminar la cuenta propietaria administradora.",
+      });
+      return;
+    }
+
     if (!confirm(`¿Estás seguro de eliminar el perfil de "${name}"? Esta acción se sincronizará inmediatamente.`)) {
       return;
     }
@@ -228,6 +256,14 @@ export default function UsuariosPage() {
   }
 
   async function toggleStatus(id: string, current: boolean) {
+    const target = users.find((u) => u.id === id);
+    if (isProtectedOwnerAdmin(target?.email)) {
+      toast.error("Cuenta protegida", {
+        description: "La cuenta propietaria debe permanecer activa como admin.",
+      });
+      return;
+    }
+
     setUsers((prev) =>
       prev.map((u) => (u.id === id ? { ...u, is_active: !current } : u))
     );
@@ -249,6 +285,14 @@ export default function UsuariosPage() {
   }
 
   async function handleRoleChange(id: string, newRole: "admin" | "editor" | "vendor" | "cliente") {
+    const target = users.find((u) => u.id === id);
+    if (isProtectedOwnerAdmin(target?.email)) {
+      toast.error("Cuenta protegida", {
+        description: "El rol de la cuenta propietaria está fijado en Administrador.",
+      });
+      return;
+    }
+
     setUsers((prev) =>
       prev.map((u) => (u.id === id ? { ...u, role: newRole } : u))
     );
@@ -374,6 +418,7 @@ export default function UsuariosPage() {
               <tbody className="divide-y divide-white/5 text-zinc-300">
                 {filteredUsers.map((u) => {
                   const isHighlighted = recentlyUpdatedId === u.id;
+                  const isOwner = isProtectedOwnerAdmin(u.email);
 
                   return (
                     <tr
@@ -387,7 +432,15 @@ export default function UsuariosPage() {
                           <div className="w-9 h-9 rounded-full bg-[#C7940A]/20 border border-[#C7940A]/40 flex items-center justify-center font-bold text-[#C7940A] shrink-0">
                             {u.name ? u.name[0].toUpperCase() : "U"}
                           </div>
-                          <span className="font-bold text-white">{u.name}</span>
+                          <div className="min-w-0">
+                            <span className="font-bold text-white">{u.name}</span>
+                            {isOwner && (
+                              <span className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#C7940A]">
+                                <Shield className="h-3 w-3" />
+                                Cuenta protegida
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -399,7 +452,13 @@ export default function UsuariosPage() {
                         <select
                           value={u.role || "cliente"}
                           onChange={(e) => handleRoleChange(u.id, e.target.value as any)}
-                          className="rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-white focus:border-[#C7940A] focus:outline-none transition-colors cursor-pointer"
+                          disabled={isOwner}
+                          title={
+                            isOwner
+                              ? "El rol de la cuenta propietaria no se puede cambiar"
+                              : undefined
+                          }
+                          className="rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-white focus:border-[#C7940A] focus:outline-none transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           <option value="cliente">Cliente / Consumidor</option>
                           <option value="admin">Administrador (Total)</option>
@@ -412,7 +471,8 @@ export default function UsuariosPage() {
                         <button
                           type="button"
                           onClick={() => toggleStatus(u.id, u.is_active)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                          disabled={isOwner}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all disabled:cursor-not-allowed disabled:opacity-70 ${
                             u.is_active
                               ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                               : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
@@ -435,8 +495,13 @@ export default function UsuariosPage() {
                           <button
                             type="button"
                             onClick={() => handleDelete(u.id, u.name)}
-                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                            title="Eliminar usuario"
+                            disabled={isOwner}
+                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                            title={
+                              isOwner
+                                ? "Cuenta protegida: no se puede eliminar"
+                                : "Eliminar usuario"
+                            }
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -494,7 +559,8 @@ export default function UsuariosPage() {
                   type="email"
                   value={currentUser.email || ""}
                   onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
+                  disabled={isEditing && isProtectedOwnerAdmin(currentUser.email)}
+                  className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
                   placeholder="usuario@lubricantesapolo.com"
                   required
                 />
@@ -507,13 +573,19 @@ export default function UsuariosPage() {
                 <select
                   value={currentUser.role || "cliente"}
                   onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value as any })}
-                  className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none"
+                  disabled={isEditing && isProtectedOwnerAdmin(currentUser.email)}
+                  className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <option value="cliente">Cliente / Consumidor (Acceso estándar)</option>
                   <option value="admin">Administrador (Acceso total)</option>
                   <option value="editor">Editor de Contenido</option>
                   <option value="vendor">Vendedor (Gestión de stock)</option>
                 </select>
+                {isEditing && isProtectedOwnerAdmin(currentUser.email) && (
+                  <p className="mt-1.5 text-[11px] text-[#C7940A]">
+                    Cuenta propietaria: el rol Administrador está bloqueado.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -522,7 +594,8 @@ export default function UsuariosPage() {
                   id="user_is_active"
                   checked={currentUser.is_active !== undefined ? currentUser.is_active : true}
                   onChange={(e) => setCurrentUser({ ...currentUser, is_active: e.target.checked })}
-                  className="w-4 h-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
+                  disabled={isEditing && isProtectedOwnerAdmin(currentUser.email)}
+                  className="w-4 h-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0 disabled:cursor-not-allowed"
                 />
                 <label htmlFor="user_is_active" className="text-xs text-zinc-300 cursor-pointer">
                   ¿Usuario Activo?

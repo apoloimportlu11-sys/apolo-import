@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +35,7 @@ export function Contact() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [status, setStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
@@ -87,6 +89,13 @@ export function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!privacyAccepted) {
+      setStatus({
+        type: "error",
+        message: "Debes aceptar la política de privacidad para enviar el mensaje.",
+      });
+      return;
+    }
     setLoading(true);
     setStatus({ type: null, message: "" });
 
@@ -116,6 +125,7 @@ export function Contact() {
         phone: "",
         message: "",
       });
+      setPrivacyAccepted(false);
     } catch (error) {
       setStatus({
         type: "error",
@@ -316,6 +326,23 @@ export function Contact() {
                 />
               </div>
 
+              <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  required
+                />
+                <span>
+                  Acepto el tratamiento de mis datos según la{" "}
+                  <Link href="/privacidad" className="text-primary underline-offset-2 hover:underline">
+                    política de privacidad
+                  </Link>
+                  .
+                </span>
+              </label>
+
               {status.type && (
                 <div
                   role="status"
@@ -333,7 +360,7 @@ export function Contact() {
               <Button
                 type="submit"
                 size="lg"
-                disabled={loading}
+                disabled={loading || !privacyAccepted}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 cursor-pointer"
               >
                 <Send className="h-4 w-4" />

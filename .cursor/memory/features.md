@@ -1,6 +1,13 @@
 # Features
 
 ## Completed
+- Legales 2026-11-12: `/cookies`, banner consentimiento, Analytics condicional, privacidad LOADP, checkbox en cotización/contacto
+- Bajas 2026-11-12: roles editor/vendor en UI + SQL staff; seed proveedores; tests flujo quote/catálogo; flotantes móvil sin tapar hero
+- Medias 2026-11-12: LCP priority/eager; dedupe carrusel destacados; CI lint bloqueante + eslint-config-next; modularización parcial admin/productos + products (`lib/admin/*`, `hooks/use-public-catalog.ts`, `lib/catalog/*`, `CatalogPager`, `SortableProductRow`)
+- SEO: robots/sitemap, OG/Twitter, JSON-LD Organization, metadata por página — `app/robots.ts`, `app/sitemap.ts`, `app/layout.tsx`, `lib/site-url.ts` (2026-11-12)
+- Catálogo público sin flash estático; skeleton hasta Supabase — `components/products.tsx` (2026-11-12)
+- Gate `/admin` con sesión + role admin — `proxy.ts` (2026-11-12)
+- Legales `/terminos` y `/privacidad` enlazados desde el footer (2026-11-12)
 - Storefront home/productos/detalle/nosotros/contacto/cotización por código — `app/**`
 - Admin módulos sidebar (productos, marcas, líneas, inventario, quotes, etc.) — `app/admin/**`. Tema del panel en `apolo-admin-theme` (claro, oscuro, sistema), aparte del tema de la tienda.
 - Líneas de catálogo paginadas (8) con orden del menú — `app/admin/lineas/page.tsx`
@@ -25,9 +32,10 @@
 - Alta de producto simplificada (foto, nombre, marca, presentación, stock). Viscosidad, línea, categoría y grupo se deducen del nombre. 2026-11-09. `app/admin/productos/page.tsx`, `components/MediaSelector.tsx`
 
 ## Planned
-- Modularizar pages admin monolíticas (deuda)
-- Confirmar wiring UI del chat Artemisa
-- Endurecer gate `/admin` más allá de cookie presente
+- Aplicar `supabase_staff_roles.sql` en el proyecto Supabase
+- Seguir extrayendo UI de `products.tsx` (Sidebar/ProductCard) y resto de admin monolítico
+- Playwright E2E de navegador (opcional)
+- Endurecer warnings ESLint (`any`, static-components) hacia error
 
 ## Deprecated
 - APIs MySQL de productos — eliminadas en commit `6569cfc`

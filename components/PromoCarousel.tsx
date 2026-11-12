@@ -306,9 +306,9 @@ export function PromoCarousel({
                       src={slide.mediaUrl}
                       alt={`${slide.title} ${slide.titleHighlight || ""}`}
                       fill
-                      priority={index === 0}
-                      loading={index === 0 ? "eager" : "lazy"}
-                      fetchPriority={index === 0 ? "high" : "auto"}
+                      priority={isActive || index === 0}
+                      loading={isActive || index === 0 ? "eager" : "lazy"}
+                      fetchPriority={isActive || index === 0 ? "high" : "auto"}
                       sizes="100vw"
                       className={`object-cover object-center ${isActive ? "animate-ken-burns" : ""}`}
                     />

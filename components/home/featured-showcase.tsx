@@ -93,6 +93,9 @@ function ShowcaseCard({
               alt={product.name}
               fill
               sizes="180px"
+              priority={lane.featured && active === 0}
+              loading={lane.featured && active === 0 ? "eager" : undefined}
+              fetchPriority={lane.featured && active === 0 ? "high" : "auto"}
               className="object-contain object-bottom drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)]"
             />
           </motion.div>

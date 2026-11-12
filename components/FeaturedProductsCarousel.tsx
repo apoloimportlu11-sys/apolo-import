@@ -307,9 +307,20 @@ export function FeaturedProductsCarousel() {
     const uniqueByKey = (list: FeaturedProductItem[]) => {
       const seen = new Set<string>();
       return list.filter((p) => {
-        const key = normalize(p.id) || normalize(p.slug) || normalize(p.code);
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
+        const idKey = normalize(p.id);
+        const slugKey = normalize(p.slug);
+        const codeKey = normalize(p.code);
+        const contentKey = [
+          normalize(p.brand),
+          normalize(p.name),
+          normalize(p.presentation),
+          normalize(p.image || p.image_url),
+        ].join("|");
+
+        const keys = [idKey, slugKey, codeKey, contentKey].filter(Boolean);
+        if (keys.length === 0) return false;
+        if (keys.some((key) => seen.has(key))) return false;
+        keys.forEach((key) => seen.add(key));
         return true;
       });
     };
@@ -355,7 +366,8 @@ export function FeaturedProductsCarousel() {
   const baseList = featuredProducts;
 
   const baseCount = baseList.length;
-  const canLoop = baseCount > itemsPerView;
+  // Evita clones visibles cuando hay pocos SKU únicos (p. ej. 3 ítems en vista de 2).
+  const canLoop = baseCount >= itemsPerView * 2;
 
   const renderedList = useMemo(() => {
     if (baseCount === 0) return [];

@@ -90,8 +90,8 @@ Regla común de **bajo stock:** producto activo con stock ≤ mínimo, y mínimo
 - Modularizar páginas admin muy grandes (p. ej. productos)
 - Gate `/admin` más estricto (hoy: cookie; el rol lo refuerza RLS/UI)
 - Confirmar SQL/RLS y templates Resend en producción
-- Ampliar tests; roles `editor` / `vendor` en UI
-- Revisar wiring completo del chat en la UI pública
+- Aplicar `supabase_staff_roles.sql` si se usan roles editor/vendor en producción
+- Playwright E2E de navegador (hay tests Vitest de flujo)
 
 ---
 

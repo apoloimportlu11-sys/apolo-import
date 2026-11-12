@@ -41,6 +41,7 @@ export default function QuoteDrawer() {
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -62,6 +63,10 @@ export default function QuoteDrawer() {
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 9) {
       setPhoneError("Ingresa un celular de al menos 9 dígitos para poder contactarte.");
+      return;
+    }
+    if (!privacyAccepted) {
+      toast.error("Debes aceptar la política de privacidad para enviar la cotización.");
       return;
     }
     setPhoneError("");
@@ -344,11 +349,27 @@ export default function QuoteDrawer() {
                 </span>
               </div>
 
+              <label className="flex items-start gap-2 text-[11px] leading-snug text-muted-foreground px-1">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                />
+                <span>
+                  Acepto el tratamiento de mis datos según la{" "}
+                  <Link href="/privacidad" className="text-primary underline-offset-2 hover:underline">
+                    política de privacidad
+                  </Link>
+                  .
+                </span>
+              </label>
+
               {/* WhatsApp Button */}
               <button
                 onClick={handleWhatsAppSend}
-                disabled={sending || items.length === 0}
-                className="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all duration-200 cursor-pointer"
+                disabled={sending || items.length === 0 || !privacyAccepted}
+                className="w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all duration-200 cursor-pointer disabled:opacity-60"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.993.589 1.954.91 2.796.91h.005c3.181 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.767-5.773-5.767zm7.643 5.767c0 4.218-3.431 7.649-7.648 7.649-.001 0-.003 0-.005 0-1.328 0-2.613-.357-3.738-1.026l-4.148 1.088 1.107-4.041c-.736-1.164-1.127-2.511-1.127-3.896 0-4.218 3.43-7.648 7.648-7.648 4.218 0 7.911 3.654 7.911 7.874z" />

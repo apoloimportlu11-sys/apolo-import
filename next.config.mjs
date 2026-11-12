@@ -13,10 +13,6 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
   // High-performance image optimization for mobile & desktop
   images: {
     formats: ['image/avif', 'image/webp'],

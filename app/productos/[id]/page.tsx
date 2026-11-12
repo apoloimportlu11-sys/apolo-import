@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { products, type Product } from "@/lib/products-data";
 import { ProductDetailClient } from "@/components/ProductDetailClient";
@@ -8,6 +9,71 @@ interface ProductPageProps {
   params: Promise<{
     id: string;
   }>;
+}
+
+export async function generateMetadata({
+  params,
+}: ProductPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey());
+
+  try {
+    const { data } = await supabase
+      .from("products")
+      .select("name, brand, presentation, short_description, description, image_url, is_active")
+      .or(`id.eq.${id},slug.eq.${id}`)
+      .maybeSingle();
+
+    if (data && data.is_active !== false) {
+      const title = String(data.name || "Producto");
+      const brand = data.brand ? String(data.brand) : "Apolo";
+      const presentation = data.presentation ? ` · ${data.presentation}` : "";
+      const description = String(
+        data.short_description ||
+          data.description ||
+          `${title} (${brand}${presentation}). Cotiza en Apolo Lubricantes.`
+      ).slice(0, 160);
+      const image = data.image_url ? String(data.image_url) : "/images/logoApolo.png";
+
+      return {
+        title,
+        description,
+        alternates: { canonical: `/productos/${id}` },
+        openGraph: {
+          title: `${title} | Apolo Lubricantes`,
+          description,
+          url: `/productos/${id}`,
+          images: [{ url: image, alt: title }],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+          images: [image],
+        },
+      };
+    }
+  } catch {
+    // fallback abajo
+  }
+
+  const fallback =
+    products.find((p) => p.id === id) ||
+    products.find((p) => p.code?.toLowerCase() === id.toLowerCase());
+
+  if (fallback) {
+    const description = (fallback.description || fallback.name).slice(0, 160);
+    return {
+      title: fallback.name,
+      description,
+      alternates: { canonical: `/productos/${id}` },
+    };
+  }
+
+  return {
+    title: "Producto",
+    alternates: { canonical: `/productos/${id}` },
+  };
 }
 
 const KNOWN_DELETED = new Set([

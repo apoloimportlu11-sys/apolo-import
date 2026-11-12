@@ -26,6 +26,8 @@ import {
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { ADMIN_SIDEBAR_KEY } from "@/lib/admin-theme";
 import { useQuoteInbox } from "@/components/QuoteInboxProvider";
+import { useAdminRole } from "@/hooks/use-admin-role";
+import { navAllowedForRole, ROLE_LABELS } from "@/lib/admin-permissions";
 
 type NavItem = {
   href: string;
@@ -89,6 +91,7 @@ export default function AdminSidebar({
   const router = useRouter();
   const supabase = createBrowserSupabase();
   const { count: newQuotes } = useQuoteInbox();
+  const { role } = useAdminRole();
   const [collapsed, setCollapsed] = useState(false);
 
   useLayoutEffect(() => {
@@ -166,13 +169,23 @@ export default function AdminSidebar({
       </div>
 
       <nav className="mt-4 flex-1 space-y-4 overflow-y-auto px-2 pb-3 [scrollbar-width:thin]" aria-label="Secciones del panel">
-        {groups.map((group) => (
+        {!compact && role && (
+          <p className="px-2.5 text-[11px] font-medium text-[var(--admin-accent)]">
+            Rol: {ROLE_LABELS[role]}
+          </p>
+        )}
+        {groups.map((group) => {
+          const items = group.items.filter((item) =>
+            role ? navAllowedForRole(role, item.href) : item.href === "/admin"
+          );
+          if (items.length === 0) return null;
+          return (
           <div key={group.label}>
             {!compact && (
               <p className="px-2.5 pb-1 text-[11px] font-medium text-[var(--admin-faint)]">{group.label}</p>
             )}
             <ul className="space-y-0.5">
-              {group.items.map((item) => {
+              {items.map((item) => {
                 const Icon = item.icon;
                 const active = isCurrent(pathname, item);
                 return (
@@ -210,7 +223,8 @@ export default function AdminSidebar({
               })}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="space-y-0.5 border-t border-[var(--admin-line)] p-2">

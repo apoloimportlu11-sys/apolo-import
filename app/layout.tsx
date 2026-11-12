@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { Montserrat, Inter, Roboto, Oswald } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
+import ConsentAnalytics from '@/components/ConsentAnalytics'
+import CookieConsent from '@/components/CookieConsent'
 import { BusinessSettingsProvider } from '@/lib/realtime-context'
 import { Toaster } from '@/components/ui/sonner'
 import FloatingWhatsApp from '@/components/FloatingWhatsApp'
@@ -12,7 +13,15 @@ import FloatingQuoteButton from '@/components/FloatingQuoteButton'
 import ImageProtection from '@/components/ImageProtection'
 import FestiveEffects from '@/components/FestiveEffects'
 import { SmoothScroll } from '@/components/smooth-scroll'
+import { JsonLd } from '@/components/JsonLd'
+import { getSiteUrl } from '@/lib/site-url'
 import './globals.css'
+
+const siteUrl = getSiteUrl()
+const siteName = 'Apolo Lubricantes'
+const siteTitle = 'Apolo Lubricantes | Aceites y Lubricantes para Vehículos'
+const siteDescription =
+  'Distribuidor de aceites de motor, lubricantes y fluidos para motos, autos, camiones y vehículos pesados. Cotiza Apolo, Overts y más.'
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -50,9 +59,64 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Apolo Lubricantes | Aceites y Lubricantes para Vehículos',
-  description: 'Apolo Lubricantes - Distribuidor de aceites de motor, lubricantes y fluidos para motos, autos, camiones y vehículos pesados. Calidad y rendimiento garantizado.',
-  keywords: ['lubricantes', 'aceites de motor', 'motos', 'autos', 'camiones', 'grasas', 'refrigerantes'],
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: siteTitle,
+    template: `%s | ${siteName}`,
+  },
+  description: siteDescription,
+  applicationName: siteName,
+  keywords: [
+    'lubricantes',
+    'aceites de motor',
+    'Apolo Lubricantes',
+    'Overts',
+    'motos',
+    'autos',
+    'camiones',
+    'grasas',
+    'refrigerantes',
+    'cotización lubricantes',
+  ],
+  authors: [{ name: siteName }],
+  creator: siteName,
+  publisher: siteName,
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    url: siteUrl,
+    siteName,
+    title: siteTitle,
+    description: siteDescription,
+    images: [
+      {
+        url: '/images/logoApolo.png',
+        width: 512,
+        height: 512,
+        alt: siteName,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteTitle,
+    description: siteDescription,
+    images: ['/images/logoApolo.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
   icons: {
     icon: [
       {
@@ -100,6 +164,26 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.className} font-sans antialiased bg-background text-foreground`} suppressHydrationWarning>
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: siteName,
+            url: siteUrl,
+            logo: `${siteUrl}/images/logoApolo.png`,
+            email: 'apoloimportlu11@gmail.com',
+            telephone: '+51958400028',
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: 'Las Flores SJL',
+              addressLocality: 'Lima',
+              addressCountry: 'PE',
+            },
+            sameAs: [
+              'https://www.facebook.com/profile.php?id=61587515016695',
+            ],
+          }}
+        />
         <ThemeProvider defaultTheme="dark" enableSystem={false}>
           <ImageProtection />
           <FestiveEffects />
@@ -110,10 +194,11 @@ export default function RootLayout({
               <FloatingWhatsApp />
               <FloatingQuoteButton />
               <QuoteDrawer />
+              <CookieConsent />
               <Toaster position="top-right" richColors />
             </QuoteProvider>
           </BusinessSettingsProvider>
-          <Analytics />
+          <ConsentAnalytics />
         </ThemeProvider>
       </body>
     </html>

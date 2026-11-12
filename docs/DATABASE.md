@@ -9,6 +9,7 @@ Schema documentado desde SQL en la raíz del repo. **El estado real del proyecto
 3. `supabase_quotes.sql` — customers / quotes
 4. `supabase_inventory.sql` — `stock_min` + `inventory_movements`
 5. `supabase_suppliers.sql` — suppliers / product_suppliers
+6. `supabase_staff_roles.sql` — `has_staff_role` + políticas editor/vendor (opcional, post RLS)
 6. `supabase_rls_secure.sql` (o `npm run db:rls`) — RLS con `is_admin()`
 7. `supabase_rls_audit.sql` — auditoría (revisar archivo al usarlo)
 

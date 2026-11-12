@@ -6,40 +6,45 @@ import { realtimeBus } from "@/lib/realtime-bus";
 import {
   Package,
   Plus,
-  Trash2,
-  Edit,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
   Star,
   Search,
-  Save,
   Image as ImageIcon,
-  Minus,
-  Check,
   X,
-  ExternalLink,
-  Sparkles,
   Tag,
-  Layers,
   RefreshCw,
   FolderSync,
   ImageOff,
   RotateCcw,
-  Copy,
   BookmarkPlus,
   BookmarkCheck,
   History,
-  ShieldCheck,
-  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
+import { CatalogPager } from "@/components/CatalogPager";
+import { SortableProductRow } from "@/components/SortableProductRow";
 import { parseProductUpsert } from "@/lib/validations/product";
 import { adjustStock, isLowStock, setStockMin } from "@/lib/inventory";
 import { products as BASE_PRODUCTS, categories as CATALOG_CATEGORIES } from "@/lib/products-data";
-import { groupProductsByLine, type ProductLineGroup } from "@/lib/product-grouping";
+import { groupProductsByLine } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
+import type { ProductItem } from "@/lib/admin/product-types";
+import {
+  CATEGORY_OPTIONS,
+  CATEGORY_DEFAULT_LINE_GROUP,
+  PRESENTATION_PRESETS,
+  VISCOSITY_PRESETS,
+  KNOWN_BRANDS,
+  PAGE_SIZE_OPTIONS,
+  detectViscosity,
+  detectPresentation,
+  suggestLineFromText,
+  suggestCategory,
+  explainProductSaveError,
+  packCatalogPages,
+  type CatalogBlock,
+} from "@/lib/admin/product-heuristics";
 import {
   DndContext,
   closestCenter,
@@ -51,202 +56,9 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
-export interface ProductItem {
-  id: string;
-  name: string;
-  slug: string;
-  brand?: string | null;
-  short_description: string | null;
-  description: string | null;
-  presentation?: string | null;
-  viscosity?: string | null;
-  type?: string | null;
-  subcategory_id?: string | null;
-  subcategoryId?: string | null;
-  subcategory?: string | null;
-  stock: number;
-  is_featured: boolean;
-  is_active: boolean;
-  category_id?: string | null;
-  brand_id?: string | null;
-  image_url?: string | null;
-  image_is_placeholder?: boolean | null;
-  stock_min?: number | null;
-  created_at: string;
-  updated_at?: string;
-  sort_order?: number;
-  line_group_id?: string | null;
-}
-
-const CATEGORY_OPTIONS = [
-  { id: "automovil", name: "Automóvil" },
-  { id: "camiones", name: "Camiones y Autobuses" },
-  { id: "motocicleta", name: "Motocicletas" },
-  { id: "vehiculo-pesado", name: "Vehículo Pesado" },
-  { id: "industrial", name: "Industrial & Grasas" },
-  { id: "otros", name: "Otros / Mantenimiento" },
-];
-
-// Línea de Catálogo sugerida por categoría (según el catálogo mayorista) — solo se aplica
-// cuando el producto todavía no tiene ninguna línea elegida, para adelantar trabajo sin pisar
-// una elección ya hecha por el admin.
-const CATEGORY_DEFAULT_LINE_GROUP: Record<string, string> = {
-  automovil: "aceites-para-motores-gasolineros",
-  camiones: "aceites-diesel-petroleros",
-  "vehiculo-pesado": "aceites-diesel-petroleros",
-  motocicleta: "motos-4t-2t",
-  industrial: "aceite-compresoras-industrial",
-  otros: "general-otros",
-};
-
-const PRESENTATION_PRESETS = [
-  "4 oz",
-  "8 oz",
-  "12 oz",
-  "280 ml",
-  "440 ml",
-  "1/4 gal",
-  "1 gal",
-  "1 L",
-  "5 L",
-  "Pote",
-  "Balde",
-  "Tambor",
-  "Caja",
-];
-
-const VISCOSITY_PRESETS = ["5W-30", "10W-30", "10W-40", "15W-40", "20W-50", "25W-60", "75W-90", "80W-90", "85W-140", "ISO 68"];
-
-function detectViscosity(text: string): string {
-  const sae = text.match(/\b(\d{1,2})\s*w\s*-?\s*(\d{2})\b/i);
-  if (sae) return `${sae[1]}W-${sae[2]}`;
-  const iso = text.match(/\biso\s*-?\s*(\d{2,3})\b/i);
-  if (iso) return `ISO ${iso[1]}`;
-  return "";
-}
-
-function detectPresentation(text: string): string {
-  const t = text.toLowerCase();
-  if (/1\s*\/\s*4|cuarto de gal/.test(t)) return "1/4 gal";
-  if (/\bbalde\b/.test(t)) return "Balde";
-  if (/\btambor\b/.test(t)) return "Tambor";
-  const oz = t.match(/\b(\d+)\s*oz\b/);
-  if (oz) return `${oz[1]} oz`;
-  if (/\b1\s*gal\b|gal[oó]n\b/.test(t)) return "1 gal";
-  const liters = t.match(/\b(\d+(?:[.,]\d+)?)\s*(?:l|lt|litros?)\b/);
-  if (liters) return `${liters[1].replace(",", ".")} L`;
-  return "";
-}
-
-function suggestLineFromText(text: string): string {
-  const t = text.toLowerCase();
-  if (/grasa/.test(t)) return "GRASAS";
-  if (/freno/.test(t)) return "FRENOS";
-  if (/filtro/.test(t)) return "FILTROS";
-  if (/refriger|coolant|anticongel/.test(t)) return "REFRIGERANTES";
-  if (/hidr[aá]ul/.test(t)) return "HIDRÁULICOS";
-  if (/diesel|petrol/.test(t)) return "DIESEL";
-  if (/\bmotos?\b|motocicleta|\b2t\b|\b4t\b/.test(t)) return "MOTOS";
-  if (/transmisi[oó]n|engranaje|valvulina/.test(t)) return "TRANSMISIÓN";
-  if (/aceite|lubric|sint[eé]tic/.test(t)) return "GASOLINERO";
-  return "";
-}
-
-function suggestCategory(text: string): string {
-  const t = text.toLowerCase();
-  if (/\bmotos?\b|motocicleta|\b2t\b|\b4t\b/.test(t)) return "motocicleta";
-  if (/diesel|cami[oó]n|petrolero|autob[uú]s/.test(t)) return "camiones";
-  if (/grasa|compresor|hidr[aá]ul|industrial/.test(t)) return "industrial";
-  if (/pesado|flota/.test(t)) return "vehiculo-pesado";
-  return "";
-}
-
-function explainProductSaveError(message?: string) {
-  const msg = message || "";
-  if (/duplicate key|already exists|23505/i.test(msg)) {
-    return "Ya existe un producto con esa ruta. Cambia el nombre o la presentación.";
-  }
-  if (/row-level security|permission denied|42501/i.test(msg)) {
-    return "Esta sesión no puede crear productos. Vuelve a entrar al panel.";
-  }
-  if (/invalid input syntax for type uuid/i.test(msg)) {
-    return "La base rechazó el identificador del producto. Falta aplicar la migración de productos.";
-  }
-  if (/schema cache|column .* does not exist/i.test(msg)) {
-    return `La base no tiene una columna que el formulario envía. ${msg}`;
-  }
-  return msg || "La base no confirmó el producto.";
-}
-
-const KNOWN_BRANDS = [
-  "Apolo",
-  "Overts",
-  "Amalie",
-  "Boil",
-  "Bosch",
-  "Chevron",
-  "Frenosa",
-  "Honda",
-  "Lys Filtros",
-  "Mann Filter",
-  "Motul",
-  "Peak",
-  "Sakura",
-  "Sonax",
-  "Versachem",
-  "Vextrom",
-  "Wagner",
-  "Yamalube",
-];
-
-const PAGE_SIZE_OPTIONS = [20, 40, 80] as const;
-
-type CatalogBlock = {
-  brand: string;
-  brandTotal: number;
-  lineName: string;
-  products: ProductItem[];
-};
-
-function packCatalogPages(
-  groups: { brand: string; totalProducts: number; lines: { lineName: string; products: ProductItem[] }[] }[],
-  pageSize: number
-) {
-  const pages: CatalogBlock[][] = [];
-  let current: CatalogBlock[] = [];
-  let count = 0;
-  for (const brandGroup of groups) {
-    for (const line of brandGroup.lines) {
-      const block: CatalogBlock = {
-        brand: brandGroup.brand,
-        brandTotal: brandGroup.totalProducts,
-        lineName: line.lineName,
-        products: line.products,
-      };
-      if (current.length > 0 && count + block.products.length > pageSize) {
-        pages.push(current);
-        current = [];
-        count = 0;
-      }
-      current.push(block);
-      count += block.products.length;
-    }
-  }
-  if (current.length) pages.push(current);
-  return pages;
-}
-
-function pageWindow(current: number, total: number) {
-  const wanted = [1, total, current - 2, current - 1, current, current + 1, current + 2].filter(
-    (page) => page >= 1 && page <= total
-  );
-  return [...new Set(wanted)].sort((a, b) => a - b);
-}
 const STORAGE_KEY = "apolo_admin_products_cache_v3";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 const RESTORE_POINT_KEY = "apolo_admin_products_restore_point";
@@ -274,288 +86,9 @@ const INITIAL_CATALOG_PRODUCTS: ProductItem[] = BASE_PRODUCTS.map((p, index) => 
   created_at: new Date().toISOString(),
 }));
 
-interface SortableProductRowProps {
-  prod: ProductItem;
-  isHighlighted: boolean;
-  onOpenImageModal: (prod: ProductItem) => void;
-  onQuickStockChange: (id: string, newStock: number) => void;
-  onQuickRemoveImage: (id: string, name: string) => void;
-  onToggleFeatured: (id: string, current: boolean) => void;
-  onToggleActive: (id: string, current: boolean) => void;
-  onDuplicate: (prod: ProductItem) => void;
-  onEdit: (prod: ProductItem) => void;
-  onDelete: (id: string, name: string) => void;
-}
-
-// Fila de producto arrastrable (dentro de su grupo de línea) — misma UI que antes,
-// solo se le agrega el asa de arrastre y el hook de dnd-kit para reordenar.
-function SortableProductRow({
-  prod,
-  isHighlighted,
-  onOpenImageModal,
-  onQuickStockChange,
-  onQuickRemoveImage,
-  onToggleFeatured,
-  onToggleActive,
-  onDuplicate,
-  onEdit,
-  onDelete,
-}: SortableProductRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: prod.id,
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-  const isApoloBrand = prod.brand?.toLowerCase() === "apolo";
-
-  return (
-    <tr
-      id={`producto-${prod.id}`}
-      ref={setNodeRef}
-      style={style}
-      className={`transition-colors duration-500 hover:bg-white/[0.03] ${
-        isHighlighted ? "bg-emerald-500/10 ring-1 ring-emerald-500/40" : ""
-      }`}
-    >
-      {/* Drag Handle */}
-      <td className="pl-4 pr-0 py-4 w-8">
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="text-zinc-500 hover:text-white cursor-grab active:cursor-grabbing touch-none"
-          title="Arrastrar para reordenar dentro de esta línea"
-        >
-          <GripVertical className="w-4 h-4" />
-        </button>
-      </td>
-
-      {/* Product Name & Interactive Image */}
-      <td className="px-5 py-4">
-        <div className="flex items-center gap-3">
-          {/* 1-Click Interactive Image Thumbnail */}
-          <button
-            type="button"
-            onClick={() => onOpenImageModal(prod)}
-            className="relative group/img w-12 h-12 rounded-lg bg-black/60 border border-white/10 hover:border-[#C7940A] flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all focus:outline-none"
-            title="Haz clic para cambiar o subir imagen de este producto"
-          >
-            {prod.image_url && prod.image_url.trim() !== "" ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={prod.image_url}
-                  alt={prod.name}
-                  className="w-full h-full object-contain p-1"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                    const parent = (e.target as HTMLElement).parentElement;
-                    if (parent) {
-                      const fb = parent.querySelector(".img-fallback-box");
-                      if (fb) (fb as HTMLElement).style.display = "flex";
-                    }
-                  }}
-                />
-                <div className="img-fallback-box hidden flex-col items-center justify-center text-zinc-500">
-                  <Package className="w-5 h-5 text-amber-400/80" />
-                  <span className="text-[8px] font-medium text-zinc-400">Sin foto</span>
-                </div>
-                <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center text-[#C7940A] opacity-0 group-hover/img:opacity-100 transition-opacity z-10">
-                  <ImageIcon className="w-4 h-4" />
-                  <span className="text-[8px] font-bold mt-0.5">Cambiar</span>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-zinc-500 group-hover/img:text-[#C7940A] transition-colors">
-                <Package className="w-5 h-5 text-[#C7940A] opacity-70" />
-                <span className="text-[8px] font-semibold text-zinc-400 group-hover/img:text-amber-300">
-                  + Foto
-                </span>
-              </div>
-            )}
-          </button>
-
-          <div className="min-w-0">
-            <p className="font-bold text-white truncate max-w-xs">{prod.name}</p>
-            <div className="flex items-center gap-2 flex-wrap mt-0.5">
-              {prod.presentation && (
-                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/10 text-amber-300 border border-white/10">
-                  {prod.presentation}
-                </span>
-              )}
-              {prod.viscosity && (
-                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  {prod.viscosity.toUpperCase().startsWith("SAE") ? prod.viscosity : `SAE ${prod.viscosity}`}
-                </span>
-              )}
-              {prod.type && (
-                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-zinc-300 border border-white/10 truncate max-w-[140px]" title={prod.type}>
-                  {prod.type}
-                </span>
-              )}
-              {prod.short_description && (
-                <p className="text-xs text-zinc-400 truncate max-w-xs">
-                  {prod.short_description}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </td>
-
-      {/* Brand Badge */}
-      <td className="px-5 py-4">
-        <span
-          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
-            isApoloBrand
-              ? "bg-[#C7940A]/15 text-[#C7940A] border-[#C7940A]/30 shadow-sm"
-              : "bg-white/5 text-zinc-300 border-white/10"
-          }`}
-        >
-          <Tag className="w-3 h-3" />
-          <span>{prod.brand || "Apolo"}</span>
-        </span>
-      </td>
-
-      {/* Slug */}
-      <td className="px-5 py-4 font-mono text-xs text-zinc-500 truncate max-w-[140px]">
-        /{prod.slug}
-      </td>
-
-      {/* Stock with quick +/- buttons */}
-      <td className="px-5 py-4">
-        {(() => {
-          const low = isLowStock(prod);
-          const min = Number(prod.stock_min) || 0;
-          return (
-            <div className={`inline-flex flex-col gap-1 rounded-lg border p-1 ${low ? "border-orange-500/40 bg-orange-500/10" : "border-white/10 bg-black/60"}`}>
-              <div className="inline-flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onQuickStockChange(prod.id, prod.stock - 1)}
-                  className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-white"
-                  aria-label={`Bajar stock de ${prod.name}`}
-                >
-                  <Minus className="h-3 w-3" />
-                </button>
-                <span className={`min-w-[28px] text-center font-mono text-xs font-bold ${low ? "text-orange-300" : "text-[#C7940A]"}`}>
-                  {prod.stock}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onQuickStockChange(prod.id, prod.stock + 1)}
-                  className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-white"
-                  aria-label={`Subir stock de ${prod.name}`}
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
-              <span className="px-1 text-[10px] text-zinc-400">
-                {low ? `Bajo mínimo · mínimo ${min}` : min > 0 ? `Mínimo ${min}` : "Sin mínimo"}
-              </span>
-            </div>
-          );
-        })()}
-      </td>
-
-      {/* Featured */}
-      <td className="px-5 py-4 text-center">
-        <button
-          type="button"
-          onClick={() => onToggleFeatured(prod.id, prod.is_featured)}
-          className={`p-2 rounded-xl border transition-all cursor-pointer ${
-            prod.is_featured
-              ? "bg-amber-500/20 text-[#C7940A] border-amber-500/40 shadow-sm ring-1 ring-amber-500/30"
-              : "bg-white/5 text-zinc-600 border-white/5 hover:text-zinc-400"
-          }`}
-          title={prod.is_featured ? "Quitar del carrusel de destacados en inicio" : "Mostrar en carrusel de destacados en inicio"}
-        >
-          <Star className={`w-4 h-4 ${prod.is_featured ? "fill-[#C7940A]" : ""}`} />
-        </button>
-      </td>
-
-      {/* Active Status */}
-      <td className="px-5 py-4 text-center">
-        <button
-          type="button"
-          onClick={() => onToggleActive(prod.id, prod.is_active)}
-          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-            prod.is_active
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-              : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/20"
-          }`}
-        >
-          {prod.is_active ? "Activo" : "Pausado"}
-        </button>
-      </td>
-
-      {/* Actions */}
-      <td className="px-5 py-4 text-right">
-        <div className="flex items-center justify-end gap-1.5">
-          {/* Change Image Action */}
-          <button
-            type="button"
-            onClick={() => onOpenImageModal(prod)}
-            className="p-2 text-zinc-400 hover:text-[#C7940A] hover:bg-[#C7940A]/10 rounded-lg transition-colors cursor-pointer"
-            title="Cambiar imagen de este producto"
-          >
-            <ImageIcon className="w-4 h-4" />
-          </button>
-
-          {/* Quick Remove Image Action */}
-          {prod.image_url && prod.image_url.trim() !== "" && (
-            <button
-              type="button"
-              onClick={() => onQuickRemoveImage(prod.id, prod.name)}
-              className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-              title="Quitar imagen del producto"
-            >
-              <ImageOff className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Duplicate Presentation Action */}
-          <button
-            type="button"
-            onClick={() => onDuplicate(prod)}
-            className="p-2 text-zinc-400 hover:text-[#C7940A] hover:bg-[#C7940A]/10 rounded-lg transition-colors cursor-pointer"
-            title="Agregar otra presentación para este producto"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
-
-          {/* Edit Full Product Action */}
-          <button
-            type="button"
-            onClick={() => onEdit(prod)}
-            className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-            title="Editar todos los campos del producto"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-
-          {/* Delete Action */}
-          <button
-            type="button"
-            onClick={() => onDelete(prod.id, prod.name)}
-            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-            title="Eliminar producto"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
 export default function ProductosPage() {
   const supabase = createBrowserSupabase();
   const { lineGroups: lineGroupsList, lineGroupsById } = useProductLineGroups();
-  const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState<ProductItem[]>(INITIAL_CATALOG_PRODUCTS);
 
   const [loading, setLoading] = useState(true);
@@ -861,7 +394,6 @@ export default function ProductosPage() {
 
   // Initial load + Real-time Subscriptions
   useEffect(() => {
-    setMounted(true);
     loadProducts();
 
     // Check saved restore point
@@ -1216,7 +748,12 @@ export default function ProductosPage() {
   const pageTotal = pageBlocks.reduce((sum, block) => sum + block.products.length, 0);
   const pageFrom = pageTotal === 0 ? 0 : shownBefore + 1;
   const pageTo = shownBefore + pageTotal;
-  const pageSections: { brand: string; brandTotal: number; onPage: number; lines: CatalogBlock[] }[] = [];
+  const pageSections: {
+    brand: string;
+    brandTotal: number;
+    onPage: number;
+    lines: CatalogBlock<ProductItem>[];
+  }[] = [];
   for (const block of pageBlocks) {
     const last = pageSections[pageSections.length - 1];
     if (last && last.brand === block.brand) {
@@ -3278,77 +2815,3 @@ export default function ProductosPage() {
   );
 }
 
-function CatalogPager({
-  page,
-  pageCount,
-  from,
-  to,
-  total,
-  pageSize,
-  onPage,
-  onPageSize,
-}: {
-  page: number;
-  pageCount: number;
-  from: number;
-  to: number;
-  total: number;
-  pageSize: number;
-  onPage: (page: number) => void;
-  onPageSize: (size: (typeof PAGE_SIZE_OPTIONS)[number]) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] px-3 py-3 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="text-sm text-[var(--admin-muted)]">
-          {from}–{to} de {total}
-        </p>
-        <label className="flex items-center gap-2 text-xs text-[var(--admin-muted)]">
-          Por página
-          <select
-            value={pageSize}
-            onChange={(event) => onPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}
-            aria-label="Productos por página"
-            className="h-9 rounded-full border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 text-sm text-[var(--admin-ink)]"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button type="button" onClick={() => onPage(1)} disabled={page <= 1} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
-          Primera
-        </button>
-        <button type="button" onClick={() => onPage(page - 1)} disabled={page <= 1} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
-          Anterior
-        </button>
-        {pageWindow(page, pageCount).map((number, index, list) => {
-          const previous = list[index - 1];
-          return (
-            <span key={number} className="flex items-center gap-1.5">
-              {previous && number - previous > 1 && <span className="px-1 text-[var(--admin-faint)]">…</span>}
-              <button
-                type="button"
-                onClick={() => onPage(number)}
-                aria-current={number === page ? "page" : undefined}
-                className={`h-9 min-w-9 rounded-full px-3 text-sm ${number === page ? "bg-[var(--admin-accent)] text-[#ffffff]" : "border border-[var(--admin-line)] text-[var(--admin-ink)]"}`}
-              >
-                {number}
-              </button>
-            </span>
-          );
-        })}
-        <button type="button" onClick={() => onPage(page + 1)} disabled={page >= pageCount} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
-          Siguiente
-        </button>
-        <button type="button" onClick={() => onPage(pageCount)} disabled={page >= pageCount} className="h-9 rounded-full border border-[var(--admin-line)] px-3 text-sm text-[var(--admin-ink)] disabled:opacity-40">
-          Última
-        </button>
-      </div>
-    </div>
-  );
-}

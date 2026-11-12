@@ -63,6 +63,7 @@ Config shadcn: `components.json` (estilo `new-york`, CSS variables, alias `@/`).
 - `db:bootstrap` → `scripts/bootstrap_supabase_catalog.js`
 - `db:rls` → `scripts/apply_rls_secure.js`
 - `db:business` → `scripts/seed_business_data.js`
+- `db:suppliers` → `scripts/seed_suppliers.js`
 - `email:templates` → `scripts/setup_resend_templates.js`
 
 ## Variables de entorno (nombres únicamente)

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createBrowserSupabase } from "@/lib/supabase-client";
+import { resolveStaffRole } from "@/lib/admin-role";
+import { defaultAdminPath } from "@/lib/admin-permissions";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
@@ -96,6 +98,7 @@ export default function AdminLoginForm() {
       try {
         await fetch("/api/auth/set-cookie", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             access_token: data.session.access_token,
@@ -109,23 +112,15 @@ export default function AdminLoginForm() {
         console.error("Failed to set server cookies", err);
       }
 
-      // Check role
-      let isAdmin = false;
-      try {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("role")
-          .eq("email", cleanEmail)
-          .maybeSingle();
-        if (userData?.role === "admin") {
-          isAdmin = true;
-        }
-      } catch (e) {}
-
-      if (isAdmin) {
-        router.push("/admin");
+      const staffRole = await resolveStaffRole(supabase, data.user);
+      if (staffRole) {
+        router.replace(defaultAdminPath(staffRole));
       } else {
-        router.push("/");
+        setLoading(false);
+        setErrorMessage(
+          "Tu cuenta no tiene acceso al panel (admin, editor o vendedor). Contacta al administrador."
+        );
+        return;
       }
       router.refresh();
     } else if (error) {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
+import { resolveStaffRole } from "@/lib/admin-role";
+import { defaultAdminPath } from "@/lib/admin-permissions";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -63,22 +65,10 @@ export async function GET(request: Request) {
         }
       }
 
-      // Check user role for redirection
-      let userRole = "cliente";
-      if (email) {
-        try {
-          const { data: roleData } = await supabase
-            .from("users")
-            .select("role")
-            .eq("email", email)
-            .maybeSingle();
-          if (roleData?.role) {
-            userRole = roleData.role;
-          }
-        } catch {}
-      }
-
-      const redirectDestination = userRole === "admin" ? `${origin}/admin` : `${origin}/`;
+      const staffRole = await resolveStaffRole(supabase, user);
+      const redirectDestination = staffRole
+        ? `${origin}${defaultAdminPath(staffRole)}`
+        : `${origin}/`;
       const response = NextResponse.redirect(redirectDestination);
 
       const maxAge = data.session.expires_at

@@ -4,6 +4,51 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-12 — Legales: cookies, privacidad reforzada y consentimiento
+
+- Banner de cookies + preferencias; Vercel Analytics solo con consentimiento
+- Página `/cookies`; privacidad ampliada (LOADP Ecuador); enlace en footer y sitemap
+- Checkbox de aceptación de privacidad en cotización y contacto
+
+## 2026-11-12 — Prioridades bajas: roles, proveedores, tests, flotantes
+
+- Roles `editor` / `vendor` en UI: matriz de rutas, sidebar filtrado, login/OAuth/proxy
+- SQL opcional `supabase_staff_roles.sql` (`has_staff_role`) para escritura RLS por rol
+- Seed proveedores: `npm run db:suppliers` (+8, total 28 en entorno local)
+- Tests de flujo cotización + catálogo + permisos (Vitest)
+- Flotantes móvil: cotización a la izquierda; Artemisa/WhatsApp no tapán el hero hasta hacer scroll
+
+## 2026-11-12 — Prioridades medias: LCP, carrusel, CI, modularización
+
+- Hero/above-the-fold: `priority` + `loading="eager"` en PromoCarousel y showcase destacados
+- Carrusel de destacados: dedupe fuerte por SKU/clave; loop solo si hay suficientes únicos
+- CI: lint bloqueante (sin `continue-on-error`); ESLint Next 16 flat config; tipado de `proxy.ts` sin `ignoreBuildErrors`
+- Extracción: heurísticas admin, `CatalogPager`, `SortableProductRow`, `usePublicCatalog`, helpers de catálogo público
+
+## 2026-11-12 — Cuenta propietaria admin protegida
+
+- `apoloimportlu11@gmail.com` asegurada como `admin` activo (`scripts/ensure_owner_admin.js`)
+- UI de usuarios bloquea cambio de rol, desactivar y eliminar esa cuenta
+- SQL `supabase_protect_owner_admin.sql` para reforzar la protección en Postgres
+
+## 2026-11-12 — Login admin redirige bien al panel
+
+- Detección de rol unificada en `lib/admin-role.ts` (RPC `is_admin`, luego `users.id`, luego email sin importar mayúsculas)
+- Login y OAuth ya no mandan un admin a `/` por un `.eq("email")` sensible a mayúsculas
+- En `/admin-login`, si la cuenta no es admin se muestra error en lugar de ir al inicio
+
+## 2026-11-12 — SEO storefront
+
+- `robots.ts` y `sitemap.ts` (rutas estáticas + hasta 500 productos activos)
+- `metadataBase`, Open Graph, Twitter, canonical y JSON-LD Organization en el layout
+- Metadata propia en productos, contacto, nosotros, legales y `generateMetadata` en detalle
+
+## 2026-11-12 — Críticos: catálogo, gate admin y legales
+
+- `/productos` ya no pinta el catálogo estático (~49) mientras carga Supabase: skeleton + “Sincronizando…”
+- `proxy.ts` exige sesión Supabase y `role === admin` (no solo cookie `sb-*`)
+- Páginas reales `/terminos` y `/privacidad`; el footer deja de enlazar a Nosotros/Contacto
+
 ## 2026-11-11 — Paleta clara blanco, rojo y grafito
 
 - El modo claro usa blanco, rojo `#C90012`, grafito `#171A20`, gris `#F2F3F5` / `#8A8F98` y oro `#FFD000` en botones, textos y fondos

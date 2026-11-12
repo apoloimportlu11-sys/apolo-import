@@ -204,12 +204,15 @@ export function Footer() {
           <p>
             {new Date().getFullYear()} {name}. Todos los derechos reservados.
           </p>
-          <div className="flex gap-6">
-            <Link href="/nosotros" className="hover:text-foreground">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link href="/terminos" className="hover:text-foreground">
               Términos y condiciones
             </Link>
-            <Link href="/contacto" className="hover:text-foreground">
+            <Link href="/privacidad" className="hover:text-foreground">
               Política de privacidad
+            </Link>
+            <Link href="/cookies" className="hover:text-foreground">
+              Política de cookies
             </Link>
           </div>
         </div>

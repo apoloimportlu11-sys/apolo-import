@@ -30,12 +30,27 @@ export default function FloatingWhatsApp() {
   const [messages, setMessages] = useState<ChatMsg[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [pastHero, setPastHero] = useState(pathname !== "/");
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setHasPrompted(true), 4000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (pathname !== "/") {
+      setPastHero(true);
+      return;
+    }
+    const onScroll = () => {
+      // En móvil el hero ocupa casi el viewport: no tapar CTAs hasta pasar ~55vh
+      setPastHero(window.scrollY > window.innerHeight * 0.55);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [pathname]);
 
   useEffect(() => {
     if (!listRef.current) return;
@@ -92,10 +107,16 @@ export default function FloatingWhatsApp() {
 
   if (pathname.startsWith("/admin")) return null;
 
+  const showOnHomeMobile = pastHero || isOpen || isAssistantOpen;
+
   return (
-    <div className="pointer-events-auto fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+    <div
+      className={`pointer-events-auto fixed z-50 flex flex-col items-end gap-2 transition-opacity duration-300 ${
+        showOnHomeMobile ? "opacity-100" : "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto"
+      } bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 md:bottom-4`}
+    >
       {isAssistantOpen && (
-        <div className="w-[22rem] max-w-[calc(100vw-2rem)] h-[28rem] rounded-2xl border border-border bg-card text-foreground shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col overflow-hidden">
+        <div className="w-[min(22rem,calc(100vw-2rem))] h-[min(28rem,70vh)] rounded-2xl border border-border bg-card text-foreground shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col overflow-hidden mb-1">
           <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/30">
             <div className="flex items-center gap-2.5">
               <div className="relative">
@@ -177,23 +198,53 @@ export default function FloatingWhatsApp() {
         </div>
       )}
 
-      <button
-        onClick={() => {
-          setIsAssistantOpen(!isAssistantOpen);
-          if (!isAssistantOpen) setIsOpen(false);
-        }}
-        className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-colors duration-200 hover:bg-red-500 cursor-pointer"
-        aria-label="Abrir a Artemisa, asistente virtual"
-      >
-        <span className="absolute -top-1 -right-1 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
-        </span>
-        <Bot className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            setIsAssistantOpen(!isAssistantOpen);
+            if (!isAssistantOpen) setIsOpen(false);
+          }}
+          className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-colors duration-200 hover:bg-red-500 cursor-pointer"
+          aria-label="Abrir a Artemisa, asistente virtual"
+        >
+          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
+          </span>
+          <Bot className="h-5 w-5" />
+        </button>
+
+        <div className="relative flex flex-col items-end gap-2">
+          {!isOpen && hasPrompted && pastHero && (
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="hidden sm:flex items-center gap-2 rounded-full bg-card border border-border px-3.5 py-1.5 text-xs text-foreground shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all backdrop-blur-md animate-in fade-in slide-in-from-right-4"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <span>¿En qué te ayudamos hoy?</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setIsOpen(!isOpen);
+              if (!isOpen) setIsAssistantOpen(false);
+            }}
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 transition-colors duration-200 hover:bg-emerald-500 cursor-pointer"
+            aria-label="Abrir chat de WhatsApp"
+          >
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
+            </span>
+            <WhatsAppIcon className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
       {isOpen && (
-        <div className="w-80 rounded-2xl border border-border bg-card text-foreground p-4 shadow-2xl shadow-emerald-950/20 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card text-foreground p-4 shadow-2xl shadow-emerald-950/20 animate-in fade-in slide-in-from-bottom-4 duration-200 order-first">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2.5">
               <div className="relative">
@@ -249,34 +300,6 @@ export default function FloatingWhatsApp() {
           </a>
         </div>
       )}
-
-      <div className="relative flex flex-col items-end gap-2">
-        {!isOpen && hasPrompted && (
-          <button
-            type="button"
-            onClick={() => setIsOpen(true)}
-            className="hidden sm:flex items-center gap-2 rounded-full bg-card border border-border px-3.5 py-1.5 text-xs text-foreground shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all backdrop-blur-md animate-in fade-in slide-in-from-right-4"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-            <span>¿En qué te ayudamos hoy?</span>
-          </button>
-        )}
-
-        <button
-          onClick={() => {
-            setIsOpen(!isOpen);
-            if (!isOpen) setIsAssistantOpen(false);
-          }}
-          className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 transition-colors duration-200 hover:bg-emerald-500 cursor-pointer"
-          aria-label="Abrir chat de WhatsApp"
-        >
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
-          </span>
-          <WhatsAppIcon className="h-5 w-5" />
-        </button>
-      </div>
     </div>
   );
 }

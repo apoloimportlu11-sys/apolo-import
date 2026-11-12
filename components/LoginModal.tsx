@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase-client";
+import { resolveIsAdmin } from "@/lib/admin-role";
 import { Eye, EyeOff, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 interface LoginModalProps {
@@ -95,6 +96,7 @@ export default function LoginModal({
       try {
         await fetch("/api/auth/set-cookie", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             access_token: data.session.access_token,
@@ -108,22 +110,10 @@ export default function LoginModal({
         console.error("Failed to set cookies", err);
       }
 
-      // Check user role
-      let isAdmin = false;
-      try {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("role")
-          .eq("email", cleanEmail)
-          .maybeSingle();
-        if (userData?.role === "admin") {
-          isAdmin = true;
-        }
-      } catch (e) {}
-
+      const isAdmin = await resolveIsAdmin(supabase, data.user);
       onClose();
       if (isAdmin) {
-        router.push("/admin");
+        router.replace("/admin");
       } else {
         router.refresh();
       }

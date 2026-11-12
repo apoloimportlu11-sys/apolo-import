@@ -33,9 +33,6 @@ import {
   type Category,
   type Subcategory,
 } from "@/lib/products-data";
-import { toast } from "sonner";
-import { createBrowserSupabase } from "@/lib/supabase-client";
-import { realtimeBus } from "@/lib/realtime-bus";
 import { useQuote } from "@/lib/quote-context";
 import { VehicleVectorDecor } from "@/components/VehicleVectorDecor";
 import { groupProductsByLine as groupProductsByLineShared, getProductLineCategory, resolveLineFilterToken, type ProductLineGroup } from "@/lib/product-grouping";
@@ -44,27 +41,29 @@ import { CatalogPagination } from "@/components/catalog/catalog-pagination";
 import { ProductQuickView } from "@/components/catalog/product-quick-view";
 import { scrollCatalogIntoView } from "@/lib/lenis-lock";
 
-const PAGE_SIZE = 24;
-
-function brandEquals(a?: string | null, b?: string | null) {
-  return Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
-}
-
-function formatViscosityBadge(visc?: string | null): string | null {
-  if (!visc) return null;
-  const clean = visc.trim();
-  if (!clean) return null;
-  return clean;
-}
+import {
+  brandEquals,
+  formatViscosityBadge,
+  CATALOG_PAGE_SIZE as PAGE_SIZE,
+} from "@/lib/catalog/display";
+import {
+  ADMIN_DELETED_PRODUCTS_KEY as DELETED_KEY,
+  ADMIN_PRODUCTS_CACHE_KEY as ADMIN_STORAGE_KEY,
+  KNOWN_DELETED_PRODUCT_KEYS as KNOWN_DELETED,
+} from "@/lib/catalog/deleted-keys";
+import { usePublicCatalog } from "@/hooks/use-public-catalog";
 
 export function Products() {
   const searchParams = useSearchParams();
-  const supabase = createBrowserSupabase();
   const { lineGroupsById } = useProductLineGroups();
+  const {
+    dbProducts,
+    dbInactiveKeys,
+    catalogStatus,
+    adminCacheVersion,
+  } = usePublicCatalog();
 
   const [mounted, setMounted] = useState(false);
-  const [dbProducts, setDbProducts] = useState<Product[]>([]);
-  const [dbInactiveKeys, setDbInactiveKeys] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedLines, setSelectedLines] = useState<string[]>([]);
@@ -87,192 +86,16 @@ export function Products() {
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  const [adminCacheVersion, setAdminCacheVersion] = useState(0);
-  const hasWarnedFetchError = useRef(false);
-  const lastGoodSupabaseProducts = useRef<Product[]>([]);
-
-  const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
-  const DELETED_KEY = "apolo_admin_deleted_products_ids";
-
-  const KNOWN_DELETED = [
-    "20",
-    "33",
-    "21",
-    "17",
-    "18",
-    "23",
-    "16",
-    "5",
-    "6",
-    "22",
-    "39",
-    "43",
-    "ovtdie1540",
-    "ovtgas2050sn",
-    "ovtdie2550",
-    "ovthd30",
-    "ovthd40",
-    "ovt-hid-68-b",
-    "ovthid68b",
-    "lubricante-transmicion-85w140-balde",
-    "apl-85140",
-    "15w40",
-    "gasolinero-10w30-mineral",
-    "ovt-gra-gl2-b",
-    "ovt-dot5",
-    "prod-1788623012922",
-    "brake-fluid-dot-5-1",
-  ];
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const el = toolbarRef.current;
-    if (!el) return;
-    const apply = () => {
-      document.documentElement.style.setProperty(
-        "--catalog-toolbar-height",
-        `${el.offsetHeight}px`
-      );
-    };
-    apply();
-    const observer = new ResizeObserver(apply);
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      document.documentElement.style.removeProperty("--catalog-toolbar-height");
-    };
-  }, []);
-
-  const mapRowToProduct = (item: any): Product => ({
-    id: String(item.id || ""),
-    name: String(item.name || "Producto"),
-    line: String(item.short_description || "Apolo Premium"),
-    code: String(item.slug || item.id || "APL-001"),
-    brand: String(item.brand || "Apolo"),
-    viscosity: item.viscosity != null ? String(item.viscosity) : "",
-    type: item.type != null ? String(item.type) : "",
-    presentation: String(item.presentation || "Galón / Cuarto / Balde"),
-    description: String(
-      item.description ||
-      item.short_description ||
-      "Lubricante de alta calidad"
-    ),
-    image: String(item.image_url || ""),
-    image_url: String(item.image_url || ""),
-    categoryId: String(item.category_id || "automovil"),
-    subcategoryId: String(item.subcategory_id || ""),
-    subcategory: String(item.subcategory || ""),
-    sort_order: Number(item.sort_order) || 0,
-    line_group_id: item.line_group_id ?? null,
-  });
-
-  const fetchDbProducts = async () => {
-    // Conserva el último resultado bueno de Supabase entre llamadas: si esta
-    // consulta falla de forma transitoria, no queremos borrar productos que
-    // ya se habían cargado correctamente antes.
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select(
-          "id, name, slug, brand, short_description, description, presentation, stock, is_featured, is_active, category_id, image_url, viscosity, type, subcategory_id, subcategory, sort_order, line_group_id"
-        );
-
-      if (data && !error && data.length > 0) {
-        // Collect all inactive items (deleted / paused in DB) so public catalog hides them immediately across all devices
-        const inactiveItems = data.filter((item) => item.is_active === false);
-        const inactiveKeys: string[] = [];
-        inactiveItems.forEach((item) => {
-          if (item.id) inactiveKeys.push(String(item.id));
-          if (item.slug) inactiveKeys.push(String(item.slug));
-        });
-        setDbInactiveKeys(inactiveKeys);
-
-        // Exclude products explicitly marked inactive (deleted)
-        const activeItems = data.filter((item) => item.is_active !== false);
-        lastGoodSupabaseProducts.current = activeItems.map(mapRowToProduct);
-      }
-    } catch (e) {
-      console.error("Error fetching db products:", e);
-      if (!hasWarnedFetchError.current) {
-        hasWarnedFetchError.current = true;
-        toast.error("No pudimos sincronizar el catálogo en línea", {
-          description: "Estás viendo el catálogo local. Verifica tu conexión e inténtalo de nuevo.",
-        });
-      }
-    }
-
-    setDbProducts([...lastGoodSupabaseProducts.current]);
-  };
-
-  useEffect(() => {
-    fetchDbProducts();
-
-    const BRANDS_STORAGE_KEY = "apolo_admin_brands_cache";
-
-    // 1. Bus listener
-    let unsubProducts: (() => void) | null = null;
-    let unsubBrands: (() => void) | null = null;
-    if (realtimeBus) {
-      unsubProducts = realtimeBus.on("products_updated", () => {
-        setAdminCacheVersion((v) => v + 1);
-        fetchDbProducts();
-      });
-      unsubBrands = realtimeBus.on("brands_updated", () => {
-        setAdminCacheVersion((v) => v + 1);
-      });
-    }
-
-    // 2. Cross-tab storage listener
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === ADMIN_STORAGE_KEY || e.key === BRANDS_STORAGE_KEY || e.key === DELETED_KEY) {
-        setAdminCacheVersion((v) => v + 1);
-      }
-    };
-    if (typeof window !== "undefined") {
-      window.addEventListener("storage", handleStorage);
-    }
-
-    // 3. Supabase Realtime
-    let channel: any = null;
-    try {
-      const channelId = `realtime:public_catalog_${Math.random().toString(36).substring(2, 9)}`;
-      channel = supabase
-        .channel(channelId)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "products" },
-          () => {
-            setAdminCacheVersion((v) => v + 1);
-            fetchDbProducts();
-          }
-        )
-        .subscribe();
-    } catch (err) {
-      console.warn("Supabase Realtime public catalog error:", err);
-    }
-
-    return () => {
-      if (unsubProducts) unsubProducts();
-      if (unsubBrands) unsubBrands();
-      if (typeof window !== "undefined") {
-        window.removeEventListener("storage", handleStorage);
-      }
-      if (channel) {
-        try {
-          supabase.removeChannel(channel);
-        } catch {}
-      }
-    };
-  }, [supabase]);
-
   const normalizeKey = (str?: any) =>
     String(str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const allMergedProducts = useMemo(() => {
-    // localStorage solo como caché de respaldo si Supabase aún no respondió
+    // Mientras carga Supabase: lista vacía (skeleton), nunca el estático de ~49.
+    if (catalogStatus === "loading" && dbProducts.length === 0) {
+      return [];
+    }
+
+    // localStorage solo como caché de respaldo si Supabase falló
     let localAdminList: any[] = [];
     const deletedSet = new Set<string>();
     KNOWN_DELETED.forEach((k) => deletedSet.add(normalizeKey(k)));
@@ -291,8 +114,8 @@ export function Products() {
         }
       } catch (e) {}
 
-      // Solo leer caché local si todavía no hay catálogo remoto
-      if (dbProducts.length === 0) {
+      // Solo leer caché local si falló la sync y no hay catálogo remoto
+      if (catalogStatus === "error" && dbProducts.length === 0) {
         try {
           const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
           if (raw) {
@@ -312,6 +135,11 @@ export function Products() {
     // Supabase es la fuente de verdad cuando hay datos remotos
     if (dbProducts.length > 0) {
       return dbProducts.filter((p) => !isDeleted(p.id, p.code));
+    }
+
+    // Catálogo remoto vacío y sync OK → no inventar productos locales
+    if (catalogStatus === "ready") {
+      return [];
     }
 
     const staticIds = new Set<string>();
@@ -532,7 +360,7 @@ export function Products() {
     });
 
     return merged;
-  }, [dbProducts, adminCacheVersion, mounted]);
+  }, [dbProducts, adminCacheVersion, mounted, catalogStatus, dbInactiveKeys]);
 
   // Lista dinámica de marcas disponibles (Apolo primero, luego las demás alfabéticamente)
   const availableBrands = useMemo(() => {
@@ -2025,9 +1853,11 @@ export function Products() {
                 </h1>
 
                 <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                  {filteredProducts.length} producto
-                  {filteredProducts.length !== 1 ? "s" : ""} encontrado
-                  {filteredProducts.length !== 1 ? "s" : ""}
+                  {catalogStatus === "loading"
+                    ? "Sincronizando catálogo…"
+                    : `${filteredProducts.length} producto${
+                        filteredProducts.length !== 1 ? "s" : ""
+                      } encontrado${filteredProducts.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
 
@@ -2126,7 +1956,27 @@ export function Products() {
 
             {/* LISTADO DE PRODUCTOS (CON SEPARADORES POR MARCA Y SUBTÍTULOS POR LÍNEA) */}
             <div ref={gridRef}>
-            {filteredProducts.length > 0 ? (
+            {catalogStatus === "loading" ? (
+              <div
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
+                aria-busy="true"
+                aria-label="Cargando catálogo"
+              >
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="overflow-hidden rounded-2xl border border-border bg-card"
+                  >
+                    <div className="aspect-[4/5] animate-pulse bg-muted/70" />
+                    <div className="space-y-2 p-3">
+                      <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                      <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length > 0 ? (
               shouldShowBrandDividers ? (
                 // VISTA AGRUPADA POR MARCA CON SUBTÍTULOS POR LÍNEA DE PRODUCTO
                 <div className="space-y-14">
