@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatRequestSchema } from "@/lib/validations/chat";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 const SYSTEM_PROMPT = `Eres Artemisa, asistente virtual de Apolo Lubricantes (Ecuador).
 Ayudas a clientes a elegir lubricantes, grasas, refrigerantes y fluidos (viscosidad SAE, marcas como Apolo, Overts, Amalie, etc.).
@@ -10,6 +11,17 @@ No menciones que eres GPT salvo que te lo pregunten.`;
 
 export async function POST(req: Request) {
   try {
+    const limited = rateLimit(clientKey(req, "chat"), 12, 60_000);
+    if (!limited.ok) {
+      return NextResponse.json(
+        { message: "Demasiadas consultas. Espera un momento e inténtalo de nuevo." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limited.retryAfterSec) },
+        }
+      );
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(

@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-12**. Prioridades bajas (roles, proveedores, tests, flotantes).
+Última revisión de documentación: **2026-11-13**. Hardening seguridad (cookies auth, rate limit, quotes RPC, images).
 
 ## Qué es
 
@@ -41,7 +41,9 @@ Sitio comercial + backoffice de **Apolo Lubricantes**: catálogo, cotizaciones W
 - Hosting de producción concreto (¿Vercel?) y dominios
 - Cobertura de tests (solo `lib/validations/contact.test.ts` encontrado)
 - Aplicar `supabase_staff_roles.sql` en Supabase para que editor/vendor escriban vía RLS (UI ya lista)
+- Aplicar `supabase_quotes_public_rpc.sql` en Supabase (quita SELECT abierto de quotes)
 - Playwright E2E de navegador (hoy hay tests de flujo Vitest)
+- Rate limit distribuido (Upstash) si hay varias instancias serverless
 - Estado de templates Resend en la cuenta real
 - Chat Artemisa activo en UI (API existe; wiring UI no auditado exhaustivamente en esta pasada)
 

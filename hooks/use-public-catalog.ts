@@ -31,27 +31,38 @@ export function usePublicCatalog() {
   const fetchDbProducts = useCallback(async () => {
     const hadProducts = lastGoodSupabaseProducts.current.length > 0;
     try {
-      const { data, error } = await supabase.from("products").select(PRODUCT_SELECT);
-
-      if (error) throw error;
-
-      if (data) {
-        const inactiveItems = data.filter((item) => item.is_active === false);
-        const inactiveKeys: string[] = [];
-        inactiveItems.forEach((item) => {
-          if (item.id) inactiveKeys.push(String(item.id));
-          if (item.slug) inactiveKeys.push(String(item.slug));
-        });
-        setDbInactiveKeys(inactiveKeys);
-
-        const activeItems = data.filter((item) => item.is_active !== false);
-        lastGoodSupabaseProducts.current = activeItems.map((row) =>
-          mapRowToProduct(row as Record<string, unknown>)
-        );
-        setCatalogStatus("ready");
-      } else if (!hadProducts) {
-        setCatalogStatus("ready");
+      // Solo activos, en páginas de 200 (menos payload que un select completo).
+      const pageSize = 200;
+      const activeRows: Record<string, unknown>[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("products")
+          .select(PRODUCT_SELECT)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true })
+          .range(from, to);
+        if (error) throw error;
+        const chunk = (data || []) as Record<string, unknown>[];
+        activeRows.push(...chunk);
+        if (chunk.length < pageSize) break;
       }
+
+      // Claves inactivas ligeras (para ocultar ítems del catálogo estático).
+      const { data: inactiveData } = await supabase
+        .from("products")
+        .select("id, slug")
+        .eq("is_active", false);
+      const inactiveKeys: string[] = [];
+      (inactiveData || []).forEach((item) => {
+        if (item.id) inactiveKeys.push(String(item.id));
+        if (item.slug) inactiveKeys.push(String(item.slug));
+      });
+      setDbInactiveKeys(inactiveKeys);
+
+      lastGoodSupabaseProducts.current = activeRows.map((row) => mapRowToProduct(row));
+      setCatalogStatus("ready");
     } catch (e) {
       console.error("Error fetching db products:", e);
       if (!hadProducts) setCatalogStatus("error");

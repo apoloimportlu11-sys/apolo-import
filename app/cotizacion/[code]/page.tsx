@@ -29,7 +29,23 @@ function supabaseOrNull() {
 }
 
 async function getQuote(supabase: SupabaseClient, code: string) {
-  const { data } = await supabase.from("quotes").select("*").eq("code", code).maybeSingle();
+  const safeCode = String(code || "").trim();
+  if (!safeCode) return null;
+
+  // Preferir RPC (no lista la tabla completa). Fallback si aún no se aplicó el SQL.
+  const { data: rpcData, error: rpcError } = await supabase.rpc("get_quote_by_code", {
+    p_code: safeCode,
+  });
+  if (!rpcError) {
+    if (Array.isArray(rpcData)) return rpcData[0] || null;
+    return rpcData || null;
+  }
+
+  const { data } = await supabase
+    .from("quotes")
+    .select("id,code,client_name,city,phone,status,items,total_items,notes,created_at")
+    .eq("code", safeCode)
+    .maybeSingle();
   return data;
 }
 

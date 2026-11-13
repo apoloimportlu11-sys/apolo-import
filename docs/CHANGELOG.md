@@ -4,6 +4,14 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-13 — Hardening seguridad y rendimiento
+
+- `/api/auth/set-cookie` valida la sesión con Supabase antes de setear cookies
+- `images.remotePatterns` limitado a hosts Supabase (ya no `**`)
+- Rate limit en memoria para `/api/chat`, `/api/contact`, `/api/quotes`
+- SQL `supabase_quotes_public_rpc.sql`: lectura pública solo por código + teléfono enmascarado
+- Catálogo público: solo activos, en páginas de 200 filas
+
 ## 2026-11-12 — Legales: cookies, privacidad reforzada y consentimiento
 
 - Banner de cookies + preferencias; Vercel Analytics solo con consentimiento

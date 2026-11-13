@@ -2,6 +2,8 @@
 
 Route Handlers en `app/api/**`. Gran parte del admin **no** usa estos endpoints: habla a Supabase desde el browser client bajo RLS.
 
+Rate limit (memoria del proceso, por IP): chat ~12/min, contact ~8/min, quotes ~10/min. `set-cookie` valida la sesión con Supabase antes de setear cookies.
+
 ## Endpoints HTTP (app)
 
 ### `POST /api/quotes`
@@ -9,7 +11,7 @@ Route Handlers en `app/api/**`. Gran parte del admin **no** usa estos endpoints:
 - Archivo: `app/api/quotes/route.ts`
 - Body: schema Zod `quoteCreateSchema` (`lib/validations/quote.ts`)
 - Acción: inserta opcionalmente `customers` + `quotes` con cliente anon de Supabase; genera `code` vía `generateQuoteCode()` (`lib/quotes.ts`)
-- Respuesta: `{ id, code }` 201; errores 400/500
+- Respuesta: `{ id, code }` 201; errores 400/429/500
 
 ### `POST /api/contact`
 

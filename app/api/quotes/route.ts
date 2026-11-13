@@ -3,9 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 import { quoteCreateSchema } from "@/lib/validations/quote";
 import { generateQuoteCode } from "@/lib/quotes";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const limited = rateLimit(clientKey(req, "quotes"), 10, 60_000);
+    if (!limited.ok) {
+      return NextResponse.json(
+        { message: "Demasiadas cotizaciones seguidas. Espera un momento." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limited.retryAfterSec) },
+        }
+      );
+    }
+
     const body = await req.json();
     const parsed = quoteCreateSchema.safeParse(body);
     if (!parsed.success) {

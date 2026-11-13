@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { contactFormSchema } from "@/lib/validations/contact";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 function buildContactHtml(input: {
   name: string;
@@ -36,6 +37,17 @@ function buildContactHtml(input: {
 
 export async function POST(req: Request) {
   try {
+    const limited = rateLimit(clientKey(req, "contact"), 8, 60_000);
+    if (!limited.ok) {
+      return NextResponse.json(
+        { message: "Demasiados mensajes. Espera un momento e inténtalo de nuevo." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(limited.retryAfterSec) },
+        }
+      );
+    }
+
     const body = await req.json();
     const parsed = contactFormSchema.safeParse(body);
 

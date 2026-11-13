@@ -1,6 +1,7 @@
 # Features
 
 ## Completed
+- Hardening 2026-11-13: set-cookie valida sesión; remotePatterns Supabase; rate limit APIs; quotes RPC; catálogo activo paginado
 - Legales 2026-11-12: `/cookies`, banner consentimiento, Analytics condicional, privacidad LOADP, checkbox en cotización/contacto
 - Bajas 2026-11-12: roles editor/vendor en UI + SQL staff; seed proveedores; tests flujo quote/catálogo; flotantes móvil sin tapar hero
 - Medias 2026-11-12: LCP priority/eager; dedupe carrusel destacados; CI lint bloqueante + eslint-config-next; modularización parcial admin/productos + products (`lib/admin/*`, `hooks/use-public-catalog.ts`, `lib/catalog/*`, `CatalogPager`, `SortableProductRow`)
