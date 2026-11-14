@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Image from "next/image";
 
 interface Testimonial {
@@ -15,24 +14,6 @@ interface TestimonialCarouselProps {
 }
 
 export default function TestimonialCarousel({ testimonials }: TestimonialCarouselProps) {
-  const [itemsPerView, setItemsPerView] = useState(3);
-
-  useEffect(() => {
-    const updateItemsPerView = () => {
-      if (window.innerWidth >= 1024) {
-        setItemsPerView(3);
-      } else if (window.innerWidth >= 768) {
-        setItemsPerView(2);
-      } else {
-        setItemsPerView(1);
-      }
-    };
-
-    updateItemsPerView();
-    window.addEventListener("resize", updateItemsPerView);
-    return () => window.removeEventListener("resize", updateItemsPerView);
-  }, []);
-
   // Duplicar elementos suficientes veces para animación infinita
   const duplicatedTestimonials = [...testimonials, ...testimonials, ...testimonials, ...testimonials];
 
@@ -96,7 +77,7 @@ export default function TestimonialCarousel({ testimonials }: TestimonialCarouse
                   </div>
                 </div>
                 {/* Texto de la reseña */}
-                <p className="text-muted-foreground text-sm leading-relaxed italic line-clamp-3">"{testimonial.text}"</p>
+                <p className="text-muted-foreground text-sm leading-relaxed italic line-clamp-3">&ldquo;{testimonial.text}&rdquo;</p>
                 {/* Badge de Google */}
                 <div className="mt-4 flex items-center gap-2">
                   <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">

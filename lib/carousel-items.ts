@@ -114,7 +114,7 @@ export function getLocalCarouselItems(): CarouselRowsData {
       populares: Array.isArray(parsed.populares) && parsed.populares.length > 0 ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
       recomendados: Array.isArray(parsed.recomendados) && parsed.recomendados.length > 0 ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
     };
-  } catch (e) {
+  } catch (_e) {
     return DEFAULT_CAROUSEL_ITEMS;
   }
 }
@@ -153,9 +153,9 @@ export async function saveCarouselItems(items: CarouselRowsData): Promise<{ succ
     }
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error saving carousel items:", err);
-    return { success: false, error: err?.message || "Error desconocido" };
+    return { success: false, error: (err instanceof Error ? err.message : undefined) || "Error desconocido" };
   }
 }
 
@@ -184,7 +184,7 @@ export function useCarouselItems() {
           if (typeof window !== "undefined") {
             localStorage.setItem(CAROUSEL_ITEMS_STORAGE_KEY, JSON.stringify(merged));
           }
-        } catch (e) {}
+        } catch (_e) {}
       }
     } catch (e) {
       console.error("Error fetching remote carousel items:", e);
@@ -217,7 +217,7 @@ export function useCarouselItems() {
             populares: Array.isArray(parsed.populares) ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
             recomendados: Array.isArray(parsed.recomendados) ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
           });
-        } catch (err) {}
+        } catch (_err) {}
       }
     };
 

@@ -36,7 +36,7 @@ export function useFestiveTheme() {
     });
 
     const supabase = createBrowserSupabase();
-    let channel: any = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       const channelId = `realtime:festive_theme_${Math.random().toString(36).substring(2, 9)}`;
       channel = supabase

@@ -4,6 +4,25 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-14 — Playwright E2E
+
+- `@playwright/test` + Chromium: smoke storefront, cotización drawer, gate admin
+- Scripts `test:e2e` / `test:e2e:ui`; job CI `e2e`
+- Base URL configurable con `PLAYWRIGHT_BASE_URL` (p. ej. producción)
+
+## 2026-11-14 — ESLint warnings a cero
+
+- Limpieza masiva: unused vars/imports, prefer-const, entidades JSX, purity/static-components
+- Sustitución de `any` por tipos concretos/`unknown` + `instanceof Error`
+- `caughtErrorsIgnorePattern: "^_"` en `eslint.config.mjs`
+- Resultado: **0 errors / 0 warnings** en `npm run lint`
+
+## 2026-11-13 — Cuentas staff editor / vendor / almacén
+
+- Rol nuevo `almacen` (UI + permisos + SQL `supabase_add_almacen_role.sql`)
+- Script `npm run db:staff-accounts` crea las 3 cuentas en Auth + `public.users`
+- `supabase_staff_roles.sql` incluye escritura de inventario/productos para almacén
+
 ## 2026-11-13 — Hardening seguridad y rendimiento
 
 - `/api/auth/set-cookie` valida la sesión con Supabase antes de setear cookies

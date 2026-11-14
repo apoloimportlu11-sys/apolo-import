@@ -1,26 +1,23 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { Loader2, Box } from "lucide-react";
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "model-viewer": any;
-    }
-  }
-}
+type ModelViewerElementProps = ComponentPropsWithoutRef<"div"> & {
+  src: string;
+  alt?: string;
+  "auto-rotate"?: string;
+  "rotation-per-second"?: string;
+  "camera-controls"?: string;
+  "touch-action"?: string;
+  "shadow-intensity"?: string;
+  "shadow-softness"?: string;
+  exposure?: string;
+  "interaction-prompt"?: string;
+  loading?: "auto" | "lazy" | "eager";
+};
 
-declare module "react" {
-  namespace JSX {
-    interface IntrinsicElements {
-      "model-viewer": any;
-    }
-  }
-}
-
-// Componente tipado para evitar advertencias de JSX.IntrinsicElements en el editor
-const ModelViewer = "model-viewer" as any;
+const ModelViewer = "model-viewer" as unknown as React.ElementType<ModelViewerElementProps>;
 
 interface ModelViewer3DProps {
   src: string;

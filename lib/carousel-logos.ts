@@ -30,7 +30,7 @@ export function getLocalCarouselLogos(): CarouselRowLogos {
       populares: parsed.populares || DEFAULT_CAROUSEL_LOGOS.populares,
       recomendados: parsed.recomendados || DEFAULT_CAROUSEL_LOGOS.recomendados,
     };
-  } catch (e) {
+  } catch (_e) {
     return DEFAULT_CAROUSEL_LOGOS;
   }
 }
@@ -71,9 +71,9 @@ export async function saveCarouselLogos(logos: CarouselRowLogos): Promise<{ succ
     }
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error saving carousel logos:", err);
-    return { success: false, error: err?.message || "Error desconocido" };
+    return { success: false, error: (err instanceof Error ? err.message : undefined) || "Error desconocido" };
   }
 }
 
@@ -102,7 +102,7 @@ export function useCarouselLogos() {
           if (typeof window !== "undefined") {
             localStorage.setItem(CAROUSEL_LOGOS_STORAGE_KEY, JSON.stringify(merged));
           }
-        } catch (e) {}
+        } catch (_e) {}
       }
     } catch (e) {
       console.error("Error fetching remote carousel logos:", e);
@@ -139,7 +139,7 @@ export function useCarouselLogos() {
             populares: parsed.populares || DEFAULT_CAROUSEL_LOGOS.populares,
             recomendados: parsed.recomendados || DEFAULT_CAROUSEL_LOGOS.recomendados,
           });
-        } catch (err) {}
+        } catch (_err) {}
       }
     };
 

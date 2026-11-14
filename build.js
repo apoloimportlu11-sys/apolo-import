@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Script auxiliar para compilar el proyecto desde cPanel (Setup Node.js App -> "Ejecutar script JS")
 // cuando no hay acceso a una Terminal/SSH para correr "npm run build" manualmente.
 const { execFileSync } = require("child_process");

@@ -9,23 +9,14 @@ import {
   Plus,
   Trash2,
   Edit,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
   Save,
   Radio,
   X,
   Search,
-  Globe,
   ExternalLink,
-  Sparkles,
-  Award,
   Target,
   Eye,
-  BookOpen,
-  Users,
-  Clock,
-  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
@@ -239,7 +230,7 @@ export default function PaginasPage() {
                 ? parsed.categoryBanners
                 : DEFAULT_HOME_CONTENT.categoryBanners,
           });
-        } catch (e) {
+        } catch {
           setHomeForm(DEFAULT_HOME_CONTENT);
         }
       } else {
@@ -258,7 +249,7 @@ export default function PaginasPage() {
             portadaImage: parsed.portadaImage || DEFAULT_NOSOTROS_CONTENT.portadaImage,
             stats: Array.isArray(parsed.stats) && parsed.stats.length > 0 ? parsed.stats : DEFAULT_NOSOTROS_CONTENT.stats,
           });
-        } catch (e) {
+        } catch {
           setNosotrosForm(DEFAULT_NOSOTROS_CONTENT);
         }
       } else {
@@ -352,10 +343,10 @@ export default function PaginasPage() {
       }
 
       setShowModal(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Error al guardar página", {
         id: toastId,
-        description: err.message,
+        description: (err instanceof Error ? err.message : String(err)),
       });
     } finally {
       setSaving(false);
@@ -384,10 +375,10 @@ export default function PaginasPage() {
         id: toastId,
         description: `"${title}" ha sido removida.`,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Error al eliminar", {
         id: toastId,
-        description: err.message,
+        description: (err instanceof Error ? err.message : String(err)),
       });
     }
   }
@@ -407,7 +398,7 @@ export default function PaginasPage() {
       if (error) throw error;
       if (realtimeBus) realtimeBus.emit("pages_updated", { id, is_published: !current });
       toast.success(!current ? "Página publicada" : "Página convertida a borrador", { duration: 1500 });
-    } catch (err: any) {
+    } catch {
       toast.error("Error al cambiar estado");
       loadPages();
     }

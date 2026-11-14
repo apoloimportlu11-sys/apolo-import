@@ -20,12 +20,13 @@ $$;
 REVOKE ALL ON FUNCTION public.has_staff_role(text[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.has_staff_role(text[]) TO anon, authenticated;
 
--- Catálogo / inventario / proveedores / cotizaciones: admin + vendor
+-- Catálogo / inventario: admin + vendor + almacen
+-- Proveedores / cotizaciones: admin + vendor
 DROP POLICY IF EXISTS "products_write_admin" ON public.products;
 DROP POLICY IF EXISTS "products_staff_write" ON public.products;
 CREATE POLICY "products_staff_write" ON public.products
-  FOR ALL USING (public.has_staff_role(ARRAY['admin','vendor']))
-  WITH CHECK (public.has_staff_role(ARRAY['admin','vendor']));
+  FOR ALL USING (public.has_staff_role(ARRAY['admin','vendor','almacen']))
+  WITH CHECK (public.has_staff_role(ARRAY['admin','vendor','almacen']));
 
 DROP POLICY IF EXISTS "brands_write_admin" ON public.brands;
 DROP POLICY IF EXISTS "brands_staff_write" ON public.brands;
@@ -55,8 +56,8 @@ DROP POLICY IF EXISTS "inventory_movements_select" ON public.inventory_movements
 DROP POLICY IF EXISTS "inventory_movements_write_admin" ON public.inventory_movements;
 DROP POLICY IF EXISTS "inventory_movements_staff_write" ON public.inventory_movements;
 CREATE POLICY "inventory_movements_staff_write" ON public.inventory_movements
-  FOR ALL USING (public.has_staff_role(ARRAY['admin','vendor']))
-  WITH CHECK (public.has_staff_role(ARRAY['admin','vendor']));
+  FOR ALL USING (public.has_staff_role(ARRAY['admin','vendor','almacen']))
+  WITH CHECK (public.has_staff_role(ARRAY['admin','vendor','almacen']));
 
 DROP POLICY IF EXISTS "quotes_admin_all" ON public.quotes;
 DROP POLICY IF EXISTS "quotes_staff_all" ON public.quotes;

@@ -389,6 +389,7 @@ export default function ConfiguracionPage() {
             <h2 className="font-heading text-xl text-white">Así queda el contacto</h2>
             <div className="mt-4 space-y-3 text-sm text-zinc-100">
               {form.logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={form.logo_url} alt="" className="h-12 w-auto object-contain" />
               )}
               <p className="font-heading text-2xl text-white">{form.business_name || "Sin nombre"}</p>
@@ -540,7 +541,12 @@ export default function ConfiguracionPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="grid size-14 place-items-center overflow-hidden rounded-lg bg-black">
-                        {isImage ? <img src={item.url} alt="" className="size-full object-contain" /> : <Box className="size-5 text-zinc-300" />}
+                        {isImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.url} alt="" className="size-full object-contain" />
+                        ) : (
+                          <Box className="size-5 text-zinc-300" />
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">Tarjeta {index + 1}</p>

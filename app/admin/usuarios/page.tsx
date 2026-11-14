@@ -8,15 +8,12 @@ import {
   Plus,
   Trash2,
   Edit,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
   Radio,
   Save,
   X,
   Search,
   Shield,
-  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,7 +25,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "editor" | "vendor" | "cliente";
+  role: "admin" | "editor" | "vendor" | "almacen" | "cliente";
   is_active: boolean;
   created_at: string;
   updated_at?: string;
@@ -212,10 +209,10 @@ export default function UsuariosPage() {
       }
 
       setShowModal(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Error al guardar usuario", {
         id: toastId,
-        description: err.message,
+        description: (err instanceof Error ? err.message : String(err)),
       });
     } finally {
       setSaving(false);
@@ -247,10 +244,10 @@ export default function UsuariosPage() {
         id: toastId,
         description: `"${name}" ha sido removido del sistema.`,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Error al eliminar", {
         id: toastId,
-        description: err.message,
+        description: (err instanceof Error ? err.message : String(err)),
       });
     }
   }
@@ -278,13 +275,16 @@ export default function UsuariosPage() {
       if (error) throw error;
       if (realtimeBus) realtimeBus.emit("users_updated", { id, is_active: !current });
       toast.success(!current ? "Usuario activado" : "Usuario desactivado", { duration: 1500 });
-    } catch (err: any) {
+    } catch {
       toast.error("Error al cambiar estado");
       loadUsers();
     }
   }
 
-  async function handleRoleChange(id: string, newRole: "admin" | "editor" | "vendor" | "cliente") {
+  async function handleRoleChange(
+    id: string,
+    newRole: "admin" | "editor" | "vendor" | "almacen" | "cliente"
+  ) {
     const target = users.find((u) => u.id === id);
     if (isProtectedOwnerAdmin(target?.email)) {
       toast.error("Cuenta protegida", {
@@ -307,7 +307,7 @@ export default function UsuariosPage() {
       if (error) throw error;
       if (realtimeBus) realtimeBus.emit("users_updated", { id, role: newRole });
       toast.success(`Rol cambiado a ${newRole.toUpperCase()}`, { duration: 1500 });
-    } catch (err: any) {
+    } catch {
       toast.error("Error al cambiar rol");
       loadUsers();
     }
@@ -451,7 +451,12 @@ export default function UsuariosPage() {
                       <td className="px-5 py-4">
                         <select
                           value={u.role || "cliente"}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value as any)}
+                          onChange={(e) =>
+                            handleRoleChange(
+                              u.id,
+                              e.target.value as UserProfile["role"]
+                            )
+                          }
                           disabled={isOwner}
                           title={
                             isOwner
@@ -464,6 +469,7 @@ export default function UsuariosPage() {
                           <option value="admin">Administrador (Total)</option>
                           <option value="editor">Editor (Contenido)</option>
                           <option value="vendor">Vendedor (Catálogo)</option>
+                          <option value="almacen">Almacén (Inventario)</option>
                         </select>
                       </td>
 
@@ -572,14 +578,20 @@ export default function UsuariosPage() {
                 </label>
                 <select
                   value={currentUser.role || "cliente"}
-                  onChange={(e) => setCurrentUser({ ...currentUser, role: e.target.value as any })}
+                  onChange={(e) =>
+                    setCurrentUser({
+                      ...currentUser,
+                      role: e.target.value as UserProfile["role"],
+                    })
+                  }
                   disabled={isEditing && isProtectedOwnerAdmin(currentUser.email)}
                   className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2.5 text-sm text-white focus:border-[#C7940A] focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <option value="cliente">Cliente / Consumidor (Acceso estándar)</option>
                   <option value="admin">Administrador (Acceso total)</option>
                   <option value="editor">Editor de Contenido</option>
-                  <option value="vendor">Vendedor (Gestión de stock)</option>
+                  <option value="vendor">Vendedor (Catálogo y cotizaciones)</option>
+                  <option value="almacen">Almacén (Inventario)</option>
                 </select>
                 {isEditing && isProtectedOwnerAdmin(currentUser.email) && (
                   <p className="mt-1.5 text-[11px] text-[#C7940A]">

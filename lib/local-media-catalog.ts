@@ -68,7 +68,7 @@ export function getLocalMediaByCategory(category?: string): LocalMediaItem[] {
 }
 
 export function searchLocalMedia(query: string, category?: string): LocalMediaItem[] {
-  let list = getLocalMediaByCategory(category);
+  const list = getLocalMediaByCategory(category);
   if (!query) return list;
   const q = query.toLowerCase();
   return list.filter(

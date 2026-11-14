@@ -15,7 +15,6 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Tag,
-  Sparkles,
   Layers,
   Package,
   FileText,
@@ -63,7 +62,7 @@ export function Products() {
     adminCacheVersion,
   } = usePublicCatalog();
 
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedLines, setSelectedLines] = useState<string[]>([]);
@@ -79,24 +78,47 @@ export function Products() {
   const [categoryOpen, setCategoryOpen] = useState(true);
   const [viscosityOpen, setViscosityOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showAllProducts, setShowAllProducts] = useState(true);
+  const [, setShowAllProducts] = useState(true);
   const [brandFilterSearch, setBrandFilterSearch] = useState("");
   const [page, setPage] = useState(1);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  const normalizeKey = (str?: any) =>
+  const normalizeKey = (str?: string | number | null) =>
     String(str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const allMergedProducts = useMemo(() => {
+    void adminCacheVersion; // invalida memo tras ediciones admin en localStorage
     // Mientras carga Supabase: lista vacía (skeleton), nunca el estático de ~49.
     if (catalogStatus === "loading" && dbProducts.length === 0) {
       return [];
     }
 
     // localStorage solo como caché de respaldo si Supabase falló
-    let localAdminList: any[] = [];
+    type LocalAdminProduct = {
+      id?: string;
+      slug?: string;
+      code?: string;
+      name?: string;
+      presentation?: string;
+      brand?: string;
+      short_description?: string;
+      line?: string;
+      description?: string;
+      image_url?: string;
+      image?: string;
+      viscosity?: string;
+      type?: string;
+      subcategory_id?: string;
+      subcategoryId?: string;
+      subcategory?: string;
+      sort_order?: number;
+      line_group_id?: string | null;
+      category_id?: string;
+      categoryId?: string;
+    };
+    let localAdminList: LocalAdminProduct[] = [];
     const deletedSet = new Set<string>();
     KNOWN_DELETED.forEach((k) => deletedSet.add(normalizeKey(k)));
     dbInactiveKeys.forEach((k) => deletedSet.add(normalizeKey(k)));
@@ -112,7 +134,7 @@ export function Products() {
             });
           }
         }
-      } catch (e) {}
+      } catch (_e) {}
 
       // Solo leer caché local si falló la sync y no hay catálogo remoto
       if (catalogStatus === "error" && dbProducts.length === 0) {
@@ -120,13 +142,13 @@ export function Products() {
           const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) localAdminList = parsed;
+            if (Array.isArray(parsed)) localAdminList = parsed as LocalAdminProduct[];
           }
-        } catch (e) {}
+        } catch (_e) {}
       }
     }
 
-    const isDeleted = (id?: any, code?: any) => {
+    const isDeleted = (id?: string | number | null, code?: string | number | null) => {
       const nId = normalizeKey(id);
       const nCode = normalizeKey(code);
       return Boolean((nId && deletedSet.has(nId)) || (nCode && deletedSet.has(nCode)));
@@ -157,7 +179,7 @@ export function Products() {
       const normBaseBrand = normalizeKey(baseP.brand);
 
       // A) Check local admin cache (USER EDITS)
-      const localMatch = localAdminList.find((item: any) => {
+      const localMatch = localAdminList.find((item) => {
         const normItemId = normalizeKey(item.id);
         const normItemCode = normalizeKey(item.slug || item.code);
         const normItemName = normalizeKey(item.name);
@@ -220,9 +242,13 @@ export function Products() {
           ? String(preferred.brand)
           : baseP.brand || "Apolo";
 
+      const preferredShort =
+        preferred && "short_description" in preferred
+          ? (preferred as LocalAdminProduct).short_description
+          : undefined;
       const finalLine =
-        preferred?.short_description != null && String(preferred.short_description).trim() !== ""
-          ? String(preferred.short_description)
+        preferredShort != null && String(preferredShort).trim() !== ""
+          ? String(preferredShort)
           : preferred?.line && preferred.line !== "Apolo Premium" && String(preferred.line).trim() !== ""
           ? String(preferred.line)
           : baseP.line || "Apolo Premium";
@@ -255,7 +281,7 @@ export function Products() {
 
       const finalLineGroupId =
         preferred?.line_group_id !== undefined
-          ? preferred.line_group_id
+          ? (preferred.line_group_id as string | null)
           : baseP.line_group_id ?? null;
 
       return {
@@ -276,7 +302,7 @@ export function Products() {
     });
 
     // Add custom creations from localList or DB that are separate products/presentations
-    localAdminList.forEach((locP: any) => {
+    localAdminList.forEach((locP) => {
       if (isDeleted(locP.id, locP.slug || locP.code)) return;
 
       const normLocId = normalizeKey(locP.id);
@@ -302,7 +328,7 @@ export function Products() {
 
       if (!alreadyMerged && locP.name && locP.name !== "Sin nombre") {
         merged.push({
-          id: String(locP.id || `custom-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`),
+          id: String(locP.id || `custom-${normLocCode || normLocName || "item"}-${normLocPres || "x"}`),
           name: String(locP.name),
           line: String(locP.short_description || locP.line || "Apolo Premium"),
           code: String(locP.slug || locP.code || "APL-NEW"),
@@ -360,7 +386,7 @@ export function Products() {
     });
 
     return merged;
-  }, [dbProducts, adminCacheVersion, mounted, catalogStatus, dbInactiveKeys]);
+  }, [dbProducts, mounted, catalogStatus, dbInactiveKeys, adminCacheVersion]);
 
   // Lista dinámica de marcas disponibles (Apolo primero, luego las demás alfabéticamente)
   const availableBrands = useMemo(() => {
@@ -390,7 +416,7 @@ export function Products() {
       if (idxB !== -1) return 1;
       return String(a || "").localeCompare(String(b || ""));
     });
-  }, [allMergedProducts, mounted, adminCacheVersion]);
+  }, [allMergedProducts]);
 
   const displayedBrands = useMemo(() => {
     if (!brandFilterSearch.trim()) return availableBrands;
@@ -436,7 +462,7 @@ export function Products() {
     let filtered = allMergedProducts;
 
     if (searchQuery && searchQuery.trim()) {
-      const cleanText = (val?: any) =>
+      const cleanText = (val?: string | number | null) =>
         String(val || "")
           .toLowerCase()
           .normalize("NFD")
@@ -619,7 +645,7 @@ export function Products() {
           brand: b,
           totalProducts: prods.length,
           products: prods,
-          lines: groupProductsByLine(prods),
+          lines: groupProductsByLineShared(prods, sortBy, lineGroupsById),
         });
         map.delete(b);
       }
@@ -632,7 +658,7 @@ export function Products() {
           brand: b,
           totalProducts: prods.length,
           products: prods,
-          lines: groupProductsByLine(prods),
+          lines: groupProductsByLineShared(prods, sortBy, lineGroupsById),
         });
       }
     });
@@ -788,7 +814,7 @@ export function Products() {
     selectedViscosities.length > 0 ||
     searchQuery.trim().length > 0;
 
-  const Breadcrumb = () => (
+  const renderBreadcrumb = () => (
     <nav className="flex flex-wrap items-center gap-2 text-sm mb-6 font-medium">
       <Link
         href="/"
@@ -858,7 +884,7 @@ export function Products() {
     </nav>
   );
 
-  const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
+  const renderSidebar = (mobile = false) => (
     <div className={mobile ? "p-4" : ""}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -1012,7 +1038,7 @@ export function Products() {
 
                 {displayedBrands.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-3">
-                    No se encontró "{brandFilterSearch}"
+                    No se encontró &quot;{brandFilterSearch}&quot;
                   </p>
                 )}
               </div>
@@ -1545,7 +1571,7 @@ export function Products() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-5 lg:px-6 relative z-10">
-        <Breadcrumb />
+        {renderBreadcrumb()}
 
         <div
           ref={toolbarRef}
@@ -1830,7 +1856,7 @@ export function Products() {
               custom-scrollbar
             "
           >
-            <Sidebar />
+            {renderSidebar()}
           </aside>
 
           {/* MAIN CONTENT */}
@@ -2183,7 +2209,7 @@ export function Products() {
                 </button>
               </div>
 
-              <Sidebar mobile />
+              {renderSidebar(true)}
             </div>
           </div>
         )}

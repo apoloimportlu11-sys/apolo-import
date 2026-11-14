@@ -99,7 +99,7 @@ export function getLocalHomeContent(): HomeContent {
           ? parsed.categoryBanners
           : DEFAULT_HOME_CONTENT.categoryBanners,
     };
-  } catch (e) {
+  } catch (_e) {
     return DEFAULT_HOME_CONTENT;
   }
 }
@@ -144,9 +144,9 @@ export async function saveHomeContent(
     }
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error saving home content:", err);
-    return { success: false, error: err?.message || "Error desconocido" };
+    return { success: false, error: (err instanceof Error ? err.message : undefined) || "Error desconocido" };
   }
 }
 
@@ -217,13 +217,14 @@ export function useHomeContent() {
           filter: `slug=eq.${HOME_CONTENT_PAGE_SLUG}`,
         },
         (payload) => {
-          if (payload.new && (payload.new as any).content) {
+          const row = payload.new as { content?: string } | null;
+          if (row?.content) {
             try {
-              const parsed = JSON.parse((payload.new as any).content);
+              const parsed = JSON.parse(row.content);
               const merged = { ...DEFAULT_HOME_CONTENT, ...parsed };
               setContent(merged);
               saveLocalHomeContent(merged);
-            } catch (e) {
+            } catch (_e) {
               fetchRemoteContent();
             }
           }

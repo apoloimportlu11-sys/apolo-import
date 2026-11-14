@@ -66,7 +66,7 @@ export function getLocalNosotrosContent(): NosotrosContent {
     if (!raw) return DEFAULT_NOSOTROS_CONTENT;
     const parsed = JSON.parse(raw);
     return { ...DEFAULT_NOSOTROS_CONTENT, ...parsed };
-  } catch (e) {
+  } catch (_e) {
     return DEFAULT_NOSOTROS_CONTENT;
   }
 }
@@ -113,9 +113,9 @@ export async function saveNosotrosContent(
     }
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error saving nosotros content:", err);
-    return { success: false, error: err?.message || "Error desconocido" };
+    return { success: false, error: (err instanceof Error ? err.message : undefined) || "Error desconocido" };
   }
 }
 
@@ -182,13 +182,14 @@ export function useNosotrosContent() {
           filter: `slug=eq.${NOSOTROS_PAGE_SLUG}`,
         },
         (payload) => {
-          if (payload.new && (payload.new as any).content) {
+          const row = payload.new as { content?: string } | null;
+          if (row?.content) {
             try {
-              const parsed = JSON.parse((payload.new as any).content);
+              const parsed = JSON.parse(row.content);
               const merged = { ...DEFAULT_NOSOTROS_CONTENT, ...parsed };
               setContent(merged);
               saveLocalNosotrosContent(merged);
-            } catch (e) {
+            } catch (_e) {
               fetchRemoteContent();
             }
           }

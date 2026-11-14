@@ -8,16 +8,12 @@ import {
   Check,
   Search,
   Trash2,
-  Play,
-  Film,
-  Sparkles,
-  ExternalLink,
   Info,
   Loader2,
   Box,
 } from "lucide-react";
 import { toast } from "sonner";
-import { LOCAL_MEDIA_ITEMS, LocalMediaItem, searchLocalMedia } from "@/lib/local-media-catalog";
+import { LocalMediaItem, searchLocalMedia } from "@/lib/local-media-catalog";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 
 interface MediaSelectorProps {
@@ -203,9 +199,9 @@ export default function MediaSelector({
       }
 
       onChangeRef.current(pubData.publicUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("No se pudo subir la foto", {
-        description: err?.message || "Error de red al subir la imagen.",
+        description: (err instanceof Error ? err.message : undefined) || "Error de red al subir la imagen.",
       });
     } finally {
       setUploading(false);
@@ -277,6 +273,7 @@ export default function MediaSelector({
           onDrop={handleDrop}
         >
           {value && !imageError && !is3DModel && !isVideo ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="" className="absolute inset-0 h-full w-full object-contain p-2" />
           ) : (
             <div className="pointer-events-none px-3 text-center">
@@ -340,6 +337,7 @@ export default function MediaSelector({
                   value === item.path ? "border-[var(--admin-accent)] ring-1 ring-[var(--admin-accent)]" : "border-[var(--admin-line)]"
                 }`}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={encodeURI(item.previewUrl || item.path)} alt={item.name} className="h-16 w-full bg-[var(--admin-subtle)] object-contain" />
                 <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--admin-ink)]">{item.name}</span>
               </button>
@@ -488,7 +486,7 @@ export default function MediaSelector({
 
             {filteredItems.length === 0 && (
               <div className="col-span-full py-8 text-center text-xs text-zinc-500">
-                No se encontraron imágenes en el catálogo para "{searchQuery}".
+                No se encontraron imágenes en el catálogo para &quot;{searchQuery}&quot;.
               </div>
             )}
           </div>
@@ -664,6 +662,7 @@ export default function MediaSelector({
                 <span>No se pudo cargar la imagen desde la ruta especificada.</span>
               </div>
             ) : (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={value}
                 alt="Vista previa"

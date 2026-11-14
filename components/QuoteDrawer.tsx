@@ -9,14 +9,12 @@ import {
   Plus,
   Minus,
   Trash2,
-  Send,
   ShoppingBag,
   FileText,
   Sparkles,
   ArrowRight,
   Package,
   RotateCcw,
-  CheckCircle2,
   User,
   MapPin,
   Phone,
@@ -144,7 +142,7 @@ export default function QuoteDrawer() {
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Navega por nuestro catálogo y presiona el botón{" "}
-                    <strong className="text-primary font-semibold">"Cotizar"</strong>{" "}
+                    <strong className="text-primary font-semibold">&quot;Cotizar&quot;</strong>{" "}
                     en los aceites, lubricantes o fluidos que desees cotizar por WhatsApp.
                   </p>
                 </div>

@@ -16,9 +16,23 @@ export interface QuoteItem {
   quantity: number;
 }
 
+type QuoteProductInput = {
+  id?: string;
+  name?: string;
+  brand?: string;
+  presentation?: string;
+  line?: string;
+  short_description?: string;
+  viscosity?: string;
+  code?: string;
+  slug?: string;
+  image?: string;
+  image_url?: string;
+};
+
 interface QuoteContextType {
   items: QuoteItem[];
-  addItem: (product: any, quantity?: number) => void;
+  addItem: (product: QuoteProductInput, quantity?: number) => void;
   removeItem: (id: string, presentation?: string) => void;
   updateQuantity: (id: string, quantity: number, presentation?: string) => void;
   clearQuote: () => void;
@@ -74,7 +88,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
   // Add item
   const addItem = useCallback(
-    (product: any, quantity = 1) => {
+    (product: QuoteProductInput, quantity = 1) => {
       if (!product || !product.name) return;
 
       const normPres = (product.presentation || "").trim().toLowerCase();
@@ -101,7 +115,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
         const newItem: QuoteItem = {
           id: product.id || `quote-${Date.now()}`,
-          name: product.name,
+          name: product.name || "Producto",
           brand: product.brand || "Apolo",
           presentation: product.presentation || undefined,
           line: product.line || product.short_description || undefined,

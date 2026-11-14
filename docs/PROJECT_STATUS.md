@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-13**. Hardening seguridad (cookies auth, rate limit, quotes RPC, images).
+Última revisión de documentación: **2026-11-14**. Playwright E2E + ESLint en 0 warnings.
 
 ## Qué es
 
@@ -15,7 +15,8 @@ Sitio comercial + backoffice de **Apolo Lubricantes**: catálogo, cotizaciones W
 - API: quotes, contact (Resend), chat (OpenAI), set-cookie
 - Schema SQL + scripts bootstrap/RLS/seed/migración MySQL
 - CI GitHub Actions: install, lint **bloqueante**, test, build con env dummy
-- ESLint flat (`eslint.config.mjs` + `eslint-config-next`); deuda histórica en warnings
+- ESLint flat (`eslint.config.mjs` + `eslint-config-next`); **0 errors / 0 warnings**
+- Playwright E2E (`e2e/`, `npm run test:e2e`); CI job `e2e` (Chromium)
 - UI shadcn + temática de marca oscura/dorado
 - Analytics Vercel en layout
 - SEO: `app/robots.ts`, `app/sitemap.ts`, Open Graph/Twitter/`metadataBase`, JSON-LD Organization; metadata por página storefront
@@ -33,16 +34,13 @@ Sitio comercial + backoffice de **Apolo Lubricantes**: catálogo, cotizaciones W
 - `OPENROUTER_API_KEY` aparece en env local pero el chat usa OpenAI — posible config residual
 - Existe un archivo `components/admin` (no directorio); módulos admin van en `components/` raíz
 - No hay `middleware.ts`; comportamiento exacto de `proxy.ts` en Next 16 debe confirmarse con docs del paquete instalado
-- Warnings ESLint (~195): `any`, purity/static-components, unused vars — endurecer gradualmente
-
 ## Pendiente / no verificado en este análisis
 
 - Si todos los SQL están aplicados en el proyecto Supabase de producción
 - Hosting de producción concreto (¿Vercel?) y dominios
-- Cobertura de tests (solo `lib/validations/contact.test.ts` encontrado)
+- Ampliar cobertura E2E (login staff real, envío cotización, admin CRUD)
 - Aplicar `supabase_staff_roles.sql` en Supabase para que editor/vendor escriban vía RLS (UI ya lista)
 - Aplicar `supabase_quotes_public_rpc.sql` en Supabase (quita SELECT abierto de quotes)
-- Playwright E2E de navegador (hoy hay tests de flujo Vitest)
 - Rate limit distribuido (Upstash) si hay varias instancias serverless
 - Estado de templates Resend en la cuenta real
 - Chat Artemisa activo en UI (API existe; wiring UI no auditado exhaustivamente en esta pasada)

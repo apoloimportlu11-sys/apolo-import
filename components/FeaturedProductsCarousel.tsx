@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -239,7 +239,7 @@ export function FeaturedProductsCarousel() {
       window.addEventListener("storage", handleStorage);
     }
 
-    let channel: any = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       const channelId = `realtime:featured_products_home_${Math.random().toString(36).substring(2, 9)}`;
       channel = supabase
@@ -275,6 +275,7 @@ export function FeaturedProductsCarousel() {
     (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
   const featuredProducts = useMemo(() => {
+    void cacheVersion; // invalida memo tras ediciones admin en localStorage
     const deletedSet = new Set<string>();
     KNOWN_DELETED.forEach((k) => deletedSet.add(normalize(k)));
     dbInactiveKeys.forEach((k) => deletedSet.add(normalize(k)));
@@ -293,7 +294,7 @@ export function FeaturedProductsCarousel() {
       } catch {}
     }
 
-    const isDeleted = (id?: any, slug?: any, code?: any) => {
+    const isDeleted = (id?: string | null, slug?: string | null, code?: string | null) => {
       const nId = normalize(id);
       const nSlug = normalize(slug);
       const nCode = normalize(code);
@@ -433,7 +434,7 @@ export function FeaturedProductsCarousel() {
     }, 3800);
 
     return () => clearInterval(interval);
-  }, [isPaused, isHovered, baseCount, handleNext]);
+  }, [isPaused, isHovered, baseCount, canLoop, handleNext]);
 
   // Current active page index for dots
   const activeDotIndex = useMemo(() => {

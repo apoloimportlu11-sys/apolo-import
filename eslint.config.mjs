@@ -12,6 +12,10 @@ const eslintConfig = [
       "out/**",
       "coverage/**",
       "scripts/**",
+      "e2e/**",
+      "playwright.config.ts",
+      "playwright-report/**",
+      "test-results/**",
       "eslint-report.json",
     ],
   },
@@ -21,7 +25,11 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
       ],
       "@typescript-eslint/no-require-imports": "warn",
       "@typescript-eslint/no-namespace": "warn",

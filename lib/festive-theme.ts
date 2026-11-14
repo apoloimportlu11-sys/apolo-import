@@ -313,7 +313,7 @@ export async function fetchRemoteFestiveConfig(): Promise<FestiveConfig | null> 
         if (typeof window !== "undefined") {
           try {
             localStorage.setItem(FESTIVE_STORAGE_KEY, JSON.stringify(normalized));
-          } catch (e) {}
+          } catch (_e) {}
         }
         return normalized;
       }
@@ -350,9 +350,9 @@ export async function saveFestiveConfig(
       console.error("Error saving festive config to Supabase:", error);
       return { success: false, error: error.message };
     }
-  } catch (cloudErr: any) {
+  } catch (cloudErr: unknown) {
     console.error("Error saving festive config to Supabase:", cloudErr);
-    return { success: false, error: cloudErr?.message || "Error de red" };
+    return { success: false, error: (cloudErr instanceof Error ? cloudErr.message : undefined) || "Error de red" };
   }
 
   // 2) Caché local + bus solo si la nube aceptó el cambio

@@ -81,6 +81,10 @@ const inputClass =
 
 type FilterKey = "all" | "home" | "hidden" | "scheduled" | "ended";
 
+function createPromoId() {
+  return `promo-${Date.now()}`;
+}
+
 const EMPTY_SLIDE: PromoSlide = {
   id: "",
   tag: "Oferta especial",
@@ -192,6 +196,7 @@ function SlideStage({
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : slide.mediaUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={slide.mediaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div className="absolute inset-0 bg-[#1a1a1a]" />
@@ -307,6 +312,7 @@ function BannerRow({
         aria-label={`Ver ${slide.title}`}
       >
         {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={thumb} alt="" className="h-full w-full object-cover" />
         ) : (
           <span className="flex h-full items-center justify-center text-zinc-500">
@@ -484,7 +490,7 @@ export default function AdminBannersPage() {
       await persist(updated, "Banner guardado.");
       return;
     }
-    const created: PromoSlide = { ...draft, id: `promo-${Date.now()}` };
+    const created: PromoSlide = { ...draft, id: createPromoId() };
     setShowModal(false);
     const ok = await persist([...slides, created], "Banner creado.");
     if (ok) setSelectedId(created.id);
@@ -494,7 +500,7 @@ export default function AdminBannersPage() {
     const index = slides.findIndex((item) => item.id === slide.id);
     const copy: PromoSlide = {
       ...slide,
-      id: `promo-${Date.now()}`,
+      id: createPromoId(),
       title: slide.title ? `${slide.title} copia` : "Copia",
       isActive: false,
     };

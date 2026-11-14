@@ -38,9 +38,9 @@ export default function AdminLoginForm() {
         setLoading(false);
         setErrorMessage(error.message);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setLoading(false);
-      setErrorMessage(err?.message || "Error al conectar con Google");
+      setErrorMessage((err instanceof Error ? err.message : undefined) || "Error al conectar con Google");
     }
   }
 

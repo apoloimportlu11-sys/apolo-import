@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Image from "next/image";
 
 interface Client {
@@ -16,24 +15,6 @@ interface ClientsCarouselProps {
 }
 
 export default function ClientsCarousel({ clients }: ClientsCarouselProps) {
-  const [itemsPerView, setItemsPerView] = useState(5);
-
-  useEffect(() => {
-    const updateItemsPerView = () => {
-      if (window.innerWidth >= 1024) {
-        setItemsPerView(5);
-      } else if (window.innerWidth >= 768) {
-        setItemsPerView(3);
-      } else {
-        setItemsPerView(2);
-      }
-    };
-
-    updateItemsPerView();
-    window.addEventListener("resize", updateItemsPerView);
-    return () => window.removeEventListener("resize", updateItemsPerView);
-  }, []);
-
   // Duplicar elementos exactamente 2 veces para animación infinita ligera (-50%)
   const duplicatedClients = [...clients, ...clients];
 

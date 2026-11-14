@@ -254,8 +254,14 @@ export default function ProductosPage() {
           stock_min: Number(p.stock_min) || 0,
           is_featured: Boolean(p.is_featured),
           is_active: p.is_active !== false,
-          subcategory_id: p.subcategory_id || (p as any).subcategoryId || "",
-          subcategoryId: p.subcategory_id || (p as any).subcategoryId || "",
+          subcategory_id:
+            p.subcategory_id ||
+            (p as { subcategoryId?: string }).subcategoryId ||
+            "",
+          subcategoryId:
+            p.subcategory_id ||
+            (p as { subcategoryId?: string }).subcategoryId ||
+            "",
         }));
         persistProductsState(() => normalized);
         return;
@@ -418,9 +424,9 @@ export default function ProductosPage() {
                 setRestorePoint(cloudRp);
                 try {
                   localStorage.setItem(RESTORE_POINT_KEY, JSON.stringify(cloudRp));
-                } catch (e) {}
+                } catch (_e) {}
               }
-            } catch (e) {}
+            } catch (_e) {}
           }
         });
     } catch {}
@@ -428,24 +434,34 @@ export default function ProductosPage() {
     // 1. Listen on BroadcastChannel for instant same-browser cross-tab sync
     let unsubscribeBus: (() => void) | null = null;
     if (realtimeBus) {
-      unsubscribeBus = realtimeBus.on("products_updated", (payload: any) => {
+      unsubscribeBus = realtimeBus.on("products_updated", (payload: unknown) => {
         if (!payload) return;
 
+        if (Array.isArray(payload)) {
+          persistProductsState(() => payload as ProductItem[]);
+          return;
+        }
+
+        if (typeof payload !== "object") {
+          loadProducts();
+          return;
+        }
+
+        const data = payload as Partial<ProductItem> & { id?: string; slug?: string };
+
         // If specific item or delta: MATCH ONLY BY EXACT ID OR EXACT SLUG (NEVER BY NAME ALONE)
-        if (payload.id || payload.slug) {
+        if (data.id || data.slug) {
           persistProductsState((prev) =>
             prev.map((p) => {
               if (
-                (payload.id && normalize(p.id) === normalize(payload.id)) ||
-                (payload.slug && normalize(p.slug) === normalize(payload.slug))
+                (data.id && normalize(p.id) === normalize(data.id)) ||
+                (data.slug && normalize(p.slug) === normalize(data.slug))
               ) {
-                return { ...p, ...payload };
+                return { ...p, ...data };
               }
               return p;
             })
           );
-        } else if (Array.isArray(payload)) {
-          persistProductsState(() => payload);
         } else {
           loadProducts();
         }
@@ -466,7 +482,7 @@ export default function ProductosPage() {
     }
 
     // 3. Supabase Realtime
-    let channel: any = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       const channelId = `realtime:admin_products_all_${Math.random().toString(36).substring(2, 9)}`;
       channel = supabase
@@ -513,7 +529,7 @@ export default function ProductosPage() {
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            parsed.forEach((b: any) => {
+            parsed.forEach((b: { name?: string; is_active?: boolean }) => {
               if (b.name && b.is_active !== false) brandSet.add(b.name.trim());
             });
           }
@@ -529,7 +545,7 @@ export default function ProductosPage() {
         .eq("is_active", true);
 
       if (data && !error && Array.isArray(data)) {
-        data.forEach((b: any) => {
+        data.forEach((b: { name?: string }) => {
           if (b.name) brandSet.add(b.name.trim());
         });
       }
@@ -1000,7 +1016,7 @@ export default function ProductosPage() {
 
       await supabase.from("products").upsert([payload], { onConflict: "id" });
       toast.success(`Imagen actualizada para "${imageModalProduct.name}"`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Supabase background image save:", err);
       toast.success(`Imagen guardada localmente para "${imageModalProduct.name}"`);
     } finally {
@@ -1038,7 +1054,7 @@ export default function ProductosPage() {
         : `prod-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
     // Generate base slug
-    let baseSlug =
+    const baseSlug =
       currentProduct.slug?.trim() ||
       rawName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
       `prod-${Date.now()}`;
@@ -1104,7 +1120,7 @@ export default function ProductosPage() {
       isEditing ? "Actualizando producto en tiempo real..." : "Guardando nuevo producto..."
     );
 
-    let savedData: any = null;
+    let savedData: ProductItem | null = null;
 
     try {
       if (isEditing) {
@@ -1144,21 +1160,23 @@ export default function ProductosPage() {
         }
         savedData = data;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("No se guardó el producto", {
         id: toastId,
-        description: explainProductSaveError(err?.message),
+        description: explainProductSaveError(
+          err instanceof Error ? err.message : undefined
+        ),
       });
       setSaving(false);
       return;
     }
 
-    const savedItem: ProductItem = {
+    const savedItem = {
       ...(savedData || {}),
       ...payload,
       id: (savedData && savedData.id) || finalId,
       created_at: (savedData && savedData.created_at) || currentProduct.created_at || new Date().toISOString(),
-    };
+    } as ProductItem;
 
     // Save to state and localStorage strictly by id
     persistProductsState((prev) => {
@@ -1224,7 +1242,7 @@ export default function ProductosPage() {
         id: toastId,
         description: `"${name}" ha sido removido del catálogo de forma permanente.`,
       });
-    } catch (err: any) {
+    } catch {
       persistProductsState((prev) =>
         prev.filter((p) => p.id !== id && (!targetSlug || p.slug !== targetSlug))
       );
@@ -1491,7 +1509,7 @@ export default function ProductosPage() {
         description: `Los ${products.length} productos quedaron sin imagen tanto en el panel como en la tienda.`,
         duration: 3500,
       });
-    } catch (err) {
+    } catch (_err) {
       toast.success("¡Se han quitado todas las imágenes localmente!", {
         id: toastId,
         description: `Los cambios ya están activos en toda la web.`,
@@ -1556,7 +1574,7 @@ export default function ProductosPage() {
         description: `Se respaldaron ${products.length} productos con sus fotos, marcas y configuraciones en la nube.`,
         duration: 4500,
       });
-    } catch (err: any) {
+    } catch {
       setRestorePoint(pointData);
       toast.success("Punto de restauración fijado localmente", {
         id: toastId,
@@ -1654,7 +1672,7 @@ export default function ProductosPage() {
         description: `Se han restaurado los ${restoredProducts.length} productos respaldados.`,
         duration: 4000,
       });
-    } catch (err: any) {
+    } catch {
       toast.success("Catálogo restaurado localmente", { id: toastId });
     } finally {
       setRestoringPoint(false);
@@ -1718,7 +1736,7 @@ export default function ProductosPage() {
         description: "Se han reasignado las imágenes del catálogo original.",
         duration: 3500,
       });
-    } catch (err) {
+    } catch (_err) {
       toast.success("Imágenes restauradas localmente", { id: toastId });
     }
   }
@@ -1762,10 +1780,13 @@ export default function ProductosPage() {
         description: `Se han persistido ${payloadList.length} productos organizados por marcas en Supabase.`,
         duration: 4000,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Nota sobre sincronización", {
         id: toastId,
-        description: err.message || "Se mantuvo el catálogo local activo.",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Se mantuvo el catálogo local activo.",
       });
     } finally {
       setSyncingAll(false);

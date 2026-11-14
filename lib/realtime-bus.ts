@@ -1,6 +1,6 @@
 // Real-time Event Bus using BroadcastChannel and window events for 0ms cross-tab and in-tab sync
 
-export type RealtimeEvent<T = any> = {
+export type RealtimeEvent<T = unknown> = {
   type: string;
   payload?: T;
   timestamp: number;
@@ -10,7 +10,7 @@ const CHANNEL_NAME = "apolo_realtime_sync_bus";
 
 class RealtimeBus {
   private channel: BroadcastChannel | null = null;
-  private listeners: Map<string, Set<(payload: any) => void>> = new Map();
+  private listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
 
   constructor() {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -27,7 +27,7 @@ class RealtimeBus {
   }
 
   // Publish event to other tabs and current window
-  public emit<T = any>(type: string, payload?: T) {
+  public emit<T = unknown>(type: string, payload?: T) {
     const eventData: RealtimeEvent<T> = {
       type,
       payload,
@@ -55,28 +55,28 @@ class RealtimeBus {
   }
 
   // Subscribe to specific event type
-  public on<T = any>(type: string, callback: (payload: T) => void): () => void {
+  public on<T = unknown>(type: string, callback: (payload: T) => void): () => void {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
     }
-    this.listeners.get(type)!.add(callback);
+    this.listeners.get(type)!.add(callback as (payload: unknown) => void);
 
     return () => {
       this.off(type, callback);
     };
   }
 
-  public off<T = any>(type: string, callback: (payload: T) => void) {
+  public off<T = unknown>(type: string, callback: (payload: T) => void) {
     const set = this.listeners.get(type);
     if (set) {
-      set.delete(callback);
+      set.delete(callback as (payload: unknown) => void);
       if (set.size === 0) {
         this.listeners.delete(type);
       }
     }
   }
 
-  private notifyLocal(type: string, payload: any) {
+  private notifyLocal(type: string, payload: unknown) {
     const notify = () => {
       const set = this.listeners.get(type);
       if (set) {

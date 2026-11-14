@@ -73,9 +73,9 @@ export default function LoginModal({
         setLoading(false);
         setErrorMessage(error.message);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setLoading(false);
-      setErrorMessage(err?.message || "Error al iniciar sesión con Google");
+      setErrorMessage((err instanceof Error ? err.message : undefined) || "Error al iniciar sesión con Google");
     }
   }
 

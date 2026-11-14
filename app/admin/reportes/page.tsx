@@ -41,12 +41,6 @@ type ProductRow = {
   quotes: number;
 };
 
-type ShareRow = {
-  name: string;
-  units: number;
-  share: number;
-};
-
 type PressureRow = InventoryProduct & { quoted: boolean };
 
 const RANGES: RangeKey[] = [7, 30, 90];

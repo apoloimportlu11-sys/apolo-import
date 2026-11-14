@@ -52,18 +52,22 @@ Config shadcn: `components.json` (estilo `new-york`, CSS variables, alias `@/`).
 
 | Herramienta | Uso |
 |-------------|-----|
-| Vitest `^5.1.0` | Tests (`npm test`) |
-| ESLint (script `lint`) | CI con `continue-on-error: true` |
+| Vitest `^5.1.0` | Tests unitarios (`npm test`) |
+| Playwright (`@playwright/test`) | E2E Chromium (`npm run test:e2e`); job `e2e` en CI |
+| ESLint (script `lint`) | CI bloqueante |
 | dotenv | Scripts Node |
 | depcheck | Auditoría deps (dev) |
 
 ## Scripts npm relevantes
 
 - `dev` / `build` / `start` / `lint` / `test`
+- E2E: `test:e2e` (requiere build previo; arranca `next start` en `:3100`), `test:e2e:local` (build+e2e), `test:e2e:ui`, `test:e2e:install`
+- E2E contra producción: `PLAYWRIGHT_BASE_URL=https://tu-dominio npm run test:e2e`
 - `db:bootstrap` → `scripts/bootstrap_supabase_catalog.js`
 - `db:rls` → `scripts/apply_rls_secure.js`
 - `db:business` → `scripts/seed_business_data.js`
 - `db:suppliers` → `scripts/seed_suppliers.js`
+- `db:staff-accounts` → `scripts/ensure_staff_accounts.js`
 - `email:templates` → `scripts/setup_resend_templates.js`
 
 ## Variables de entorno (nombres únicamente)

@@ -32,7 +32,6 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   whatsapp: "+51 958 400 028",
   address: "Las flores SJL, Lima, Perú",
   hours: "Lun - Vie: 9:00 AM - 6:30 PM",
-  mapsUrl: "https://www.google.com/maps?q=Las+flores+SJL&output=embed",
   maps_url: "https://www.google.com/maps?q=Las+flores+SJL&output=embed",
   logo_url: "/images/logoApolo.png",
   primary_color: "#C7940A",
@@ -40,7 +39,7 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   accent_color: "#F5C542",
   font_scale: 100,
   font_family: "inter",
-} as any;
+};
 
 const FONT_FAMILY_VARS: Record<string, string> = {
   montserrat: "var(--font-montserrat)",
@@ -169,7 +168,7 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
         try {
           localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
           localStorage.setItem(SETTINGS_TS_KEY, Date.now().toString());
-        } catch (e) {
+        } catch (_e) {
           // ignore storage error
         }
       }
@@ -208,7 +207,7 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
           setLoading(false);
           return;
         }
-      } catch (e) {}
+      } catch (_e) {}
     }
 
     try {
@@ -256,7 +255,7 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
           setSettings((prev) => ({ ...prev, ...parsed }));
           applyThemeColors({ ...DEFAULT_BUSINESS_SETTINGS, ...parsed });
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore parse error
       }
     }
@@ -308,7 +307,7 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
       if (unsubscribeBus) unsubscribeBus();
       supabase.removeChannel(channel);
     };
-  }, [supabase, fetchSettings, updateLocalSettings]);
+  }, [supabase, fetchSettings, updateLocalSettings, applyThemeColors]);
 
   // Save settings with Optimistic UI + BroadcastChannel + Supabase write
   const saveSettings = useCallback(
@@ -362,13 +361,13 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
         }
 
         return { success: true };
-      } catch (err: any) {
+      } catch (err: unknown) {
         updateLocalSettings(previous, "save");
         if (realtimeBus) realtimeBus.emit("business_settings_updated", previous);
         console.error("Failed to save business_settings:", err);
         return {
           success: false,
-          error: err.message || "Error desconocido al guardar",
+          error: err instanceof Error ? err.message : "Error desconocido al guardar",
         };
       }
     },

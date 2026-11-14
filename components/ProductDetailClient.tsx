@@ -51,8 +51,8 @@ const KNOWN_DELETED = new Set([
   "brake-fluid-dot-5-1",
 ]);
 
-const normalizeKey = (str?: string) =>
-  (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalizeKey = (str?: string | number | null) =>
+  String(str ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export function ProductDetailClient({
   initialProduct,
@@ -91,7 +91,7 @@ export function ProductDetailClient({
             }
           }
         }
-      } catch (e) {}
+      } catch (_e) {}
     }
   }, [productId, initialProduct?.code, product?.code]);
 
@@ -107,7 +107,21 @@ export function ProductDetailClient({
     const normPres = normalizeKey(initialProduct.presentation || product.presentation);
 
     let merged: Product = { ...initialProduct };
-    let dbData: any = null;
+    type DbProductRow = {
+      is_active?: boolean;
+      name?: string;
+      image_url?: string | null;
+      presentation?: string | null;
+      description?: string | null;
+      brand?: string | null;
+      short_description?: string | null;
+      viscosity?: string | null;
+      type?: string | null;
+      subcategory_id?: string | null;
+      subcategoryId?: string | null;
+      subcategory?: string | null;
+    };
+    let dbData: DbProductRow | null = null;
 
     // 1. Fetch Supabase first (baseline server data)
     try {
@@ -122,7 +136,7 @@ export function ProductDetailClient({
             setIsProductDeleted(true);
             return;
           }
-          dbData = byId;
+          dbData = byId as DbProductRow;
         }
       }
 
@@ -138,7 +152,7 @@ export function ProductDetailClient({
             setIsProductDeleted(true);
             return;
           }
-          dbData = bySlug;
+          dbData = bySlug as DbProductRow;
         }
       }
 
@@ -147,17 +161,17 @@ export function ProductDetailClient({
           ...merged,
           name: dbData.name || merged.name,
           image: dbData.image_url !== undefined ? (dbData.image_url || "") : merged.image,
-          presentation: dbData.presentation !== undefined ? dbData.presentation : merged.presentation,
-          description: dbData.description !== undefined ? dbData.description : merged.description,
+          presentation: dbData.presentation !== undefined ? (dbData.presentation || "") : merged.presentation,
+          description: dbData.description !== undefined ? (dbData.description || "") : merged.description,
           brand: dbData.brand || merged.brand,
-          line: dbData.short_description !== undefined ? dbData.short_description : merged.line,
+          line: dbData.short_description !== undefined ? (dbData.short_description || "") : merged.line,
           viscosity: dbData.viscosity !== undefined ? (dbData.viscosity || "") : merged.viscosity,
           type: dbData.type !== undefined ? (dbData.type || "") : merged.type,
           subcategoryId: dbData.subcategory_id || dbData.subcategoryId || merged.subcategoryId,
-          subcategory: dbData.subcategory !== undefined ? dbData.subcategory : merged.subcategory,
+          subcategory: dbData.subcategory !== undefined ? (dbData.subcategory || "") : merged.subcategory,
         };
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // 2. localStorage solo si Supabase no devolvió el producto
     if (!dbData && typeof window !== "undefined") {
@@ -166,24 +180,27 @@ export function ProductDetailClient({
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            let match = parsed.find((item: any) => {
-              const itemNormId = normalizeKey(item.id);
+            type LocalProduct = Record<string, unknown>;
+            let match = parsed.find((item: LocalProduct) => {
+              const itemNormId = normalizeKey(item.id as string | null);
               return itemNormId && itemNormId === normId;
             });
 
             if (!match && normCode) {
-              match = parsed.find((item: any) => {
-                const itemNormSlug = normalizeKey(item.slug || item.code);
+              match = parsed.find((item: LocalProduct) => {
+                const itemNormSlug = normalizeKey(
+                  (item.slug || item.code) as string | null
+                );
                 return itemNormSlug && (itemNormSlug === normId || itemNormSlug === normCode);
               });
             }
 
             const normBaseBrand = normalizeKey(merged.brand);
             if (!match && normName && normPres) {
-              match = parsed.find((item: any) => {
-                const itemNormName = normalizeKey(item.name);
-                const itemNormPres = normalizeKey(item.presentation);
-                const itemNormBrand = normalizeKey(item.brand);
+              match = parsed.find((item: LocalProduct) => {
+                const itemNormName = normalizeKey(item.name as string | null);
+                const itemNormPres = normalizeKey(item.presentation as string | null);
+                const itemNormBrand = normalizeKey(item.brand as string | null);
                 return (
                   itemNormName === normName &&
                   itemNormPres === normPres &&
@@ -216,7 +233,7 @@ export function ProductDetailClient({
             }
           }
         }
-      } catch (e) {}
+      } catch (_e) {}
     }
 
     setProduct(merged);
@@ -244,9 +261,9 @@ export function ProductDetailClient({
     }
 
     // 3. Supabase Realtime Channel
-    let channel: any = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
-      const channelId = `realtime:product_detail_${productId}_${Math.random().toString(36).substring(2, 9)}`;
+      const channelId = `realtime:product_detail_${productId}`;
       channel = supabase
         .channel(channelId)
         .on(
@@ -270,6 +287,8 @@ export function ProductDetailClient({
         } catch {}
       }
     };
+    // syncProductData / supabase are stable enough for this productId-scoped subscription
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   if (isProductDeleted) {

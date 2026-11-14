@@ -60,9 +60,9 @@ function CotizacionesList() {
     try {
       const data = await fetchQuotes(supabase, status);
       setRows(data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error("No se pudieron cargar cotizaciones", {
-        description: e?.message || "¿Ejecutaste supabase_quotes.sql?",
+        description: (e instanceof Error ? e.message : undefined) || "¿Ejecutaste supabase_quotes.sql?",
       });
       setRows([]);
     } finally {
@@ -84,8 +84,8 @@ function CotizacionesList() {
       await updateQuoteStatus(supabase, id, next);
       toast.success("Estado actualizado");
       load();
-    } catch (e: any) {
-      toast.error(e?.message || "Error al actualizar");
+    } catch (e: unknown) {
+      toast.error((e instanceof Error ? e.message : undefined) || "Error al actualizar");
     }
   }
 

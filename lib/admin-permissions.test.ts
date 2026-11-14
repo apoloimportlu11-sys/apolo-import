@@ -11,6 +11,7 @@ describe("roles staff en UI", () => {
     expect(isStaffRole("admin")).toBe(true);
     expect(isStaffRole("editor")).toBe(true);
     expect(isStaffRole("vendor")).toBe(true);
+    expect(isStaffRole("almacen")).toBe(true);
     expect(isStaffRole("cliente")).toBe(false);
   });
 
@@ -30,6 +31,15 @@ describe("roles staff en UI", () => {
     expect(canAccessAdminPath("vendor", "/admin/paginas")).toBe(false);
     expect(navAllowedForRole("vendor", "/admin/usuarios")).toBe(false);
     expect(defaultAdminPath("vendor")).toBe("/admin/cotizaciones");
+  });
+
+  it("almacén ve inventario y productos, no CMS ni usuarios", () => {
+    expect(canAccessAdminPath("almacen", "/admin/inventario")).toBe(true);
+    expect(canAccessAdminPath("almacen", "/admin/productos")).toBe(true);
+    expect(canAccessAdminPath("almacen", "/admin/reportes")).toBe(true);
+    expect(canAccessAdminPath("almacen", "/admin/cotizaciones")).toBe(false);
+    expect(canAccessAdminPath("almacen", "/admin/paginas")).toBe(false);
+    expect(defaultAdminPath("almacen")).toBe("/admin/inventario");
   });
 
   it("admin entra a todo", () => {

@@ -41,7 +41,7 @@ export function getLocalLineGroups(): ProductLineGroupItem[] {
     if (!raw) return DEFAULT_LINE_GROUPS;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_LINE_GROUPS;
-  } catch (e) {
+  } catch (_e) {
     return DEFAULT_LINE_GROUPS;
   }
 }
@@ -80,9 +80,9 @@ export async function saveLineGroups(items: ProductLineGroupItem[]): Promise<{ s
     // Caché local solo después de persistir en Supabase
     saveLocalLineGroups(items);
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error saving line groups:", err);
-    return { success: false, error: err?.message || "Error desconocido" };
+    return { success: false, error: (err instanceof Error ? err.message : undefined) || "Error desconocido" };
   }
 }
 
@@ -108,7 +108,7 @@ export function useProductLineGroups() {
               localStorage.setItem(LINE_GROUPS_STORAGE_KEY, JSON.stringify(parsed));
             }
           }
-        } catch (e) {}
+        } catch (_e) {}
       }
     } catch (e) {
       console.error("Error fetching remote line groups:", e);

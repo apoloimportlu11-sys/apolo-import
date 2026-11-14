@@ -1,6 +1,8 @@
 # Features
 
 ## Completed
+- Playwright E2E 2026-11-14: 9 tests Chromium (smoke, drawer cotización, cookies, admin gate) — `e2e/`, puerto `3100` via `next start`, CI job `e2e`
+- ESLint 2026-11-14: 0 errors / 0 warnings (unused, any→unknown/tipos, purity/static-components, caughtErrors `^_`)
 - Hardening 2026-11-13: set-cookie valida sesión; remotePatterns Supabase; rate limit APIs; quotes RPC; catálogo activo paginado
 - Legales 2026-11-12: `/cookies`, banner consentimiento, Analytics condicional, privacidad LOADP, checkbox en cotización/contacto
 - Bajas 2026-11-12: roles editor/vendor en UI + SQL staff; seed proveedores; tests flujo quote/catálogo; flotantes móvil sin tapar hero
@@ -35,8 +37,6 @@
 ## Planned
 - Aplicar `supabase_staff_roles.sql` en el proyecto Supabase
 - Seguir extrayendo UI de `products.tsx` (Sidebar/ProductCard) y resto de admin monolítico
-- Playwright E2E de navegador (opcional)
-- Endurecer warnings ESLint (`any`, static-components) hacia error
-
+- Ampliar E2E con credenciales staff (opcional, secrets)
 ## Deprecated
 - APIs MySQL de productos — eliminadas en commit `6569cfc`

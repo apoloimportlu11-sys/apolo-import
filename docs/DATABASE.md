@@ -40,7 +40,7 @@ site_texts          (key/value)
 ### `public.users`
 
 - `id` uuid PK (alineado con `auth.users` en flujos de callback)
-- `name`, `email` unique, `role` ∈ `admin|editor|vendor|cliente`, `is_active`
+- `name`, `email` unique, `role` ∈ `admin|editor|vendor|almacen|cliente`, `is_active`
 - Timestamps `created_at`, `updated_at`
 
 ### `public.business_settings`

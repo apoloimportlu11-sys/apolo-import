@@ -355,7 +355,7 @@ export default function InventarioPage() {
 
   const pageCount = Math.max(1, pages.length);
   const safePage = Math.min(page, pageCount);
-  const pageGroups = pages[safePage - 1] || [];
+  const pageGroups = useMemo(() => pages[safePage - 1] || [], [pages, safePage]);
   const pageStart = pages.slice(0, safePage - 1).reduce((sum, group) => sum + group.reduce((inner, family) => inner + family.items.length, 0), 0);
   const pageTotal = pageGroups.reduce((sum, family) => sum + family.items.length, 0);
 

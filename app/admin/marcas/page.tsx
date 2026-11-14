@@ -300,6 +300,7 @@ function LogoField({ value, onChange }: { value: string; onChange: (url: string)
     <div className="rounded-xl border border-white/10 bg-black/30 p-3">
       <div className="flex items-center gap-3">
         <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           {value ? <img src={encodeURI(value)} alt="" className="max-h-full max-w-full object-contain" /> : <ImageIcon className="size-5 text-zinc-400" />}
         </div>
         <div className="min-w-0 flex-1">
@@ -453,7 +454,7 @@ export default function MarcasPage() {
       if (unsubscribeBus) unsubscribeBus();
       supabase.removeChannel(channel);
     };
-  }, [supabase, loadBrands]);
+  }, [supabase, loadBrands, persistBrands]);
 
   function openCreateModal() {
     setIsEditing(false);
@@ -694,6 +695,7 @@ export default function MarcasPage() {
               <li key={brand.id} className="flex gap-3 rounded-2xl border border-white/10 bg-[#141414] p-3">
                 <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-black">
                   {brand.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={encodeURI(brand.logo_url)} alt="" className="max-h-full max-w-full object-contain" />
                   ) : (
                     <ImageIcon className="size-5 text-zinc-400" />

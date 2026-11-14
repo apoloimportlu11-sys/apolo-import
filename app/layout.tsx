@@ -155,7 +155,6 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <Script id="apolo-theme" strategy="beforeInteractive">
           {`(function(){try{var p=location.pathname;if(p==="/admin"||p.indexOf("/admin/")===0)return;var t=localStorage.getItem("apolo-theme")||"dark";var dark=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.remove("light","dark");document.documentElement.classList.add(dark?"dark":"light");document.documentElement.style.colorScheme=dark?"dark":"light";}catch(e){}})();`}
         </Script>

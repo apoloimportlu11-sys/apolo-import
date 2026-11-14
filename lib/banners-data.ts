@@ -169,7 +169,7 @@ export async function fetchRemotePromoSlides(): Promise<PromoSlide[] | null> {
           if (typeof window !== "undefined") {
             try {
               localStorage.setItem(PROMO_BANNERS_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) {}
+            } catch (_e) {}
           }
           return parsed;
         }
@@ -207,8 +207,8 @@ export async function savePromoSlides(
 
     saveLocalPromoSlides(slides);
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected error saving promo banners:", err);
-    return { success: false, error: err?.message || "Error desconocido al guardar en la nube" };
+    return { success: false, error: (err instanceof Error ? err.message : undefined) || "Error desconocido al guardar en la nube" };
   }
 }

@@ -117,7 +117,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   // 1. Consultar en Supabase para obtener el estado actual y real del producto en el servidor
-  let dbProduct: any = null;
+  type DbProductRow = {
+    id?: string;
+    name?: string;
+    short_description?: string | null;
+    brand?: string | null;
+    slug?: string | null;
+    viscosity?: string | null;
+    type?: string | null;
+    presentation?: string | null;
+    description?: string | null;
+    image_url?: string | null;
+    category_id?: string | null;
+    subcategory_id?: string | null;
+    subcategory?: string | null;
+    stock?: number | null;
+    is_featured?: boolean | null;
+    is_active?: boolean | null;
+  };
+  let dbProduct: DbProductRow | null = null;
   try {
     const { data } = await supabase
       .from("products")
@@ -129,7 +147,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       if (data.is_active === false) {
         notFound();
       }
-      dbProduct = data;
+      dbProduct = data as DbProductRow;
     }
   } catch (err) {
     console.warn("Supabase fetch in ProductPage error:", err);

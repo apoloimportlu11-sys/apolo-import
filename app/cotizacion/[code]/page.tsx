@@ -119,6 +119,7 @@ export default async function CotizacionPublicPage({
     <main className="min-h-screen bg-[#f4f4f5] px-4 py-8 text-[#141414] sm:py-12">
       <div className="mx-auto max-w-xl space-y-5">
         <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/logoApolo.png" alt={business} className="h-12 w-auto" />
           <div>
             <p className="text-sm font-semibold">{business}</p>
@@ -164,6 +165,7 @@ export default async function CotizacionPublicPage({
                 <li key={`${item.id || item.name}-${index}`} className="flex gap-3 border-t border-[#f4f4f5] px-4 py-4 first:border-t-0">
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#f4f4f5]">
                     {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={image} alt={item.name || "Producto"} className="h-full w-full object-contain" />
                     ) : (
                       <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-[#a1a1aa]">Sin foto</div>

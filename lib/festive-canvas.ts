@@ -318,7 +318,6 @@ export function mountFestiveCanvas(canvas: HTMLCanvasElement, options: FestiveCa
 
   let width = 1;
   let height = 1;
-  let frame = 0;
   let raf = 0;
   let running = true;
   const particles: Particle[] = [];
@@ -432,7 +431,6 @@ export function mountFestiveCanvas(canvas: HTMLCanvasElement, options: FestiveCa
 
   const tick = () => {
     if (!running) return;
-    frame += 1;
     if (!reduced && type === "new_year_sparkles") {
       burstIn -= 1;
       if (burstIn <= 0) {
