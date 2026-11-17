@@ -109,11 +109,11 @@ export function Header() {
 
   const compact = mounted && scrolled;
   const markClass = compact
-    ? "h-11 w-auto max-w-[88px] object-contain object-left"
-    : "h-14 w-auto max-w-[112px] object-contain object-left sm:h-16 sm:max-w-[128px]";
+    ? "h-10 w-auto max-w-[72px] object-contain object-left sm:h-11 sm:max-w-[88px]"
+    : "h-11 w-auto max-w-[80px] object-contain object-left sm:h-14 sm:max-w-[112px] lg:h-16 lg:max-w-[128px]";
   const wordmarkClass = compact
-    ? "h-8 w-auto max-w-[132px] object-contain"
-    : "h-10 w-auto max-w-[168px] object-contain sm:h-12 sm:max-w-[190px]";
+    ? "h-8 w-auto max-w-[120px] object-contain"
+    : "h-10 w-auto max-w-[150px] object-contain lg:h-12 lg:max-w-[190px]";
 
   return (
     <>
@@ -136,14 +136,14 @@ export function Header() {
             )}
           >
             <div
-              className="flex min-w-0 shrink-0 items-center gap-2 overflow-hidden sm:gap-3 lg:gap-3 xl:gap-4"
+              className="flex min-w-0 items-center gap-2 overflow-hidden sm:gap-3 lg:gap-3 xl:gap-4"
               aria-label="Marcas Apolo, Overts y Valtrom"
             >
               <Link
                 href="/"
                 className={cn(
                   "flex shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90",
-                  compact ? "h-11" : "h-12 sm:h-14 lg:h-16"
+                  compact ? "h-10 sm:h-11" : "h-11 sm:h-14 lg:h-16"
                 )}
                 title="Apolo"
               >
@@ -157,15 +157,16 @@ export function Header() {
                   className={markClass}
                 />
               </Link>
+              {/* En móvil solo Apolo: Overts/Valtrom aplastaban el header con Catálogo */}
               <span
-                className="hidden h-10 w-px bg-zinc-300 dark:bg-white/20 sm:block"
+                className="hidden h-10 w-px bg-zinc-300 dark:bg-white/20 md:block"
                 aria-hidden
               />
               <Link
                 href="/productos?brand=Overts"
                 className={cn(
-                  "flex shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90",
-                  compact ? "h-11" : "h-12 sm:h-14 lg:h-16"
+                  "hidden shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90 md:flex",
+                  compact ? "h-11" : "h-14 lg:h-16"
                 )}
                 title="Overts"
               >
@@ -179,14 +180,14 @@ export function Header() {
                 />
               </Link>
               <span
-                className="hidden h-10 w-px bg-zinc-300 dark:bg-white/20 sm:block"
+                className="hidden h-10 w-px bg-zinc-300 dark:bg-white/20 md:block"
                 aria-hidden
               />
               <Link
                 href="/productos?brand=Valtrom"
                 className={cn(
-                  "flex shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90",
-                  compact ? "h-11" : "h-12 sm:h-14 lg:h-16"
+                  "hidden shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90 md:flex",
+                  compact ? "h-11" : "h-14 lg:h-16"
                 )}
                 title="Valtrom"
               >
@@ -299,16 +300,16 @@ export function Header() {
               </Link>
             </div>
 
-            <div className="flex items-center justify-end gap-1.5 justify-self-end sm:gap-2 lg:hidden">
+            <div className="flex shrink-0 items-center justify-end gap-1 justify-self-end sm:gap-1.5 lg:hidden">
               <Link
                 href="/productos"
                 className={cn(
-                  "inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-3 text-[11px] font-bold uppercase tracking-wide text-white shadow-[0_0_0_2px_rgba(220,38,38,0.25)] ring-2 ring-primary/30 transition-[transform,background-color,box-shadow] hover:bg-red-500 active:scale-[0.98] sm:h-11 sm:px-3.5 sm:text-xs",
-                  pathname.startsWith("/productos") && "ring-4 ring-primary/40"
+                  "inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-primary px-2.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-primary/35 transition-[transform,background-color] hover:bg-red-500 active:scale-[0.98] sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[11px]",
+                  pathname.startsWith("/productos") && "ring-primary/55"
                 )}
                 aria-label="Ver catálogo de productos"
               >
-                <Package className="h-4 w-4 shrink-0" />
+                <Package className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
                 <span>Catálogo</span>
               </Link>
               <Button
@@ -316,10 +317,10 @@ export function Header() {
                 variant="ghost"
                 size="icon"
                 onClick={openDrawer}
-                className="relative h-11 w-11 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10 sm:h-12 sm:w-12"
+                className="relative h-10 w-10 shrink-0 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
                 aria-label="Ver Cotización"
               >
-                <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+                <FileText className="h-5 w-5" />
                 {mounted && totalItems > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
                     {totalItems}
@@ -331,11 +332,11 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-11 w-11 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10 sm:h-12 sm:w-12"
+                    className="h-10 w-10 shrink-0 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
                     aria-label="Abrir menú"
                     suppressHydrationWarning
                   >
-                    <Menu className="h-6 w-6 sm:h-7 sm:w-7" />
+                    <Menu className="h-6 w-6" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent
