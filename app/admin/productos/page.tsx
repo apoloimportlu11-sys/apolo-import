@@ -89,7 +89,7 @@ const INITIAL_CATALOG_PRODUCTS: ProductItem[] = BASE_PRODUCTS.map((p, index) => 
 export default function ProductosPage() {
   const supabase = createBrowserSupabase();
   const { lineGroups: lineGroupsList, lineGroupsById } = useProductLineGroups();
-  const [products, setProducts] = useState<ProductItem[]>(INITIAL_CATALOG_PRODUCTS);
+  const [products, setProducts] = useState<ProductItem[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -239,15 +239,14 @@ export default function ProductosPage() {
         );
       };
 
-      // 2. Fetch from Supabase (fuente de verdad)
+      // 2. Fetch from Supabase (fuente de verdad, incluso si está vacío)
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
 
-      const dbList: ProductItem[] = data && !error ? data.filter((p) => !isDeleted(p.id, p.slug)) : [];
-
-      if (dbList.length > 0) {
+      if (!error) {
+        const dbList: ProductItem[] = (data || []).filter((p) => !isDeleted(p.id, p.slug));
         const normalized = dbList.map((p) => ({
           ...p,
           stock: Number(p.stock) || 0,
@@ -263,11 +262,14 @@ export default function ProductosPage() {
             (p as { subcategoryId?: string }).subcategoryId ||
             "",
         }));
+        // Vacío en DB = vacío en admin (no resucitar caché ni catálogo estático)
         persistProductsState(() => normalized);
         return;
       }
 
-      // 3. Fallback offline: localStorage / catálogo base
+      console.warn("Supabase products fetch failed, using offline cache:", error.message);
+
+      // 3. Fallback offline SOLO si falló la red/API
       let localList: ProductItem[] = [];
       try {
         const cached = localStorage.getItem(STORAGE_KEY);
@@ -279,118 +281,13 @@ export default function ProductosPage() {
         }
       } catch {}
 
-      const activeBaseProds = INITIAL_CATALOG_PRODUCTS.filter((baseP) => !isDeleted(baseP.id, baseP.slug));
-      const usedLocalIds = new Set<string>();
-
-      const mergedList: ProductItem[] = activeBaseProds.map((baseP) => {
-        const normBaseId = normalize(baseP.id);
-        const normBaseSlug = normalize(baseP.slug);
-
-        const localMatch = localList.find((locP) => {
-          if (usedLocalIds.has(locP.id)) return false;
-          const nId = normalize(locP.id);
-          const nSlug = normalize(locP.slug);
-          return (nId && nId === normBaseId) || (normBaseSlug && nSlug && nSlug === normBaseSlug);
-        });
-        if (localMatch) {
-          usedLocalIds.add(localMatch.id);
-        }
-
-        const pickStr = (localVal?: string | null, baseVal?: string | null) => {
-          const loc = localVal != null ? String(localVal).trim() : "";
-          if (loc) return loc;
-          return baseVal != null ? String(baseVal) : "";
-        };
-        const pickVal = <T,>(localVal: T | null | undefined, baseVal: T): T => {
-          if (localVal !== undefined && localVal !== null) return localVal;
-          return baseVal;
-        };
-
-        const chosenName = pickStr(localMatch?.name, baseP.name);
-        const chosenSlug = pickStr(localMatch?.slug, baseP.slug);
-        const chosenBrand = pickStr(localMatch?.brand, baseP.brand);
-        const chosenShortDesc = pickVal(localMatch?.short_description, baseP.short_description);
-        const chosenPresentation = pickVal(localMatch?.presentation, baseP.presentation);
-        const chosenDesc = pickVal(localMatch?.description, baseP.description);
-        const chosenStock = pickVal(localMatch?.stock, baseP.stock);
-        const chosenFeatured = pickVal(localMatch?.is_featured, baseP.is_featured);
-        const chosenActive = pickVal(localMatch?.is_active, baseP.is_active);
-        const chosenCategory = pickStr(localMatch?.category_id, baseP.category_id) || "automovil";
-        const chosenImageUrl = pickStr(localMatch?.image_url, baseP.image_url);
-        const chosenViscosity = pickStr(localMatch?.viscosity, baseP.viscosity || "");
-        const chosenType = pickStr(localMatch?.type, baseP.type || "Lubricante Especializado");
-        const chosenSubcategoryId = pickStr(
-          localMatch?.subcategory_id ?? localMatch?.subcategoryId,
-          baseP.subcategory_id || baseP.subcategoryId || ""
-        );
-        const chosenSubcategory = pickStr(localMatch?.subcategory, baseP.subcategory || "");
-        const chosenSortOrder = pickVal(localMatch?.sort_order, baseP.sort_order || 0);
-        const chosenLineGroupId = pickVal(localMatch?.line_group_id, baseP.line_group_id ?? null);
-
-        return {
-          ...baseP,
-          id: baseP.id,
-          name: chosenName,
-          slug: chosenSlug,
-          brand: chosenBrand,
-          short_description: chosenShortDesc,
-          presentation: chosenPresentation,
-          viscosity: chosenViscosity,
-          type: chosenType,
-          subcategoryId: chosenSubcategoryId,
-          subcategory_id: chosenSubcategoryId,
-          subcategory: chosenSubcategory,
-          description: chosenDesc,
-          stock: chosenStock,
-          is_featured: chosenFeatured,
-          is_active: chosenActive,
-          category_id: chosenCategory,
-          image_url: chosenImageUrl,
-          sort_order: chosenSortOrder,
-          line_group_id: chosenLineGroupId,
-          created_at: localMatch?.created_at || baseP.created_at,
-          updated_at: localMatch?.updated_at,
-        };
-      });
-
-      // Add custom creations from localList or dbList
-      const handledSlugs = new Set(mergedList.map((p) => normalize(p.slug)));
-      const handledIds = new Set(mergedList.map((p) => normalize(p.id)));
-
-      localList.forEach((locP) => {
-        if (isDeleted(locP.id, locP.slug)) return;
-        const nSlug = normalize(locP.slug);
-        const nId = normalize(locP.id);
-        if (!handledSlugs.has(nSlug) && !handledIds.has(nId)) {
-          mergedList.push(locP);
-          if (nSlug) handledSlugs.add(nSlug);
-          if (nId) handledIds.add(nId);
-        }
-      });
-
-      dbList.forEach((dbP) => {
-        if (isDeleted(dbP.id, dbP.slug)) return;
-        const nSlug = normalize(dbP.slug);
-        const nId = normalize(dbP.id);
-        if (!handledSlugs.has(nSlug) && !handledIds.has(nId)) {
-          mergedList.push(dbP);
-          if (nSlug) handledSlugs.add(nSlug);
-          if (nId) handledIds.add(nId);
-        }
-      });
-
-      // Strict deduplication to guarantee 100% unique keys
-      const finalUniqueList: ProductItem[] = [];
-      const seenIds = new Set<string>();
-      for (const item of mergedList) {
-        if (!item || !item.id) continue;
-        const normId = normalize(item.id);
-        if (seenIds.has(normId)) continue;
-        seenIds.add(normId);
-        finalUniqueList.push(item);
+      if (localList.length > 0) {
+        persistProductsState(() => localList);
+        return;
       }
 
-      persistProductsState(() => finalUniqueList);
+      const activeBaseProds = INITIAL_CATALOG_PRODUCTS.filter((baseP) => !isDeleted(baseP.id, baseP.slug));
+      persistProductsState(() => activeBaseProds);
     } catch (err) {
       console.error("Error loading products:", err);
     } finally {
