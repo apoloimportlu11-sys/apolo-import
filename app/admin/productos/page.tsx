@@ -183,17 +183,7 @@ export default function ProductosPage() {
 
   const availableSubcategories = useMemo(() => {
     const currentCatId = currentProduct.category_id || "automovil";
-    const cat = CATALOG_CATEGORIES.find((c) => c.id === currentCatId);
-    if (cat) return cat.subcategories;
-    if (currentCatId === "industrial") {
-      return [
-        { id: "hidraulicos-ind", name: "Aceites hidráulicos", categoryId: "industrial" },
-        { id: "engranajes-ind", name: "Aceite de engranajes", categoryId: "industrial" },
-        { id: "grasas-ind", name: "Grasas industriales", categoryId: "industrial" },
-        { id: "compresores-ind", name: "Aceite de compresores", categoryId: "industrial" },
-      ];
-    }
-    return [];
+    return CATALOG_CATEGORIES.find((c) => c.id === currentCatId)?.subcategories || [];
   }, [currentProduct.category_id]);
 
   const featuredCount = useMemo(() => {

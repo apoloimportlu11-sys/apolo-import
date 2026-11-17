@@ -3,7 +3,11 @@ export const CATEGORY_OPTIONS = [
   { id: "camiones", name: "Camiones y Autobuses" },
   { id: "motocicleta", name: "Motocicletas" },
   { id: "vehiculo-pesado", name: "Vehículo Pesado" },
-  { id: "industrial", name: "Industrial & Grasas" },
+  { id: "industrial", name: "Industrial" },
+  { id: "agricola", name: "Agrícola / Maquinaria" },
+  { id: "marina", name: "Marina" },
+  { id: "filtros", name: "Filtros" },
+  { id: "aditivos", name: "Aditivos y químicos" },
   { id: "otros", name: "Otros / Mantenimiento" },
 ] as const;
 
@@ -14,6 +18,10 @@ export const CATEGORY_DEFAULT_LINE_GROUP: Record<string, string> = {
   "vehiculo-pesado": "aceites-diesel-petroleros",
   motocicleta: "motos-4t-2t",
   industrial: "aceite-compresoras-industrial",
+  agricola: "aceites-diesel-petroleros",
+  marina: "motos-4t-2t",
+  filtros: "general-otros",
+  aditivos: "limpieza-y-cuidado-automotriz",
   otros: "general-otros",
 };
 
@@ -21,29 +29,65 @@ export const PRESENTATION_PRESETS = [
   "4 oz",
   "8 oz",
   "12 oz",
+  "16 oz",
+  "32 oz",
   "280 ml",
   "440 ml",
+  "500 ml",
+  "946 ml",
+  "1 L",
+  "4 L",
+  "5 L",
+  "18 L",
+  "20 L",
   "1/4 gal",
   "1 gal",
-  "1 L",
-  "5 L",
+  "5 gal",
   "Pote",
   "Balde",
   "Tambor",
   "Caja",
+  "Cartucho",
 ] as const;
 
+/** SAE motor / transmisión / ISO hidráulicos / grasas */
 export const VISCOSITY_PRESETS = [
+  "0W-20",
+  "0W-30",
+  "5W-20",
   "5W-30",
+  "5W-40",
   "10W-30",
   "10W-40",
   "15W-40",
+  "15W-50",
+  "20W-40",
   "20W-50",
+  "25W-50",
   "25W-60",
+  "SAE 30",
+  "SAE 40",
+  "SAE 50",
+  "75W-80",
   "75W-90",
   "80W-90",
   "85W-140",
+  "ATF",
+  "DOT 3",
+  "DOT 4",
+  "ISO VG 32",
+  "ISO VG 46",
+  "ISO VG 68",
+  "ISO VG 100",
+  "ISO VG 150",
+  "ISO VG 220",
+  "ISO VG 320",
   "ISO 68",
+  "NLGI 1",
+  "NLGI 2",
+  "NLGI 3",
+  "2T",
+  "4T",
 ] as const;
 
 export const KNOWN_BRANDS: string[] = [
@@ -72,8 +116,19 @@ export const PAGE_SIZE_OPTIONS = [20, 40, 80] as const;
 export function detectViscosity(text: string): string {
   const sae = text.match(/\b(\d{1,2})\s*w\s*-?\s*(\d{2})\b/i);
   if (sae) return `${sae[1]}W-${sae[2]}`;
-  const iso = text.match(/\biso\s*-?\s*(\d{2,3})\b/i);
-  if (iso) return `ISO ${iso[1]}`;
+  const isoVg = text.match(/\biso\s*(?:vg)?\s*-?\s*(\d{2,3})\b/i);
+  if (isoVg) {
+    const n = isoVg[1];
+    if (["32", "46", "68", "100", "150", "220", "320"].includes(n)) return `ISO VG ${n}`;
+    return `ISO ${n}`;
+  }
+  const nlgi = text.match(/\bnlgi\s*-?\s*([123])\b/i);
+  if (nlgi) return `NLGI ${nlgi[1]}`;
+  if (/\batf\b/i.test(text)) return "ATF";
+  if (/\bdot\s*-?\s*4\b/i.test(text)) return "DOT 4";
+  if (/\bdot\s*-?\s*3\b/i.test(text)) return "DOT 3";
+  if (/\b2\s*-?\s*t\b/i.test(text)) return "2T";
+  if (/\b4\s*-?\s*t\b/i.test(text)) return "4T";
   return "";
 }
 
@@ -106,10 +161,15 @@ export function suggestLineFromText(text: string): string {
 
 export function suggestCategory(text: string): string {
   const t = text.toLowerCase();
-  if (/\bmotos?\b|motocicleta|\b2t\b|\b4t\b/.test(t)) return "motocicleta";
+  if (/filtro/.test(t)) return "filtros";
+  if (/aditivo|limpiador|sellador|anticongel/.test(t)) return "aditivos";
+  if (/marina|fuera de borda|outboard/.test(t)) return "marina";
+  if (/agr[ií]cola|tractor|cosechadora/.test(t)) return "agricola";
+  if (/\bmotos?\b|motocicleta|\b2t\b|\b4t\b|horquilla|cvt/.test(t)) return "motocicleta";
   if (/diesel|cami[oó]n|petrolero|autob[uú]s/.test(t)) return "camiones";
-  if (/grasa|compresor|hidr[aá]ul|industrial/.test(t)) return "industrial";
-  if (/pesado|flota/.test(t)) return "vehiculo-pesado";
+  if (/compresor|hidr[aá]ul|industrial|iso\s*vg|engranaje industrial/.test(t)) return "industrial";
+  if (/pesado|flota|minero/.test(t)) return "vehiculo-pesado";
+  if (/grasa/.test(t)) return "industrial";
   return "";
 }
 

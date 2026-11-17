@@ -175,30 +175,21 @@ export default function MediaSelector({
         else contentType = "application/octet-stream";
       }
 
-      // Upload directly to Supabase Storage 'products' bucket
-      const { data, error } = await supabase.storage
-        .from("products")
-        .upload(filePath, file, {
-          contentType,
-          upsert: true,
-        });
-
-      if (error || !data) {
+      // Subida vía API staff (service role) para evitar RLS del bucket en el browser
+      const body = new FormData();
+      body.append("file", file, file.name);
+      const res = await fetch("/api/admin/upload", { method: "POST", body });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload?.url) {
         toast.error("No se pudo subir la foto", {
-          description: error?.message || "El almacén no aceptó el archivo.",
+          description:
+            payload?.message ||
+            "Revisa sesión staff y SUPABASE_SERVICE_ROLE_KEY, o aplica supabase_storage_products.sql.",
         });
         return;
       }
 
-      const { data: pubData } = supabase.storage.from("products").getPublicUrl(filePath);
-      if (!pubData?.publicUrl) {
-        toast.error("No se pudo subir la foto", {
-          description: "No hubo un enlace público para el archivo.",
-        });
-        return;
-      }
-
-      onChangeRef.current(pubData.publicUrl);
+      onChangeRef.current(String(payload.url));
     } catch (err: unknown) {
       toast.error("No se pudo subir la foto", {
         description: (err instanceof Error ? err.message : undefined) || "Error de red al subir la imagen.",
@@ -338,7 +329,11 @@ export default function MediaSelector({
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={encodeURI(item.previewUrl || item.path)} alt={item.name} className="h-16 w-full bg-[var(--admin-subtle)] object-contain" />
+                <img
+                  src={encodeURI(item.previewUrl || item.path)}
+                  alt={item.name}
+                  className="h-20 w-full bg-white object-contain p-1 dark:bg-zinc-100"
+                />
                 <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--admin-ink)]">{item.name}</span>
               </button>
             ))}
@@ -444,7 +439,7 @@ export default function MediaSelector({
           </div>
 
           {/* Gallery Grid — celdas rectangulares adaptables */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-64 sm:max-h-72 overflow-y-auto p-1.5 border border-white/5 rounded-lg bg-black/60 custom-scrollbar">
+          <div className="custom-scrollbar grid max-h-64 grid-cols-2 gap-2.5 overflow-y-auto rounded-lg border border-white/10 bg-zinc-950/40 p-1.5 sm:max-h-72 sm:grid-cols-3 lg:grid-cols-4">
             {filteredItems.map((item) => {
               const isSelected = value === item.path;
               const previewSrc = encodeURI(item.previewUrl || item.path);
@@ -453,25 +448,25 @@ export default function MediaSelector({
                   key={item.id}
                   type="button"
                   onClick={() => handleSelectInternal(item)}
-                  className={`relative flex flex-col rounded-xl border transition-all group text-left cursor-pointer overflow-hidden ${
+                  className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-all ${
                     isSelected
                       ? "border-[#C7940A] bg-[#C7940A]/15 shadow-md ring-1 ring-[#C7940A]"
-                      : "border-white/5 bg-white/[0.03] hover:border-white/20 hover:bg-white/10"
+                      : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10"
                   }`}
                 >
-                  <div className="relative w-full aspect-[4/3] flex items-center justify-center bg-gradient-to-b from-black/30 to-black/60 p-2">
+                  <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-white p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={previewSrc}
                       alt={item.name}
-                      className="max-h-full max-w-full object-contain drop-shadow-sm"
+                      className="max-h-full max-w-full object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.18)]"
                       loading="lazy"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).style.opacity = "0.25";
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-zinc-300 line-clamp-2 w-full text-center px-1.5 py-1.5 group-hover:text-white font-medium leading-tight bg-black/40">
+                  <span className="line-clamp-2 w-full bg-zinc-950/80 px-1.5 py-1.5 text-center text-[10px] font-medium leading-tight text-zinc-200 group-hover:text-white">
                     {item.name}
                   </span>
 

@@ -9,6 +9,7 @@ export interface LineCategorizable {
   short_description?: string | null;
   subcategory?: string | null;
   viscosity?: string | null;
+  presentation?: string | null;
   sort_order?: number | null;
   line_group_id?: string | null;
 }
@@ -205,7 +206,22 @@ export interface ProductLineGroup<T> {
   products: T[];
 }
 
-export type ProductSortMode = "featured" | "name-asc" | "name-desc";
+export type ProductSortMode = "featured" | "name-asc" | "name-desc" | "format";
+
+function presentationRank(presentation?: string | null): number {
+  const t = String(presentation || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/\btambor\b|\b200\s*l\b|\b55\s*gal/.test(t)) return 100;
+  if (/\bbalde\b|\b5\s*gal|\b18\s*l|\b20\s*l/.test(t)) return 90;
+  if (/\b5\s*l|\b4\s*l|\bcaja\b/.test(t)) return 75;
+  if (/\b1\s*gal|\bgalon\b/.test(t) && !/1\s*\/\s*4|cuarto/.test(t)) return 70;
+  if (/\b1\s*l\b|\b946/.test(t)) return 55;
+  if (/1\s*\/\s*4|cuarto/.test(t)) return 40;
+  if (/\boz\b|\bml\b|\bpote\b|\bcartucho\b/.test(t)) return 25;
+  return 50;
+}
 
 // Agrupa por línea y ordena cada grupo según el orden configurado en /admin/lineas.
 // En modo "featured" (el default), respeta el sort_order manual de los productos
@@ -236,6 +252,11 @@ export function groupProductsByLine<T extends LineCategorizable>(
       const sortedProds = [...pList].sort((a, b) => {
         if (sortBy === "name-asc") return (a.name || "").localeCompare(b.name || "");
         if (sortBy === "name-desc") return (b.name || "").localeCompare(a.name || "");
+        if (sortBy === "format") {
+          const diff = presentationRank(b.presentation) - presentationRank(a.presentation);
+          if (diff !== 0) return diff;
+          return (a.name || "").localeCompare(b.name || "");
+        }
 
         const orderA = a.sort_order || 0;
         const orderB = b.sort_order || 0;

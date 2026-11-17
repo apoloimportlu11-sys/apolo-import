@@ -28,6 +28,14 @@ Rate limit (memoria del proceso, por IP): chat público ~12/min, chat admin ~30/
 - 503 si falta `OPENAI_API_KEY`
 - Sin catálogo DB: prompt fijo orientado a clientes
 
+### `POST /api/admin/upload`
+
+- Archivo: `app/api/admin/upload/route.ts`
+- Auth: staff (`admin` | `vendor` | `almacen`)
+- Body: `multipart/form-data` con `file`
+- Acción: sube al bucket Storage `products` con service role y devuelve `{ url, path }`
+- Evita el error RLS del browser al subir fotos
+
 ### `POST /api/admin/chat`
 
 - Archivo: `app/api/admin/chat/route.ts`

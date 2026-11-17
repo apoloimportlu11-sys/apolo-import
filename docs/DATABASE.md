@@ -94,7 +94,11 @@ Patrón en `supabase_rls_secure.sql`:
 
 ## Storage
 
-Uso verificado en código: bucket `products` (`components/MediaSelector.tsx`).
+Uso verificado en código: bucket `products`.
+
+- Subida del panel: `POST /api/admin/upload` (service role) desde `MediaSelector`
+- Políticas opcionales del bucket: `supabase_storage_products.sql` (staff INSERT/UPDATE/DELETE + lectura pública)
+- En Vercel hace falta `SUPABASE_SERVICE_ROLE_KEY` o `SUPABASE_SECRET_KEY`
 
 ## Scripts relacionados
 

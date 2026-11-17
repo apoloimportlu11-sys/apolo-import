@@ -582,8 +582,8 @@ export function SloganBar() {
   return (
     <div className="relative overflow-hidden border-y border-border bg-muted dark:border-white/10 dark:bg-[#141414]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-      <div className="relative z-10 mx-auto flex w-full max-w-[1700px] items-center justify-center px-4 py-4 sm:px-8 sm:py-5">
-        <p className="max-w-4xl text-center font-heading text-[length:var(--fs-slogan)] font-semibold leading-snug tracking-tight text-balance text-foreground">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1700px] items-center justify-center px-4 py-2 sm:px-8 sm:py-2.5">
+        <p className="max-w-4xl text-balance text-center font-heading text-sm font-semibold leading-snug tracking-tight text-foreground sm:text-base md:text-lg">
           <span className="text-muted-foreground">No te vendemos un producto. </span>
           <span className="text-primary">Te damos experiencia.</span>
         </p>

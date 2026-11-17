@@ -111,9 +111,9 @@ export default function FloatingWhatsApp() {
 
   return (
     <div
-      className={`pointer-events-auto fixed z-50 flex flex-col items-end gap-2 transition-opacity duration-300 ${
-        showOnHomeMobile ? "opacity-100" : "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto"
-      } bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 md:bottom-4`}
+      className={`pointer-events-auto fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 flex flex-col items-end gap-2 transition-opacity duration-300 md:bottom-4 ${
+        showOnHomeMobile ? "opacity-100" : "pointer-events-none opacity-0 md:pointer-events-auto md:opacity-100"
+      }`}
     >
       {isAssistantOpen && (
         <div className="w-[min(22rem,calc(100vw-2rem))] h-[min(28rem,70vh)] rounded-2xl border border-border bg-card text-foreground shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col overflow-hidden mb-1">
@@ -198,45 +198,47 @@ export default function FloatingWhatsApp() {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => {
-            setIsAssistantOpen(!isAssistantOpen);
-            if (!isAssistantOpen) setIsOpen(false);
-          }}
-          className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-colors duration-200 hover:bg-red-500 cursor-pointer"
-          aria-label="Abrir a Artemisa, asistente virtual"
-        >
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
-          </span>
-          <Bot className="h-5 w-5" />
-        </button>
+      <div className="flex flex-col items-end gap-2">
+        {!isOpen && hasPrompted && pastHero && (
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="hidden cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-foreground shadow-xl backdrop-blur-md transition-all animate-in fade-in slide-in-from-right-4 hover:border-emerald-500/50 sm:flex"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+            <span>¿En qué te ayudamos hoy?</span>
+          </button>
+        )}
 
-        <div className="relative flex flex-col items-end gap-2">
-          {!isOpen && hasPrompted && pastHero && (
-            <button
-              type="button"
-              onClick={() => setIsOpen(true)}
-              className="hidden sm:flex items-center gap-2 rounded-full bg-card border border-border px-3.5 py-1.5 text-xs text-foreground shadow-xl cursor-pointer hover:border-emerald-500/50 transition-all backdrop-blur-md animate-in fade-in slide-in-from-right-4"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-              <span>¿En qué te ayudamos hoy?</span>
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsAssistantOpen(!isAssistantOpen);
+              if (!isAssistantOpen) setIsOpen(false);
+            }}
+            className="group relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-colors duration-200 hover:bg-red-500"
+            aria-label="Abrir a Artemisa, asistente virtual"
+          >
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-400" />
+            </span>
+            <Bot className="h-5 w-5" />
+          </button>
 
           <button
+            type="button"
             onClick={() => {
               setIsOpen(!isOpen);
               if (!isOpen) setIsAssistantOpen(false);
             }}
-            className="group relative flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 transition-colors duration-200 hover:bg-emerald-500 cursor-pointer"
+            className="group relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 transition-colors duration-200 hover:bg-emerald-500"
             aria-label="Abrir chat de WhatsApp"
           >
             <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-400" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-400" />
             </span>
             <WhatsAppIcon className="h-5 w-5" />
           </button>

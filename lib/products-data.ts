@@ -41,191 +41,141 @@ export type Category = {
   subcategories: Subcategory[];
 };
 
+function subs(categoryId: string, items: Array<[string, string]>): Subcategory[] {
+  return items.map(([id, name]) => ({ id, name, categoryId }));
+}
+
 export const categories: Category[] = [
   {
     id: "automovil",
     name: "Automóvil",
-    subcategories: [
-      {
-        id: "aceites-motor-auto",
-        name: "Aceites de motor",
-        categoryId: "automovil",
-      },
-      {
-        id: "transmision-manual-auto",
-        name: "Aceite de transmisiones manuales",
-        categoryId: "automovil",
-      },
-      {
-        id: "transmision-auto-auto",
-        name: "Aceite de transmisiones automáticas",
-        categoryId: "automovil",
-      },
-      {
-        id: "frenos-auto",
-        name: "Líquidos de frenos y dirección",
-        categoryId: "automovil",
-      },
-      {
-        id: "refrigerante-auto",
-        name: "Líquido refrigerante",
-        categoryId: "automovil",
-      },
-      {
-        id: "mantenimiento-auto",
-        name: "Líquidos de mantenimiento",
-        categoryId: "automovil",
-      },
-      { id: "grasas-auto", name: "Grasas", categoryId: "automovil" },
-    ],
+    subcategories: subs("automovil", [
+      ["aceites-motor-auto", "Aceites de motor"],
+      ["sinteticos-auto", "Sintéticos / alto rendimiento"],
+      ["transmision-manual-auto", "Transmisión manual"],
+      ["transmision-auto-auto", "Transmisión automática (ATF)"],
+      ["frenos-auto", "Frenos y dirección"],
+      ["refrigerante-auto", "Refrigerantes / coolants"],
+      ["mantenimiento-auto", "Limpieza y mantenimiento"],
+      ["aditivos-auto", "Aditivos"],
+      ["grasas-auto", "Grasas"],
+      ["filtros-auto", "Filtros"],
+    ]),
   },
   {
     id: "camiones",
     name: "Camiones y autobuses",
-    subcategories: [
-      {
-        id: "aceites-motor-cam",
-        name: "Aceites de motor",
-        categoryId: "camiones",
-      },
-      {
-        id: "transmision-manual-cam",
-        name: "Aceite de transmisiones manuales",
-        categoryId: "camiones",
-      },
-      {
-        id: "transmision-auto-cam",
-        name: "Aceite de transmisiones automáticas",
-        categoryId: "camiones",
-      },
-      {
-        id: "hidraulicos-cam",
-        name: "Aceites hidráulicos",
-        categoryId: "camiones",
-      },
-      {
-        id: "frenos-cam",
-        name: "Líquidos de frenos y dirección",
-        categoryId: "camiones",
-      },
-      {
-        id: "refrigerante-cam",
-        name: "Líquido refrigerante",
-        categoryId: "camiones",
-      },
-      {
-        id: "mantenimiento-cam",
-        name: "Líquidos de mantenimiento",
-        categoryId: "camiones",
-      },
-      { id: "grasas-cam", name: "Grasas", categoryId: "camiones" },
-    ],
+    subcategories: subs("camiones", [
+      ["aceites-motor-cam", "Aceites diésel / motor"],
+      ["transmision-manual-cam", "Transmisión manual"],
+      ["transmision-auto-cam", "Transmisión automática"],
+      ["hidraulicos-cam", "Hidráulicos"],
+      ["diferencial-cam", "Diferenciales y ejes"],
+      ["frenos-cam", "Frenos y dirección"],
+      ["refrigerante-cam", "Refrigerantes"],
+      ["mantenimiento-cam", "Mantenimiento"],
+      ["grasas-cam", "Grasas"],
+      ["filtros-cam", "Filtros"],
+    ]),
   },
   {
     id: "vehiculo-pesado",
     name: "Vehículo pesado",
-    subcategories: [
-      {
-        id: "aceites-motor-pesado",
-        name: "Aceites de motor",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "transmision-manual-pesado",
-        name: "Aceite de transmisiones manuales y ejes",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "transmision-auto-pesado",
-        name: "Aceite de transmisiones automáticas",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "hidraulicos-pesado",
-        name: "Aceites hidráulicos",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "frenos-pesado",
-        name: "Líquidos de frenos y dirección",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "refrigerante-pesado",
-        name: "Líquido refrigerante",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "mantenimiento-pesado",
-        name: "Líquidos de mantenimiento",
-        categoryId: "vehiculo-pesado",
-      },
-      {
-        id: "diferencial-pesado",
-        name: "Aceite para diferenciales",
-        categoryId: "vehiculo-pesado",
-      },
-      { id: "grasas-pesado", name: "Grasas", categoryId: "vehiculo-pesado" },
-    ],
+    subcategories: subs("vehiculo-pesado", [
+      ["aceites-motor-pesado", "Aceites de motor"],
+      ["transmision-manual-pesado", "Transmisión y ejes"],
+      ["transmision-auto-pesado", "Transmisión automática"],
+      ["hidraulicos-pesado", "Hidráulicos"],
+      ["diferencial-pesado", "Diferenciales"],
+      ["frenos-pesado", "Frenos y dirección"],
+      ["refrigerante-pesado", "Refrigerantes"],
+      ["mantenimiento-pesado", "Mantenimiento"],
+      ["grasas-pesado", "Grasas"],
+    ]),
   },
   {
     id: "motocicleta",
-    name: "Motocicleta",
-    subcategories: [
-      {
-        id: "aceites-motor-moto",
-        name: "Aceites de motor",
-        categoryId: "motocicleta",
-      },
-      {
-        id: "transmision-moto",
-        name: "Aceite de transmisiones manuales y ejes",
-        categoryId: "motocicleta",
-      },
-      {
-        id: "transmision-automatica-moto",
-        name: "Aceite de transmisión automática (CVT)",
-        categoryId: "motocicleta",
-      },
-      {
-        id: "frenos-moto",
-        name: "Líquidos de frenos y dirección",
-        categoryId: "motocicleta",
-      },
-      {
-        id: "refrigerante-moto",
-        name: "Líquido refrigerante",
-        categoryId: "motocicleta",
-      },
-      {
-        id: "mantenimiento-moto",
-        name: "Líquidos de mantenimiento",
-        categoryId: "motocicleta",
-      },
-      { id: "grasas-moto", name: "Grasas", categoryId: "motocicleta" },
-      {
-        id: "horquilla",
-        name: "Aceite de horquilla",
-        categoryId: "motocicleta",
-      },
-    ],
+    name: "Motocicletas",
+    subcategories: subs("motocicleta", [
+      ["aceites-motor-moto", "Aceites 4T"],
+      ["aceites-2t-moto", "Aceites 2T"],
+      ["transmision-moto", "Transmisión / cadena"],
+      ["transmision-automatica-moto", "CVT"],
+      ["horquilla", "Aceite de horquilla"],
+      ["frenos-moto", "Frenos"],
+      ["refrigerante-moto", "Refrigerantes"],
+      ["mantenimiento-moto", "Limpieza y cuidado"],
+      ["grasas-moto", "Grasas"],
+    ]),
+  },
+  {
+    id: "industrial",
+    name: "Industrial",
+    subcategories: subs("industrial", [
+      ["hidraulicos-ind", "Aceites hidráulicos (ISO VG)"],
+      ["engranajes-ind", "Engranajes industriales"],
+      ["compresores-ind", "Compresoras"],
+      ["turbinas-ind", "Turbinas / circulación"],
+      ["corte-ind", "Corte y mecanizado"],
+      ["grasas-ind", "Grasas industriales"],
+      ["mantenimiento-ind", "Mantenimiento industrial"],
+    ]),
+  },
+  {
+    id: "agricola",
+    name: "Agrícola / maquinaria",
+    subcategories: subs("agricola", [
+      ["aceites-motor-agr", "Aceites de motor"],
+      ["hidraulicos-agr", "Hidráulicos / transmisión"],
+      ["engranajes-agr", "Engranajes"],
+      ["grasas-agr", "Grasas"],
+      ["refrigerante-agr", "Refrigerantes"],
+      ["mantenimiento-agr", "Mantenimiento"],
+    ]),
+  },
+  {
+    id: "marina",
+    name: "Marina / fuera de borda",
+    subcategories: subs("marina", [
+      ["aceites-2t-mar", "Aceites 2T marina"],
+      ["aceites-4t-mar", "Aceites 4T marina"],
+      ["engranajes-mar", "Caja / cola"],
+      ["grasas-mar", "Grasas marinas"],
+      ["mantenimiento-mar", "Cuidado y limpieza"],
+    ]),
+  },
+  {
+    id: "filtros",
+    name: "Filtros",
+    subcategories: subs("filtros", [
+      ["filtro-aceite", "Filtro de aceite"],
+      ["filtro-aire", "Filtro de aire"],
+      ["filtro-combustible", "Filtro de combustible"],
+      ["filtro-cabina", "Filtro de cabina"],
+      ["filtro-hidraulico", "Filtro hidráulico"],
+    ]),
+  },
+  {
+    id: "aditivos",
+    name: "Aditivos y químicos",
+    subcategories: subs("aditivos", [
+      ["aditivos-motor", "Aditivos de motor"],
+      ["aditivos-combustible", "Aditivos de combustible"],
+      ["limpiadores", "Limpiadores"],
+      ["selladores", "Selladores / químicos"],
+      ["anticongelantes", "Anticongelantes / coolants"],
+    ]),
   },
   {
     id: "otros",
-    name: "Otros",
-    subcategories: [
-      { id: "grasas-otros", name: "Grasas", categoryId: "otros" },
-      {
-        id: "aceite-compresora",
-        name: "Aceite para compresoras",
-        categoryId: "otros",
-      },
-      {
-        id: "mantenimiento-otros",
-        name: "Productos de mantenimiento",
-        categoryId: "otros",
-      },
-    ],
+    name: "Otros / mantenimiento",
+    subcategories: subs("otros", [
+      ["grasas-otros", "Grasas"],
+      ["aceite-compresora", "Aceite para compresoras"],
+      ["baterias-otros", "Cuidado de baterías"],
+      ["herramientas-otros", "Accesorios"],
+      ["mantenimiento-otros", "Productos de mantenimiento"],
+    ]),
   },
 ];
 
@@ -1311,17 +1261,40 @@ export const products: Product[] = [
 
 export const viscosities = [
   "0W-20",
+  "0W-30",
   "5W-20",
   "5W-30",
+  "5W-40",
   "10W-30",
   "10W-40",
   "15W-40",
+  "15W-50",
+  "20W-40",
   "20W-50",
   "25W-50",
   "25W-60",
+  "SAE 30",
+  "SAE 40",
+  "SAE 50",
+  "75W-80",
   "75W-90",
   "80W-90",
   "85W-140",
+  "ATF",
+  "DOT 3",
+  "DOT 4",
+  "ISO VG 32",
+  "ISO VG 46",
+  "ISO VG 68",
+  "ISO VG 100",
+  "ISO VG 150",
+  "ISO VG 220",
+  "ISO VG 320",
+  "NLGI 1",
+  "NLGI 2",
+  "NLGI 3",
+  "2T",
+  "4T",
   "Monogrado",
   "Multigrado",
 ];

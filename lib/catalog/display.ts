@@ -31,7 +31,7 @@ export function getPresentationVisual(presentation?: string | null): Presentatio
   const t = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   if (!t) {
-    return { scale: 0.82, label: "Estándar", size: "md" };
+    return { scale: 0.9, label: "Estándar", size: "md" };
   }
 
   // Tambor / drum
@@ -40,11 +40,11 @@ export function getPresentationVisual(presentation?: string | null): Presentatio
   }
   // Balde / pail
   if (/\bbalde\b|\bpail\b|\b5\s*gal/.test(t)) {
-    return { scale: 0.96, label: raw, size: "xl" };
+    return { scale: 0.98, label: raw, size: "xl" };
   }
   // Caja
   if (/\bcaja\b|\bbox\b/.test(t)) {
-    return { scale: 0.9, label: raw, size: "lg" };
+    return { scale: 0.94, label: raw, size: "lg" };
   }
   // 1 galón
   if (/\b1\s*\/\s*1\s*gal|\b1\s*gal\b|\bgalon\b(?!\s*1\s*\/\s*4)/.test(t) && !/1\s*\/\s*4|cuarto/.test(t)) {
@@ -55,36 +55,36 @@ export function getPresentationVisual(presentation?: string | null): Presentatio
   }
   // 1/4 galón
   if (/1\s*\/\s*4|cuarto\s*(de\s*)?gal|0\.25\s*gal/.test(t)) {
-    return { scale: 0.58, label: raw, size: "sm" };
+    return { scale: 0.66, label: raw, size: "sm" };
   }
   // Litros
   const liters = t.match(/(\d+(?:[.,]\d+)?)\s*(?:l|lt|lts|litros?)\b/);
   if (liters) {
     const n = parseFloat(liters[1].replace(",", "."));
     if (n >= 18) return { scale: 1, label: raw, size: "xl" };
-    if (n >= 4) return { scale: 0.92, label: raw, size: "lg" };
-    if (n >= 1) return { scale: 0.78, label: raw, size: "md" };
-    return { scale: 0.62, label: raw, size: "sm" };
+    if (n >= 4) return { scale: 0.96, label: raw, size: "lg" };
+    if (n >= 1) return { scale: 0.86, label: raw, size: "md" };
+    return { scale: 0.7, label: raw, size: "sm" };
   }
   // Onzas
   const oz = t.match(/(\d+(?:[.,]\d+)?)\s*oz\b/);
   if (oz) {
     const n = parseFloat(oz[1].replace(",", "."));
-    if (n >= 32) return { scale: 0.78, label: raw, size: "md" };
-    if (n >= 12) return { scale: 0.64, label: raw, size: "sm" };
-    return { scale: 0.5, label: raw, size: "xs" };
+    if (n >= 32) return { scale: 0.86, label: raw, size: "md" };
+    if (n >= 12) return { scale: 0.72, label: raw, size: "sm" };
+    return { scale: 0.58, label: raw, size: "xs" };
   }
   // ml
   const ml = t.match(/(\d+(?:[.,]\d+)?)\s*ml\b/);
   if (ml) {
     const n = parseFloat(ml[1].replace(",", "."));
-    if (n >= 1000) return { scale: 0.78, label: raw, size: "md" };
-    if (n >= 400) return { scale: 0.66, label: raw, size: "sm" };
-    return { scale: 0.52, label: raw, size: "xs" };
+    if (n >= 1000) return { scale: 0.86, label: raw, size: "md" };
+    if (n >= 400) return { scale: 0.74, label: raw, size: "sm" };
+    return { scale: 0.6, label: raw, size: "xs" };
   }
-  if (/\bpote\b|\bpot\b/.test(t)) {
-    return { scale: 0.7, label: raw, size: "sm" };
+  if (/\bpote\b|\bpot\b|\bcartucho\b/.test(t)) {
+    return { scale: 0.78, label: raw, size: "sm" };
   }
 
-  return { scale: 0.82, label: raw, size: "md" };
+  return { scale: 0.9, label: raw, size: "md" };
 }

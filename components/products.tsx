@@ -87,6 +87,15 @@ export function Products() {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const sidebarAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [sidebarDock, setSidebarDock] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    maxHeight: number;
+    active: boolean;
+  }>({ left: 0, top: 0, width: 288, maxHeight: 600, active: false });
 
   const normalizeKey = (str?: string | number | null) =>
     String(str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -419,6 +428,90 @@ export function Products() {
     const q = brandFilterSearch.toLowerCase();
     return availableBrands.filter((b) => b.toLowerCase().includes(q));
   }, [availableBrands, brandFilterSearch]);
+
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    const section = sectionRef.current;
+    let raf = 0;
+
+    const syncToolbarHeight = () => {
+      if (!toolbar) return;
+      document.documentElement.style.setProperty(
+        "--catalog-toolbar-height",
+        `${toolbar.offsetHeight}px`
+      );
+    };
+
+    const syncSidebarDock = () => {
+      const anchor = sidebarAnchorRef.current;
+      const catalogSection = sectionRef.current;
+      const isLg = window.matchMedia("(min-width: 1024px)").matches;
+      if (!anchor || !catalogSection || !isLg) {
+        setSidebarDock((prev) => (prev.active ? { ...prev, active: false } : prev));
+        return;
+      }
+
+      const root = document.documentElement;
+      const header =
+        parseFloat(getComputedStyle(root).getPropertyValue("--site-header-height")) || 96;
+      const sectionRect = catalogSection.getBoundingClientRect();
+      const anchorRect = anchor.getBoundingClientRect();
+
+      // Clavado bajo el header, pero nunca por encima del inicio de la sección
+      const top = Math.max(header + 12, sectionRect.top + 8);
+      // No invadir el footer: el borde inferior es el mínimo entre viewport y fin de sección
+      const bottomLimit = Math.min(window.innerHeight - 16, sectionRect.bottom - 8);
+      const maxHeight = Math.max(0, bottomLimit - top);
+      const stillInView = sectionRect.bottom > header + 80 && sectionRect.top < window.innerHeight - 40;
+
+      if (!stillInView || maxHeight < 120) {
+        setSidebarDock((prev) => (prev.active ? { ...prev, active: false } : prev));
+        return;
+      }
+
+      setSidebarDock({
+        left: anchorRect.left,
+        top,
+        width: anchor.offsetWidth,
+        maxHeight,
+        active: true,
+      });
+    };
+
+    const syncAll = () => {
+      syncToolbarHeight();
+      syncSidebarDock();
+    };
+
+    const onScrollOrResize = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(syncAll);
+    };
+
+    syncAll();
+    const ro = new ResizeObserver(onScrollOrResize);
+    if (toolbar) ro.observe(toolbar);
+    if (sidebarAnchorRef.current) ro.observe(sidebarAnchorRef.current);
+    if (section) ro.observe(section);
+
+    window.addEventListener("resize", onScrollOrResize);
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+
+    type LenisLike = { on?: (event: string, cb: () => void) => void; off?: (event: string, cb: () => void) => void };
+    const lenis = (window as Window & { __apoloLenis?: LenisLike }).__apoloLenis;
+    lenis?.on?.("scroll", onScrollOrResize);
+
+    const t = window.setTimeout(syncAll, 120);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.clearTimeout(t);
+      window.removeEventListener("resize", onScrollOrResize);
+      window.removeEventListener("scroll", onScrollOrResize);
+      lenis?.off?.("scroll", onScrollOrResize);
+      document.documentElement.style.removeProperty("--catalog-toolbar-height");
+    };
+  }, []);
 
   useEffect(() => {
     const categoryId = searchParams.get("category");
@@ -811,7 +904,7 @@ export function Products() {
     searchQuery.trim().length > 0;
 
   const renderBreadcrumb = () => (
-    <nav className="flex flex-wrap items-center gap-2 text-sm mb-6 font-medium">
+    <nav className="mb-3 flex flex-wrap items-center gap-2 text-sm font-medium">
       <Link
         href="/"
         className="text-muted-foreground hover:text-primary transition-colors"
@@ -1323,7 +1416,7 @@ export function Products() {
               <button
                 type="button"
                 onClick={() => setQuickViewProduct(product)}
-                className="relative w-full sm:w-44 h-52 sm:h-44 flex-shrink-0 bg-[linear-gradient(180deg,#fff_0%,#f4f4f5_100%)] rounded-xl overflow-hidden border border-border/40 p-3 flex items-end justify-center group-hover:scale-[1.02] transition-transform duration-200"
+                className="relative w-full sm:w-44 h-52 sm:h-44 flex-shrink-0 rounded-xl overflow-hidden border border-zinc-200/80 bg-white p-2 flex items-end justify-center group-hover:scale-[1.02] transition-transform duration-200 dark:border-white/10 dark:bg-zinc-50"
               >
                 {hasValidImage ? (
                   <div
@@ -1339,7 +1432,7 @@ export function Products() {
                       fill
                       unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                       sizes="(max-width: 640px) 100vw, 176px"
-                      className="object-contain object-bottom"
+                      className="object-contain object-bottom drop-shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
                       style={{ objectFit: "contain", objectPosition: "bottom center" }}
                     />
                   </div>
@@ -1493,15 +1586,15 @@ export function Products() {
                 ) : null}
               </div>
 
-              {/* Imagen escalada por presentación (1/4 gal más chico que 1 gal, etc.) */}
-              <div className="relative w-full h-56 sm:h-60 mb-4 overflow-hidden rounded-xl border border-border/40 bg-[linear-gradient(180deg,#ffffff_0%,#f4f4f5_78%,#e4e4e7_100%)] p-3 flex items-end justify-center group-hover:scale-[1.02] transition-transform duration-200">
+              {/* Imagen: fondo claro para que el envase destaque; escala por presentación */}
+              <div className="relative mb-4 flex h-56 items-end justify-center overflow-hidden rounded-xl border border-zinc-200/70 bg-white p-2 sm:h-60 dark:border-white/10 dark:bg-zinc-50">
                 <div
-                  className="pointer-events-none absolute inset-x-6 bottom-2 h-2 rounded-full bg-black/10 blur-[2px]"
+                  className="pointer-events-none absolute inset-x-8 bottom-1.5 h-1.5 rounded-full bg-black/8 blur-[1px]"
                   aria-hidden
                 />
                 {hasValidImage ? (
                   <div
-                    className="relative w-full origin-bottom transition-[height] duration-300"
+                    className="relative z-[1] w-full origin-bottom transition-[height] duration-300"
                     style={{
                       height: `${Math.round(packVisual.scale * 100)}%`,
                       maxHeight: "100%",
@@ -1513,7 +1606,7 @@ export function Products() {
                       fill
                       unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      className="object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]"
+                      className="object-contain object-bottom drop-shadow-[0_14px_24px_rgba(0,0,0,0.22)]"
                       style={{ objectFit: "contain", objectPosition: "bottom center" }}
                     />
                   </div>
@@ -1593,7 +1686,7 @@ export function Products() {
     !searchQuery.trim();
 
   return (
-    <section className="py-8 md:py-12 bg-transparent min-h-screen relative">
+    <section ref={sectionRef} className="relative min-h-screen bg-transparent py-4 md:py-6">
       {/* Ilustración Vectorial de Vehículos en el centro del lado izquierdo */}
       {/* Contenedor propio con overflow-hidden: evita que el resplandor decorativo genere scroll horizontal,
           sin que ese overflow quede en un ancestro del sidebar de filtros (rompería su "sticky") */}
@@ -1601,299 +1694,290 @@ export function Products() {
         <VehicleVectorDecor size="lg" className="absolute left-4 2xl:left-8 3xl:left-14 top-[320px] xl:top-[380px]" />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-5 lg:px-6 relative z-10">
+      <div className="container relative z-10 mx-auto px-4 sm:px-5 lg:px-6">
         {renderBreadcrumb()}
 
-        <div
-          ref={toolbarRef}
-          className="sticky z-30 -mx-4 mb-6 space-y-3 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur-md sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6"
-          style={{ top: "var(--site-header-height, 6rem)" }}
-        >
-        {/* Barra de Búsqueda Mejorada */}
-        <div className="max-w-3xl mx-auto">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-
-            <Input
-              type="text"
-              placeholder="Buscar por marca, nombre, viscosidad o código..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-12 py-5 md:py-6 bg-card border-border text-foreground placeholder:text-muted-foreground text-sm sm:text-base rounded-2xl shadow-xs focus-visible:ring-primary"
+        <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-6">
+          {/* SIDEBAR DESKTOP: fixed acotado a la section (no invade el footer) */}
+          <aside className="relative hidden w-72 min-w-72 max-w-72 flex-shrink-0 lg:block">
+            <div
+              ref={sidebarAnchorRef}
+              className="w-full"
+              style={{ height: sidebarDock.active ? sidebarDock.maxHeight : undefined }}
+              aria-hidden
             />
-
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Limpiar búsqueda"
+            {sidebarDock.active ? (
+              <div
+                data-lenis-prevent
+                className="custom-scrollbar fixed z-20 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-sm"
+                style={{
+                  top: sidebarDock.top,
+                  left: sidebarDock.left,
+                  width: sidebarDock.width,
+                  maxHeight: sidebarDock.maxHeight,
+                }}
               >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* PESTAÑAS RÁPIDAS DE MARCAS (SEPARADOR / SELECTOR SUPERIOR) */}
-        <div className="flex flex-col items-center gap-2.5">
-          {/* Fila destacada: Todas las marcas + marcas oficiales (Apolo, Overts, Valtrom) */}
-          <div className="flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto p-1.5 bg-card border border-border rounded-2xl shadow-xs custom-scrollbar sm:justify-center">
-            <button
-              onClick={() => handleBrandQuickSelect("all")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
-                selectedBrands.length === 0
-                  ? "bg-primary text-white shadow-sm shadow-primary/20"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              }`}
-            >
-              <span>Todas las marcas</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  selectedBrands.length === 0
-                    ? "bg-white/20 text-white"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {allMergedProducts.length}
-              </span>
-            </button>
-
-            <div className="w-px h-6 bg-border mx-0.5 hidden sm:block" />
-
-            {availableBrands
-              .filter((brand) =>
-                ["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
-              )
-              .map((brand) => {
-                const count = allMergedProducts.filter((p) =>
-                  brandEquals(p.brand, brand)
-                ).length;
-                const isSelected =
-                  selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
-                const isApolo = brand.toLowerCase() === "apolo";
-                const isOverts = brand.toLowerCase() === "overts";
-
-                const activeClasses = isApolo
-                  ? "bg-red-600 text-white shadow-sm shadow-red-600/30"
-                  : isOverts
-                  ? "bg-amber-600 text-white shadow-sm shadow-amber-600/30"
-                  : "bg-purple-600 text-white shadow-sm shadow-purple-600/30";
-                const idleClasses = isApolo
-                  ? "bg-red-600/10 text-red-500 border border-red-500/30 hover:bg-red-600/20"
-                  : isOverts
-                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20"
-                  : "bg-purple-600/10 text-purple-500 dark:text-purple-400 border border-purple-500/30 hover:bg-purple-600/20";
-
-                return (
-                  <button
-                    key={brand}
-                    onClick={() => handleBrandQuickSelect(brand)}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center gap-2 ${
-                      isSelected ? activeClasses : idleClasses
-                    }`}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isApolo
-                          ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]"
-                          : isOverts
-                          ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
-                          : "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
-                      }`}
-                    />
-                    <span>{brand}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                        isSelected
-                          ? "bg-white/25 text-white"
-                          : "bg-black/10 dark:bg-white/10"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-          </div>
-
-          {(() => {
-            const otherBrands = availableBrands.filter(
-              (brand) => !["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
-            );
-            if (otherBrands.length === 0) return null;
-
-            return (
-              <div className="flex max-w-4xl items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
-                {otherBrands.map((brand) => {
-                  const count = allMergedProducts.filter((p) =>
-                    brandEquals(p.brand, brand)
-                  ).length;
-                  const isSelected =
-                    selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
-
-                  return (
-                    <button
-                      key={brand}
-                      onClick={() => handleBrandQuickSelect(brand)}
-                      className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
-                        isSelected
-                          ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30"
-                          : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-blue-200" : "bg-blue-400"}`} />
-                      <span>{brand}</span>
-                      <span
-                        className={`rounded-full px-1.5 text-[10px] ${
-                          isSelected
-                            ? "bg-white/25 text-white"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                {renderSidebar()}
               </div>
-            );
-          })()}
-        </div>
-
-        {/* CHIPS DE FILTROS ACTIVOS */}
-        {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2 p-3 bg-card border border-border rounded-xl shadow-xs">
-            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 mr-1">
-              <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
-              Filtros activos:
-            </span>
-
-            {selectedBrands.map((brand) => (
-              <span
-                key={brand}
-                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/30 font-medium"
-              >
-                Marca: <strong>{brand}</strong>
-                <button
-                  onClick={() => handleBrandToggle(brand)}
-                  className="hover:bg-primary/20 rounded p-0.5 transition-colors"
-                  aria-label={`Quitar filtro ${brand}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-
-            {selectedLines.map((line) => (
-              <span
-                key={line}
-                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/30 font-medium"
-              >
-                Línea: <strong>{line}</strong>
-                <button
-                  onClick={() => handleLineToggle(line)}
-                  className="hover:bg-primary/20 rounded p-0.5 transition-colors cursor-pointer"
-                  aria-label={`Quitar filtro línea ${line}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-
-            {selectedCategory && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-muted/80 text-foreground border border-border font-medium">
-                Categoría: <strong>{selectedCategory.name}</strong>
-                <button
-                  onClick={() => {
-                    setSelectedCategory(null);
-                    setSelectedSubcategory(null);
-                  }}
-                  className="hover:bg-muted rounded p-0.5 transition-colors"
-                  aria-label="Quitar filtro de categoría"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
+            ) : (
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                {renderSidebar()}
+              </div>
             )}
-
-            {selectedSubcategory && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-muted/80 text-foreground border border-border font-medium">
-                Subcategoría: <strong>{selectedSubcategory.name}</strong>
-                <button
-                  onClick={() => setSelectedSubcategory(null)}
-                  className="hover:bg-muted rounded p-0.5 transition-colors"
-                  aria-label="Quitar filtro de subcategoría"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-
-            {selectedViscosities.map((viscosity) => (
-              <span
-                key={viscosity}
-                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/30 font-medium"
-              >
-                Viscosidad: <strong>{viscosity}</strong>
-                <button
-                  onClick={() => handleViscosityToggle(viscosity)}
-                  className="hover:bg-primary/20 rounded p-0.5 transition-colors"
-                  aria-label={`Quitar viscosidad ${viscosity}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-
-            {searchQuery.trim() && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-muted/80 text-foreground border border-border font-medium">
-                Búsqueda: <strong>&ldquo;{searchQuery}&rdquo;</strong>
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="hover:bg-muted rounded p-0.5 transition-colors"
-                  aria-label="Quitar búsqueda"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-
-            <button
-              onClick={clearFilters}
-              className="text-xs text-primary hover:underline font-semibold ml-auto"
-            >
-              Limpiar todo
-            </button>
-          </div>
-        )}
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-          {/* SIDEBAR DESKTOP */}
-          <aside
-            data-lenis-prevent
-            className="
-              hidden lg:block
-              w-72 min-w-72 max-w-72 flex-shrink-0
-              bg-card
-              border border-border
-              shadow-sm
-              rounded-2xl
-              p-4
-              sticky top-[calc(var(--site-header-height,6rem)+var(--catalog-toolbar-height,0px)+0.75rem)]
-              max-h-[calc(100dvh-var(--site-header-height,6rem)-var(--catalog-toolbar-height,0px)-1.5rem)]
-              overflow-y-auto
-              overscroll-contain
-              custom-scrollbar
-            "
-          >
-            {renderSidebar()}
           </aside>
 
-          {/* MAIN CONTENT */}
+          {/* MAIN CONTENT: búsqueda/marcas solo aquí para no tapar filtros */}
           <div className="flex-1 min-w-0 w-full">
+            <div
+              ref={toolbarRef}
+              className="sticky z-30 mb-4 space-y-2.5 border-b border-border/60 bg-background/95 pb-2.5 backdrop-blur-md"
+              style={{ top: "var(--site-header-height, 6rem)" }}
+            >
+              <div className="mx-auto max-w-3xl">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por marca, nombre, viscosidad o código..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="rounded-2xl border-border bg-card py-3.5 pl-12 pr-12 text-sm text-foreground shadow-xs placeholder:text-muted-foreground focus-visible:ring-primary sm:text-base md:py-4"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label="Limpiar búsqueda"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-2.5">
+                <div className="custom-scrollbar flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 shadow-xs sm:justify-center">
+                  <button
+                    onClick={() => handleBrandQuickSelect("all")}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200 sm:text-sm ${
+                      selectedBrands.length === 0
+                        ? "bg-primary text-white shadow-sm shadow-primary/20"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    }`}
+                  >
+                    <span>Todas las marcas</span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                        selectedBrands.length === 0
+                          ? "bg-white/20 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {allMergedProducts.length}
+                    </span>
+                  </button>
+
+                  <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+
+                  {availableBrands
+                    .filter((brand) =>
+                      ["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
+                    )
+                    .map((brand) => {
+                      const count = allMergedProducts.filter((p) =>
+                        brandEquals(p.brand, brand)
+                      ).length;
+                      const isSelected =
+                        selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
+                      const isApolo = brand.toLowerCase() === "apolo";
+                      const isOverts = brand.toLowerCase() === "overts";
+                      const activeClasses = isApolo
+                        ? "bg-red-600 text-white shadow-sm shadow-red-600/30"
+                        : isOverts
+                          ? "bg-amber-600 text-white shadow-sm shadow-amber-600/30"
+                          : "bg-purple-600 text-white shadow-sm shadow-purple-600/30";
+                      const idleClasses = isApolo
+                        ? "border border-red-500/30 bg-red-600/10 text-red-500 hover:bg-red-600/20"
+                        : isOverts
+                          ? "border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
+                          : "border border-purple-500/30 bg-purple-600/10 text-purple-500 hover:bg-purple-600/20 dark:text-purple-400";
+
+                      return (
+                        <button
+                          key={brand}
+                          onClick={() => handleBrandQuickSelect(brand)}
+                          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 sm:text-sm ${
+                            isSelected ? activeClasses : idleClasses
+                          }`}
+                        >
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              isApolo
+                                ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]"
+                                : isOverts
+                                  ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                                  : "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+                            }`}
+                          />
+                          <span>{brand}</span>
+                          <span
+                            className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                              isSelected ? "bg-white/25 text-white" : "bg-black/10 dark:bg-white/10"
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                {(() => {
+                  const otherBrands = availableBrands.filter(
+                    (brand) => !["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
+                  );
+                  if (otherBrands.length === 0) return null;
+                  return (
+                    <div className="custom-scrollbar flex max-w-4xl items-center gap-1.5 overflow-x-auto pb-1">
+                      {otherBrands.map((brand) => {
+                        const count = allMergedProducts.filter((p) =>
+                          brandEquals(p.brand, brand)
+                        ).length;
+                        const isSelected =
+                          selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
+                        return (
+                          <button
+                            key={brand}
+                            onClick={() => handleBrandQuickSelect(brand)}
+                            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
+                              isSelected
+                                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30"
+                                : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-blue-200" : "bg-blue-400"}`}
+                            />
+                            <span>{brand}</span>
+                            <span
+                              className={`rounded-full px-1.5 text-[10px] ${
+                                isSelected
+                                  ? "bg-white/25 text-white"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-xs">
+                  <span className="mr-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
+                    Filtros activos:
+                  </span>
+                  {selectedBrands.map((brand) => (
+                    <span
+                      key={brand}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                    >
+                      Marca: <strong>{brand}</strong>
+                      <button
+                        onClick={() => handleBrandToggle(brand)}
+                        className="rounded p-0.5 transition-colors hover:bg-primary/20"
+                        aria-label={`Quitar filtro ${brand}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {selectedLines.map((line) => (
+                    <span
+                      key={line}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                    >
+                      Línea: <strong>{line}</strong>
+                      <button
+                        onClick={() => handleLineToggle(line)}
+                        className="cursor-pointer rounded p-0.5 transition-colors hover:bg-primary/20"
+                        aria-label={`Quitar filtro línea ${line}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {selectedCategory && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/80 px-2.5 py-1 text-xs font-medium text-foreground">
+                      Categoría: <strong>{selectedCategory.name}</strong>
+                      <button
+                        onClick={() => {
+                          setSelectedCategory(null);
+                          setSelectedSubcategory(null);
+                        }}
+                        className="rounded p-0.5 transition-colors hover:bg-muted"
+                        aria-label="Quitar filtro de categoría"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {selectedSubcategory && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/80 px-2.5 py-1 text-xs font-medium text-foreground">
+                      Subcategoría: <strong>{selectedSubcategory.name}</strong>
+                      <button
+                        onClick={() => setSelectedSubcategory(null)}
+                        className="rounded p-0.5 transition-colors hover:bg-muted"
+                        aria-label="Quitar filtro de subcategoría"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {selectedViscosities.map((viscosity) => (
+                    <span
+                      key={viscosity}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                    >
+                      Viscosidad: <strong>{viscosity}</strong>
+                      <button
+                        onClick={() => handleViscosityToggle(viscosity)}
+                        className="rounded p-0.5 transition-colors hover:bg-primary/20"
+                        aria-label={`Quitar viscosidad ${viscosity}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {searchQuery.trim() && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/80 px-2.5 py-1 text-xs font-medium text-foreground">
+                      Búsqueda: <strong>&ldquo;{searchQuery}&rdquo;</strong>
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="rounded p-0.5 transition-colors hover:bg-muted"
+                        aria-label="Quitar búsqueda"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    onClick={clearFilters}
+                    className="ml-auto text-xs font-semibold text-primary hover:underline"
+                  >
+                    Limpiar todo
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* ENCABEZADO Y CONTROLES */}
-            <div className="flex flex-col gap-4 mb-6">
+            <div className="mb-6 flex flex-col gap-4">
               <div>
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
                   {searchQuery
