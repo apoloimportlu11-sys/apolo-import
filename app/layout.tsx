@@ -194,7 +194,7 @@ export default function RootLayout({
               <FloatingQuoteButton />
               <QuoteDrawer />
               <CookieConsent />
-              <Toaster position="top-right" richColors />
+              <Toaster />
             </QuoteProvider>
           </BusinessSettingsProvider>
           <ConsentAnalytics />

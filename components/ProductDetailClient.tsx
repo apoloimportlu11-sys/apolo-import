@@ -18,7 +18,7 @@ interface ProductDetailClientProps {
   productId: string;
 }
 
-const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
+const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v4";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 
 const KNOWN_DELETED = new Set([

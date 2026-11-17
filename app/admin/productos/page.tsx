@@ -19,11 +19,23 @@ import {
   BookmarkPlus,
   BookmarkCheck,
   History,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
 import { CatalogPager } from "@/components/CatalogPager";
 import { SortableProductRow } from "@/components/SortableProductRow";
+import { showAppToast } from "@/components/app-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { parseProductUpsert } from "@/lib/validations/product";
 import { adjustStock, isLowStock, setStockMin } from "@/lib/inventory";
 import { products as BASE_PRODUCTS, categories as CATALOG_CATEGORIES } from "@/lib/products-data";
@@ -59,7 +71,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 
-const STORAGE_KEY = "apolo_admin_products_cache_v3";
+const STORAGE_KEY = "apolo_admin_products_cache_v4";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 const RESTORE_POINT_KEY = "apolo_admin_products_restore_point";
 const RESTORE_POINT_SLUG = "catalog-restore-point";
@@ -148,6 +160,8 @@ export default function ProductosPage() {
 
   // Create / Edit Product Modal State
   const [showModal, setShowModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Partial<ProductItem>>({
     name: "",
@@ -1087,22 +1101,27 @@ export default function ProductosPage() {
     setRecentlyUpdatedId(savedItem.id);
     if (realtimeBus) realtimeBus.emit("products_updated", savedItem);
 
-    toast.success("¡Producto guardado exitosamente!", {
-      id: toastId,
+    toast.dismiss(toastId);
+    showAppToast({
+      tone: "success",
+      title: isEditing ? "Producto actualizado" : "Producto creado",
       description: isEditing
-        ? `Se actualizaron los datos de "${payload.name}".`
-        : `Se agregó "${payload.name}" (${payload.presentation || "Nueva presentación"}) al catálogo.`,
-      duration: 3500,
+        ? `"${payload.name}" quedó guardado en el catálogo.`
+        : `"${payload.name}" (${payload.presentation || "sin presentación"}) ya está disponible.`,
     });
 
     closeProductModal();
     setSaving(false);
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`¿Estás seguro de eliminar el producto "${name}"? Esta acción se sincronizará inmediatamente.`)) {
-      return;
-    }
+  function handleDelete(id: string, name: string) {
+    setPendingDelete({ id, name });
+  }
+
+  async function confirmDeleteProduct() {
+    if (!pendingDelete) return;
+    const { id, name } = pendingDelete;
+    setDeleting(true);
 
     const toastId = toast.loading("Eliminando producto...");
     const targetProduct = products.find((p) => p.id === id);
@@ -1119,15 +1138,19 @@ export default function ProductosPage() {
         console.warn("Could not save to DELETED_KEY:", e);
       }
 
-      // 2. Mark as inactive and unfeature so public catalog and featured carousel exclude it across all devices
-      await supabase.from("products").upsert({
-        id: id,
-        slug: targetSlug || id,
-        name: name,
-        is_active: false,
-        is_featured: false,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "id" });
+      // 2. Borrado duro (no pausar: eso dejaba fantasmas en el admin)
+      const { error, count } = await supabase
+        .from("products")
+        .delete({ count: "exact" })
+        .eq("id", id);
+      if (error) throw error;
+      if (!count) {
+        // Por si el id local no coincide, intenta por slug
+        if (targetSlug) {
+          const { error: slugErr } = await supabase.from("products").delete().eq("slug", targetSlug);
+          if (slugErr) throw slugErr;
+        }
+      }
 
       // 3. Remove from state and cache
       persistProductsState((prev) =>
@@ -1135,15 +1158,23 @@ export default function ProductosPage() {
       );
       if (realtimeBus) realtimeBus.emit("products_updated", { id, slug: targetSlug, deleted: true });
 
-      toast.success("Producto eliminado", {
-        id: toastId,
-        description: `"${name}" ha sido removido del catálogo de forma permanente.`,
+      toast.dismiss(toastId);
+      showAppToast({
+        tone: "success",
+        title: "Producto eliminado",
+        description: `"${name}" ya no aparece en el catálogo ni en la tienda.`,
       });
-    } catch {
-      persistProductsState((prev) =>
-        prev.filter((p) => p.id !== id && (!targetSlug || p.slug !== targetSlug))
-      );
-      toast.success("Producto eliminado del panel", { id: toastId });
+    } catch (err) {
+      console.error("delete product failed", err);
+      toast.dismiss(toastId);
+      showAppToast({
+        tone: "error",
+        title: "No se pudo eliminar",
+        description: `"${name}" sigue en la base. Revisa permisos de admin e inténtalo de nuevo.`,
+      });
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
     }
   }
 
@@ -2729,6 +2760,56 @@ export default function ProductosPage() {
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent className="overflow-hidden border-white/10 bg-[#141414] p-0 text-[#F4F4F5] sm:max-w-md">
+          <div className="border-b border-white/10 bg-[linear-gradient(135deg,#1a1010,#141414_55%)] px-6 py-5">
+            <AlertDialogHeader>
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-500/15 ring-1 ring-red-500/35">
+                <Trash2 className="h-5 w-5 text-red-400" />
+              </div>
+              <AlertDialogTitle className="text-lg text-white">Eliminar producto</AlertDialogTitle>
+              <AlertDialogDescription className="text-[13px] leading-relaxed text-zinc-400">
+                Vas a quitar{" "}
+                <span className="font-medium text-zinc-200">
+                  {pendingDelete?.name || "este producto"}
+                </span>{" "}
+                del catálogo. La tienda se actualizará de inmediato.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
+            <AlertDialogCancel
+              disabled={deleting}
+              className="rounded-xl border-white/10 bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDeleteProduct();
+              }}
+              className="rounded-xl bg-red-600 text-white hover:bg-red-500"
+            >
+              {deleting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Eliminando…
+                </span>
+              ) : (
+                "Sí, eliminar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

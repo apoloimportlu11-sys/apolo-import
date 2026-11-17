@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
-import { toast } from "sonner";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
+import { showAppToast } from "@/components/app-toast";
 
 export interface QuoteItem {
   id: string;
@@ -107,8 +107,13 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
             ...updated[existingIndex],
             quantity: updated[existingIndex].quantity + validQty,
           };
-          toast.success(`Se aumentó la cantidad de "${product.name}" a ${updated[existingIndex].quantity}`, {
-            description: product.presentation ? `Presentación: ${product.presentation}` : undefined,
+          showAppToast({
+            tone: "success",
+            title: "Cantidad actualizada",
+            description: `"${product.name}" ahora va con ${updated[existingIndex].quantity} unidad(es)${
+              product.presentation ? ` · ${product.presentation}` : ""
+            }.`,
+            duration: 2800,
           });
           return updated;
         }
@@ -125,12 +130,13 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
           quantity: validQty,
         };
 
-        toast.success(`"${product.name}" agregado a tu cotización`, {
-          description: product.presentation ? `Presentación: ${product.presentation}` : undefined,
-          action: {
-            label: "Ver Lista",
-            onClick: () => setIsDrawerOpen(true),
-          },
+        showAppToast({
+          tone: "success",
+          title: "Agregado a tu cotización",
+          description: `"${product.name}"${
+            product.presentation ? ` · ${product.presentation}` : ""
+          }. Abre la lista cuando quieras enviarla.`,
+          duration: 3200,
         });
 
         return [newItem, ...prev];
@@ -152,7 +158,12 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
             )
         )
       );
-      toast.info("Producto removido de la cotización");
+      showAppToast({
+        tone: "info",
+        title: "Producto quitado",
+        description: "Se removió de tu lista de cotización.",
+        duration: 2200,
+      });
     },
     [persistItems]
   );
@@ -184,7 +195,12 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
   // Clear quote
   const clearQuote = useCallback(() => {
     persistItems(() => []);
-    toast.info("Lista de cotización vaciada");
+    showAppToast({
+      tone: "info",
+      title: "Lista vaciada",
+      description: "Puedes volver a armar tu cotización cuando quieras.",
+      duration: 2200,
+    });
   }, [persistItems]);
 
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);

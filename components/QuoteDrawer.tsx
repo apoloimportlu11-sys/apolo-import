@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,8 +17,10 @@ import {
   User,
   MapPin,
   Phone,
+  CheckCircle2,
 } from "lucide-react";
 import { useQuote } from "@/lib/quote-context";
+import { showAppToast } from "@/components/app-toast";
 
 export default function QuoteDrawer() {
   const {
@@ -41,6 +42,7 @@ export default function QuoteDrawer() {
   const [phoneError, setPhoneError] = useState("");
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sentCode, setSentCode] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -55,6 +57,10 @@ export default function QuoteDrawer() {
     }
   }, []);
 
+  useEffect(() => {
+    if (items.length === 0) setSentCode(null);
+  }, [items.length]);
+
   if (!isDrawerOpen) return null;
 
   const handleWhatsAppSend = async () => {
@@ -64,7 +70,11 @@ export default function QuoteDrawer() {
       return;
     }
     if (!privacyAccepted) {
-      toast.error("Debes aceptar la política de privacidad para enviar la cotización.");
+      showAppToast({
+        tone: "error",
+        title: "Falta aceptar la privacidad",
+        description: "Marca la casilla de política de privacidad para continuar.",
+      });
       return;
     }
     setPhoneError("");
@@ -72,7 +82,11 @@ export default function QuoteDrawer() {
     try {
       const saved = await submitQuote(clientName, city, phone.trim());
       if (!saved?.code) {
-        toast.error("No se pudo registrar la cotización. Revisa el celular e inténtalo de nuevo.");
+        showAppToast({
+          tone: "error",
+          title: "No se pudo registrar la cotización",
+          description: "Revisa el celular e inténtalo de nuevo en unos segundos.",
+        });
         return;
       }
       try {
@@ -80,6 +94,13 @@ export default function QuoteDrawer() {
       } catch {
         /* el navegador puede bloquear el almacenamiento */
       }
+      setSentCode(saved.code);
+      showAppToast({
+        tone: "success",
+        title: "Cotización lista",
+        description: `Código ${saved.code}. Te abrimos WhatsApp con el detalle para enviarlo.`,
+        duration: 5200,
+      });
       const url = generateWhatsAppUrl(clientName, city, saved.code, phone.trim());
       window.open(url, "_blank", "noopener,noreferrer");
     } finally {
@@ -363,6 +384,42 @@ export default function QuoteDrawer() {
                 </span>
               </label>
 
+              {sentCode ? (
+                <div className="rounded-2xl border border-[#C7940A]/35 bg-[linear-gradient(135deg,#17140c,#121212)] p-4 text-left shadow-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C7940A]/18 text-[#E8C45A] ring-1 ring-[#C7940A]/35">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground">Cotización enviada</p>
+                      <p className="mt-1 text-[12px] leading-snug text-muted-foreground">
+                        Código{" "}
+                        <span className="font-mono font-semibold text-[#C7940A]">{sentCode}</span>. Ya
+                        puedes seguir el pedido o volver a abrir WhatsApp.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Link
+                          href={`/cotizacion/${sentCode}`}
+                          className="inline-flex items-center rounded-lg border border-border bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted"
+                        >
+                          Ver seguimiento
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = generateWhatsAppUrl(clientName, city, sentCode, phone.trim());
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }}
+                          className="inline-flex items-center rounded-lg bg-[#25D366] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#20ba59]"
+                        >
+                          Abrir WhatsApp
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {/* WhatsApp Button */}
               <button
                 onClick={handleWhatsAppSend}
@@ -372,7 +429,13 @@ export default function QuoteDrawer() {
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.993.589 1.954.91 2.796.91h.005c3.181 0 5.767-2.586 5.768-5.766 0-3.18-2.586-5.767-5.773-5.767zm7.643 5.767c0 4.218-3.431 7.649-7.648 7.649-.001 0-.003 0-.005 0-1.328 0-2.613-.357-3.738-1.026l-4.148 1.088 1.107-4.041c-.736-1.164-1.127-2.511-1.127-3.896 0-4.218 3.43-7.648 7.648-7.648 4.218 0 7.911 3.654 7.911 7.874z" />
                 </svg>
-                <span>{sending ? "Guardando..." : "Cotizar por WhatsApp"}</span>
+                <span>
+                  {sending
+                    ? "Guardando..."
+                    : sentCode
+                      ? "Enviar otra vez por WhatsApp"
+                      : "Cotizar por WhatsApp"}
+                </span>
               </button>
 
               <p className="text-[11px] text-center text-muted-foreground leading-snug">

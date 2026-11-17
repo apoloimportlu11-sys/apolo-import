@@ -21,7 +21,7 @@ import { useQuote } from "@/lib/quote-context";
 import { useHomeContent } from "@/lib/home-content";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
 
-const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v3";
+const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v4";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
 
 const KNOWN_DELETED = new Set([

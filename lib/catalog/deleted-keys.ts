@@ -29,5 +29,5 @@ export const KNOWN_DELETED_PRODUCT_KEYS = [
   "brake-fluid-dot-5-1",
 ] as const;
 
-export const ADMIN_PRODUCTS_CACHE_KEY = "apolo_admin_products_cache_v3";
+export const ADMIN_PRODUCTS_CACHE_KEY = "apolo_admin_products_cache_v4";
 export const ADMIN_DELETED_PRODUCTS_KEY = "apolo_admin_deleted_products_ids";

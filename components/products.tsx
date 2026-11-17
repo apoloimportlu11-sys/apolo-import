@@ -51,6 +51,7 @@ import {
   KNOWN_DELETED_PRODUCT_KEYS as KNOWN_DELETED,
 } from "@/lib/catalog/deleted-keys";
 import { usePublicCatalog } from "@/hooks/use-public-catalog";
+import { usePublicBrands } from "@/hooks/use-public-brands";
 
 export function Products() {
   const searchParams = useSearchParams();
@@ -61,6 +62,7 @@ export function Products() {
     catalogStatus,
     adminCacheVersion,
   } = usePublicCatalog();
+  const { brands: catalogBrands } = usePublicBrands();
 
   const [mounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -388,23 +390,16 @@ export function Products() {
     return merged;
   }, [dbProducts, mounted, catalogStatus, dbInactiveKeys, adminCacheVersion]);
 
-  // Lista dinámica de marcas disponibles (Apolo primero, luego las demás alfabéticamente)
+  // Marcas del admin (Supabase) + las que aparezcan en productos activos
   const availableBrands = useMemo(() => {
     const brandSet = new Set<string>();
-
-    // Marcas predeterminadas garantizadas del catálogo (Líneas oficiales Apolo, Overts y Valtrom)
-    brandSet.add("Apolo");
-    brandSet.add("Overts");
-    brandSet.add("Valtrom");
-
-    // Marcas presentes en el catálogo (Supabase)
+    catalogBrands.forEach((b) => {
+      if (b.name?.trim()) brandSet.add(b.name.trim());
+    });
     allMergedProducts.forEach((p) => {
-      if (p.brand && p.brand.trim()) {
-        brandSet.add(p.brand.trim());
-      }
+      if (p.brand && p.brand.trim()) brandSet.add(p.brand.trim());
     });
 
-    // Orden de prioridad: Marcas oficiales primero (Apolo, Overts, Valtrom) y luego alfabéticamente
     const officialPriority = ["apolo", "overts", "valtrom"];
     return Array.from(brandSet).sort((a, b) => {
       const strA = String(a || "").toLowerCase();
@@ -414,9 +409,9 @@ export function Products() {
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       if (idxA !== -1) return -1;
       if (idxB !== -1) return 1;
-      return String(a || "").localeCompare(String(b || ""));
+      return String(a || "").localeCompare(String(b || ""), "es");
     });
-  }, [allMergedProducts]);
+  }, [allMergedProducts, catalogBrands]);
 
   const displayedBrands = useMemo(() => {
     if (!brandFilterSearch.trim()) return availableBrands;

@@ -36,6 +36,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={(onAdmin ? adminTheme : theme) as ToasterProps['theme']}
       className="toaster group"
+      position="top-right"
+      expand
+      visibleToasts={4}
+      gap={12}
+      offset={18}
       style={
         {
           '--normal-bg': onAdmin ? 'var(--admin-surface)' : 'var(--popover)',
@@ -43,6 +48,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--normal-border': onAdmin ? 'var(--admin-line)' : 'var(--border)',
         } as React.CSSProperties
       }
+      toastOptions={{
+        classNames: {
+          toast: 'border shadow-xl',
+          title: 'font-semibold',
+          description: 'opacity-90',
+        },
+      }}
       {...props}
     />
   )
