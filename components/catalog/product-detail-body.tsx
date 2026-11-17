@@ -14,6 +14,7 @@ import {
   normalizeProductKey,
 } from "@/lib/product-related";
 import { cn } from "@/lib/utils";
+import { getPresentationVisual } from "@/lib/catalog/display";
 
 type ProductDetailBodyProps = {
   product: Product;
@@ -169,6 +170,7 @@ export function ProductDetailBody({
                   <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 custom-scrollbar">
                     {related.map((item) => {
                       const imageOk = hasValidImage(item.image);
+                      const pack = getPresentationVisual(item.presentation);
                       const isSibling =
                         normalizeProductKey(item.name) ===
                         normalizeProductKey(product.name);
@@ -184,16 +186,21 @@ export function ProductDetailBody({
                               : "border-border"
                           )}
                         >
-                          <div className="relative mb-1 flex aspect-square items-center justify-center overflow-hidden rounded-md bg-white">
+                          <div className="relative mb-1 flex aspect-square items-end justify-center overflow-hidden rounded-md bg-white p-1">
                             {imageOk ? (
-                              <Image
-                                src={item.image}
-                                alt={item.name}
-                                fill
-                                sizes="72px"
-                                className="object-contain p-1"
-                                unoptimized={item.image.startsWith("data:")}
-                              />
+                              <div
+                                className="relative w-full origin-bottom"
+                                style={{ height: `${Math.round(pack.scale * 100)}%` }}
+                              >
+                                <Image
+                                  src={item.image}
+                                  alt={item.name}
+                                  fill
+                                  sizes="72px"
+                                  className="object-contain object-bottom"
+                                  unoptimized={item.image.startsWith("data:")}
+                                />
+                              </div>
                             ) : (
                               <Package className="h-5 w-5 text-muted-foreground/50" />
                             )}
@@ -433,6 +440,7 @@ export function ProductDetailBody({
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 custom-scrollbar">
             {related.map((item) => {
               const imageOk = hasValidImage(item.image);
+              const pack = getPresentationVisual(item.presentation);
               const isSibling =
                 normalizeProductKey(item.name) === normalizeProductKey(product.name);
               return (
@@ -445,16 +453,21 @@ export function ProductDetailBody({
                     isSibling ? "border-primary/40" : "border-border"
                   )}
                 >
-                  <div className="relative mb-2 flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-white">
+                  <div className="relative mb-2 flex aspect-square items-end justify-center overflow-hidden rounded-lg bg-white p-2">
                     {imageOk ? (
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        sizes="160px"
-                        className="object-contain p-2"
-                        unoptimized={item.image.startsWith("data:")}
-                      />
+                      <div
+                        className="relative w-full origin-bottom"
+                        style={{ height: `${Math.round(pack.scale * 100)}%` }}
+                      >
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="160px"
+                          className="object-contain object-bottom"
+                          unoptimized={item.image.startsWith("data:")}
+                        />
+                      </div>
                     ) : (
                       <Package className="h-8 w-8 text-muted-foreground/50" />
                     )}

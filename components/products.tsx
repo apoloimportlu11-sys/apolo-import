@@ -43,6 +43,7 @@ import { scrollCatalogIntoView } from "@/lib/lenis-lock";
 import {
   brandEquals,
   formatViscosityBadge,
+  getPresentationVisual,
   CATALOG_PAGE_SIZE as PAGE_SIZE,
 } from "@/lib/catalog/display";
 import {
@@ -1276,6 +1277,7 @@ export function Products() {
     const subcategory = product.subcategoryId ? getSubcategoryById(product.subcategoryId) : null;
     const subcategoryText = product.subcategory || subcategory?.name || null;
     const topBadgeText = formatViscosityBadge(product.viscosity);
+    const packVisual = getPresentationVisual(product.presentation);
     const isApolo = (product.brand || "").toLowerCase() === "apolo";
     const isOverts = (product.brand || "").toLowerCase() === "overts";
     const isValtrom = (product.brand || "").toLowerCase() === "valtrom";
@@ -1321,18 +1323,24 @@ export function Products() {
               <button
                 type="button"
                 onClick={() => setQuickViewProduct(product)}
-                className="w-full sm:w-44 h-52 sm:h-44 flex-shrink-0 bg-white rounded-xl overflow-hidden border border-border/40 p-3 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-200"
+                className="relative w-full sm:w-44 h-52 sm:h-44 flex-shrink-0 bg-[linear-gradient(180deg,#fff_0%,#f4f4f5_100%)] rounded-xl overflow-hidden border border-border/40 p-3 flex items-end justify-center group-hover:scale-[1.02] transition-transform duration-200"
               >
                 {hasValidImage ? (
-                  <div className="relative w-full h-full">
+                  <div
+                    className="relative w-full origin-bottom transition-transform duration-300"
+                    style={{
+                      height: `${Math.round(packVisual.scale * 100)}%`,
+                      maxHeight: "100%",
+                    }}
+                  >
                     <Image
                       src={product.image}
-                      alt={product.name || "Producto"}
+                      alt={`${product.name || "Producto"} · ${packVisual.label}`}
                       fill
                       unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                       sizes="(max-width: 640px) 100vw, 176px"
-                      className="object-contain object-center"
-                      style={{ objectFit: "contain", objectPosition: "center" }}
+                      className="object-contain object-bottom"
+                      style={{ objectFit: "contain", objectPosition: "bottom center" }}
                     />
                   </div>
                 ) : (
@@ -1341,6 +1349,11 @@ export function Products() {
                     <span className="text-[11px] font-medium text-zinc-500">Sin imagen</span>
                   </div>
                 )}
+                {product.presentation ? (
+                  <span className="absolute left-2 top-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {packVisual.label}
+                  </span>
+                ) : null}
               </button>
 
               <div className="flex-1 min-w-0 flex flex-col justify-between">
@@ -1480,26 +1493,49 @@ export function Products() {
                 ) : null}
               </div>
 
-              {/* Imagen centrada sobre fondo blanco limpio y con aspect ratio perfecto */}
-              <div className="w-full h-56 sm:h-60 bg-white rounded-xl mb-4 overflow-hidden border border-border/40 p-3 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-200">
+              {/* Imagen escalada por presentación (1/4 gal más chico que 1 gal, etc.) */}
+              <div className="relative w-full h-56 sm:h-60 mb-4 overflow-hidden rounded-xl border border-border/40 bg-[linear-gradient(180deg,#ffffff_0%,#f4f4f5_78%,#e4e4e7_100%)] p-3 flex items-end justify-center group-hover:scale-[1.02] transition-transform duration-200">
+                <div
+                  className="pointer-events-none absolute inset-x-6 bottom-2 h-2 rounded-full bg-black/10 blur-[2px]"
+                  aria-hidden
+                />
                 {hasValidImage ? (
-                  <div className="relative w-full h-full">
+                  <div
+                    className="relative w-full origin-bottom transition-[height] duration-300"
+                    style={{
+                      height: `${Math.round(packVisual.scale * 100)}%`,
+                      maxHeight: "100%",
+                    }}
+                  >
                     <Image
                       src={product.image}
-                      alt={product.name || "Producto"}
+                      alt={`${product.name || "Producto"} · ${packVisual.label}`}
                       fill
                       unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      className="object-contain object-center"
-                      style={{ objectFit: "contain", objectPosition: "center" }}
+                      className="object-contain object-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]"
+                      style={{ objectFit: "contain", objectPosition: "bottom center" }}
                     />
                   </div>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50 rounded-lg p-4 text-center border border-dashed border-zinc-200">
+                  <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50/80 rounded-lg p-4 text-center border border-dashed border-zinc-200">
                     <Package className="w-12 h-12 text-[#FFD000] opacity-70 mb-2" />
                     <span className="text-xs font-medium text-zinc-500">Sin imagen asignada</span>
                   </div>
                 )}
+                {product.presentation ? (
+                  <span
+                    className={`absolute left-2.5 top-2.5 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ${
+                      packVisual.size === "xl" || packVisual.size === "lg"
+                        ? "bg-red-600/90"
+                        : packVisual.size === "md"
+                          ? "bg-zinc-800/85"
+                          : "bg-zinc-700/80"
+                    }`}
+                  >
+                    {packVisual.label}
+                  </span>
+                ) : null}
               </div>
 
               <div className="flex-1 flex flex-col">
