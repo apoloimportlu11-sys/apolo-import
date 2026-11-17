@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Monitor, Moon, Sun, Menu, ExternalLink, Bell } from "lucide-react";
+import { Monitor, Moon, Sun, Menu, ExternalLink, Bell, Bot } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import {
@@ -12,6 +12,7 @@ import {
   type AdminThemeChoice,
 } from "@/lib/admin-theme";
 import { useQuoteInbox } from "@/components/QuoteInboxProvider";
+import AdminAssistPanel from "@/components/AdminAssistPanel";
 
 const themeOptions: { id: AdminThemeChoice; label: string; icon: typeof Sun }[] = [
   { id: "light", label: "Claro", icon: Sun },
@@ -24,6 +25,8 @@ export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void })
   const { settings } = useBusinessSettings();
   const { count, quotes } = useQuoteInbox();
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [assistOpen, setAssistOpen] = useState(false);
+  const [assistQuoteCode, setAssistQuoteCode] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [theme, setTheme] = useState<AdminThemeChoice>("light");
 
@@ -32,6 +35,17 @@ export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void })
       if (data?.user?.email) setUserEmail(data.user.email);
     });
   }, [supabase]);
+
+  useEffect(() => {
+    const onOpenAssist = (event: Event) => {
+      const detail = (event as CustomEvent<{ quoteCode?: string | null }>).detail;
+      setInboxOpen(false);
+      setAssistQuoteCode(detail?.quoteCode || null);
+      setAssistOpen(true);
+    };
+    window.addEventListener("apolo-open-assist", onOpenAssist);
+    return () => window.removeEventListener("apolo-open-assist", onOpenAssist);
+  }, []);
 
   useEffect(() => {
     setTheme(readAdminThemeChoice());
@@ -65,6 +79,18 @@ export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void })
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          aria-label="Abrir asistente IA"
+          onClick={() => {
+            setInboxOpen(false);
+            setAssistOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-ink)] hover:border-[#C7940A]/50"
+        >
+          <Bot className="size-3.5 text-[#C7940A]" />
+          <span className="hidden sm:inline">Asistente</span>
+        </button>
         <div className="relative">
           <button
             type="button"
@@ -158,6 +184,16 @@ export default function AdminHeader({ onOpenMenu }: { onOpenMenu?: () => void })
           <p className="hidden max-w-[11rem] truncate text-xs text-[var(--admin-faint)] sm:block">{userEmail}</p>
         )}
       </div>
+
+      <AdminAssistPanel
+        open={assistOpen}
+        pendingQuoteCode={assistQuoteCode}
+        onPendingQuoteConsumed={() => setAssistQuoteCode(null)}
+        onClose={() => {
+          setAssistOpen(false);
+          setAssistQuoteCode(null);
+        }}
+      />
     </header>
   );
 }

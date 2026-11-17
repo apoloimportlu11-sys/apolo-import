@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   FileText,
+  Package,
 } from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "@/components/theme-provider";
@@ -298,16 +299,27 @@ export function Header() {
               </Link>
             </div>
 
-            <div className="flex items-center justify-end gap-1 justify-self-end sm:gap-2 lg:hidden">
+            <div className="flex items-center justify-end gap-1.5 justify-self-end sm:gap-2 lg:hidden">
+              <Link
+                href="/productos"
+                className={cn(
+                  "inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-3 text-[11px] font-bold uppercase tracking-wide text-white shadow-[0_0_0_2px_rgba(220,38,38,0.25)] ring-2 ring-primary/30 transition-[transform,background-color,box-shadow] hover:bg-red-500 active:scale-[0.98] sm:h-11 sm:px-3.5 sm:text-xs",
+                  pathname.startsWith("/productos") && "ring-4 ring-primary/40"
+                )}
+                aria-label="Ver catálogo de productos"
+              >
+                <Package className="h-4 w-4 shrink-0" />
+                <span>Catálogo</span>
+              </Link>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={openDrawer}
-                className="relative h-12 w-12 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
+                className="relative h-11 w-11 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10 sm:h-12 sm:w-12"
                 aria-label="Ver Cotización"
               >
-                <FileText className="h-6 w-6" />
+                <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
                 {mounted && totalItems > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
                     {totalItems}
@@ -319,11 +331,11 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
+                    className="h-11 w-11 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10 sm:h-12 sm:w-12"
                     aria-label="Abrir menú"
                     suppressHydrationWarning
                   >
-                    <Menu className="h-7 w-7" />
+                    <Menu className="h-6 w-6 sm:h-7 sm:w-7" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent
@@ -347,10 +359,10 @@ export function Header() {
                         <Link
                           href="/productos"
                           onClick={() => setIsOpen(false)}
-                          className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-primary py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm transition-colors hover:bg-red-500 sm:text-sm"
+                          className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-center text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-[0_8px_20px_rgba(220,38,38,0.35)] ring-2 ring-primary/40 transition-colors hover:bg-red-500"
                         >
-                          <Search className="h-4 w-4" />
-                          <span>Encuentra tu lubricante</span>
+                          <Package className="h-5 w-5" />
+                          <span>Ver catálogo</span>
                         </Link>
 
                         <button
@@ -429,17 +441,26 @@ export function Header() {
                           Nosotros
                         </Link>
 
+                        <Link
+                          href="/productos"
+                          onClick={() => setIsOpen(false)}
+                          className={cn(
+                            "rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
+                            pathname.startsWith("/productos")
+                              ? "bg-primary/10 font-bold text-primary"
+                              : "text-foreground hover:bg-muted/60"
+                          )}
+                        >
+                          Catálogo / Productos
+                        </Link>
+
                         <div>
                           <button
+                            type="button"
                             onClick={() =>
                               setMobileProductsOpen(!mobileProductsOpen)
                             }
-                            className={cn(
-                              "flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
-                              pathname.startsWith("/productos")
-                                ? "bg-primary/10 font-bold text-primary"
-                                : "text-foreground hover:bg-muted/60"
-                            )}
+                            className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted/60"
                           >
                             <span>Líneas de Productos</span>
                             <ChevronDown
@@ -452,13 +473,6 @@ export function Header() {
 
                           {mobileProductsOpen && (
                             <div className="my-1 rounded-xl border border-border/60 bg-muted/30 p-1">
-                              <Link
-                                href="/productos"
-                                onClick={() => setIsOpen(false)}
-                                className="block rounded-lg px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
-                              >
-                                Ver todos los productos →
-                              </Link>
                               {activeLineGroups.map((line) => (
                                 <Link
                                   key={line.id}

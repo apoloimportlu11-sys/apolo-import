@@ -2,7 +2,7 @@
 
 Route Handlers en `app/api/**`. Gran parte del admin **no** usa estos endpoints: habla a Supabase desde el browser client bajo RLS.
 
-Rate limit (memoria del proceso, por IP): chat ~12/min, contact ~8/min, quotes ~10/min. `set-cookie` valida la sesión con Supabase antes de setear cookies.
+Rate limit (memoria del proceso, por IP): chat público ~12/min, chat admin ~30/min por usuario, contact ~8/min, quotes ~10/min. `set-cookie` valida la sesión con Supabase antes de setear cookies.
 
 ## Endpoints HTTP (app)
 
@@ -24,8 +24,19 @@ Rate limit (memoria del proceso, por IP): chat ~12/min, contact ~8/min, quotes ~
 
 - Archivo: `app/api/chat/route.ts`
 - Body: `chatRequestSchema` (`lib/validations/chat.ts`)
-- Acción: proxy a OpenAI Chat Completions (asistente **Artemisa**); modelo `OPENAI_CHAT_MODEL` o `gpt-4o-mini`
+- Acción: proxy a OpenAI Chat Completions (asistente **Artemisa** público); modelo `OPENAI_CHAT_MODEL` o `gpt-4o-mini`
 - 503 si falta `OPENAI_API_KEY`
+- Sin catálogo DB: prompt fijo orientado a clientes
+
+### `POST /api/admin/chat`
+
+- Archivo: `app/api/admin/chat/route.ts`
+- Auth: sesión staff (`requireStaff`: admin | editor | vendor | almacen)
+- Body: `adminChatRequestSchema` (`messages` + `pageContext?`)
+- Acción: recupera productos activos + `business_settings` desde Supabase, arma prompt por rol y llama OpenAI
+- Modelo recomendado: **`gpt-4o-mini`** (`OPENAI_CHAT_MODEL`); upgrade opcional a `gpt-4o` si el equipo necesita respuestas más técnicas
+- Solo lectura/orientación; no escribe inventario ni cotizaciones
+- 401/403 sin staff; 503 sin `OPENAI_API_KEY`
 
 ### `POST /api/auth/set-cookie`
 
@@ -41,7 +52,7 @@ Rate limit (memoria del proceso, por IP): chat ~12/min, contact ~8/min, quotes ~
 ## Protección de rutas
 
 - `proxy.ts`: si path `/admin` y no hay cookie `sb-*`, redirect a `/admin-login`
-- Autorización real de mutaciones: RLS + comprobaciones de rol en cliente/admin; `requireAdmin()` para gates server
+- Autorización real de mutaciones: RLS + comprobaciones de rol en cliente/admin; `requireAdmin()` / `requireStaff()` para gates server
 
 ## Integraciones externas
 
@@ -49,7 +60,7 @@ Rate limit (memoria del proceso, por IP): chat ~12/min, contact ~8/min, quotes ~
 |-------------|-------|------|
 | Supabase Auth / DB / Storage / Realtime | `lib/supabase-*`, componentes admin, storefront | URL + anon/publishable; secret solo server |
 | Resend | `/api/contact`, `scripts/setup_resend_templates.js` | `RESEND_API_KEY` |
-| OpenAI | `/api/chat` | `OPENAI_API_KEY` |
+| OpenAI | `/api/chat`, `/api/admin/chat` | `OPENAI_API_KEY` |
 | Google OAuth | `AdminLoginForm` → Supabase provider | Configurado en proyecto Supabase (no en repo) |
 | Vercel Analytics | `app/layout.tsx` | Paquete analytics |
 
@@ -59,7 +70,7 @@ Rate limit (memoria del proceso, por IP): chat ~12/min, contact ~8/min, quotes ~
 |--------|---------|
 | Contacto | `lib/validations/contact.ts` (+ test `contact.test.ts`) |
 | Cotización | `lib/validations/quote.ts` |
-| Chat | `lib/validations/chat.ts` |
+| Chat (público + admin) | `lib/validations/chat.ts` |
 | Producto | `lib/validations/product.ts` |
 
 ## Acceso a datos sin REST propio

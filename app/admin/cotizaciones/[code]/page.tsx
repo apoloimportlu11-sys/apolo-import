@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Copy, Loader2, MapPin, Phone, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, Copy, Loader2, MapPin, Phone, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { fetchQuoteByCode, updateQuoteStatus, type QuoteRow, type QuoteStatus } from "@/lib/quotes";
+import { openAdminAssist } from "@/components/QuoteInboxProvider";
 
 const STATUS_LABEL: Record<QuoteStatus, string> = {
   nueva: "Nueva",
@@ -186,6 +187,14 @@ export default function AdminQuoteDetailPage() {
           >
             <Copy className="h-3.5 w-3.5" />
             Copiar enlace del cliente
+          </button>
+          <button
+            type="button"
+            onClick={() => openAdminAssist(quote.code)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#C7940A]/45 bg-[#C7940A]/10 px-3 py-2 text-sm font-medium text-[var(--admin-ink)] hover:bg-[#C7940A]/18"
+          >
+            <Bot className="h-3.5 w-3.5 text-[#C7940A]" />
+            Analizar con IA
           </button>
         </div>
       </div>

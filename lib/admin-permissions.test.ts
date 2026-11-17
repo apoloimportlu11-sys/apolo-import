@@ -47,4 +47,12 @@ describe("roles staff en UI", () => {
     expect(canAccessAdminPath("admin", "/admin/usuarios")).toBe(true);
     expect(canAccessAdminPath("admin", "/admin/configuracion")).toBe(true);
   });
+
+  it("asistente IA disponible para todo el staff", () => {
+    expect(canAccessAdminPath("admin", "/admin/asistente")).toBe(true);
+    expect(canAccessAdminPath("editor", "/admin/asistente")).toBe(true);
+    expect(canAccessAdminPath("vendor", "/admin/asistente")).toBe(true);
+    expect(canAccessAdminPath("almacen", "/admin/asistente")).toBe(true);
+    expect(navAllowedForRole("vendor", "/admin/asistente")).toBe(true);
+  });
 });

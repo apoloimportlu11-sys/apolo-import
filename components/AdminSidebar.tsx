@@ -22,6 +22,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  Bot,
 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { ADMIN_SIDEBAR_KEY } from "@/lib/admin-theme";
@@ -43,6 +44,7 @@ const groups: { label: string; items: NavItem[] }[] = [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
       { href: "/admin/cotizaciones", label: "Cotizaciones", icon: ClipboardList },
+      { href: "/admin/asistente", label: "Asistente IA", icon: Bot },
     ],
   },
   {

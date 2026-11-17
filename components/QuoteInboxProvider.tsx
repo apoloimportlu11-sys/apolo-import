@@ -15,6 +15,16 @@ export type InboxQuote = {
   status: string;
 };
 
+/** Abre el drawer del asistente (escucha AdminHeader) con cotización opcional. */
+export function openAdminAssist(quoteCode?: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("apolo-open-assist", {
+      detail: { quoteCode: quoteCode || null },
+    })
+  );
+}
+
 type InboxValue = {
   count: number;
   quotes: InboxQuote[];
