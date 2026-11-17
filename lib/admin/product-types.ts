@@ -19,6 +19,7 @@ export interface ProductItem {
   image_url?: string | null;
   image_is_placeholder?: boolean | null;
   stock_min?: number | null;
+  price?: number | null;
   created_at: string;
   updated_at?: string;
   sort_order?: number;

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
+import { ProductForm } from "@/components/admin-product-form";
 import { CatalogPager } from "@/components/CatalogPager";
 import { SortableProductRow } from "@/components/SortableProductRow";
 import { showAppToast } from "@/components/app-toast";
@@ -45,14 +46,8 @@ import type { ProductItem } from "@/lib/admin/product-types";
 import {
   CATEGORY_OPTIONS,
   CATEGORY_DEFAULT_LINE_GROUP,
-  PRESENTATION_PRESETS,
-  VISCOSITY_PRESETS,
   KNOWN_BRANDS,
   PAGE_SIZE_OPTIONS,
-  detectViscosity,
-  detectPresentation,
-  suggestLineFromText,
-  suggestCategory,
   explainProductSaveError,
   packCatalogPages,
   type CatalogBlock,
@@ -151,12 +146,9 @@ export default function ProductosPage() {
     });
     return list;
   });
-  const [isCustomSubcategoryInput, setIsCustomSubcategoryInput] = useState(false);
-  const [brandIsCustom, setBrandIsCustom] = useState(false);
-  const [categoryTouched, setCategoryTouched] = useState(false);
   const [isNewPresentation, setIsNewPresentation] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  const detectedRef = useRef({ viscosity: "", presentation: "", line: "" });
+  const [formKey, setFormKey] = useState(0);
 
   // Create / Edit Product Modal State
   const [showModal, setShowModal] = useState(false);
@@ -743,45 +735,11 @@ export default function ProductosPage() {
     setImageUploading(false);
   }
 
-  function updateProductName(name: string) {
-    setCurrentProduct((prev) => {
-      const next: Partial<ProductItem> = { ...prev, name };
-      const viscosity = detectViscosity(name);
-      if (!prev.viscosity || prev.viscosity === detectedRef.current.viscosity) {
-        next.viscosity = viscosity;
-        detectedRef.current.viscosity = viscosity;
-      }
-      const line = suggestLineFromText(name);
-      if (!prev.short_description || prev.short_description === detectedRef.current.line) {
-        next.short_description = line;
-        detectedRef.current.line = line;
-      }
-      const presentation = detectPresentation(name);
-      if (!prev.presentation || prev.presentation === detectedRef.current.presentation) {
-        next.presentation = presentation;
-        detectedRef.current.presentation = presentation;
-      }
-      if (!categoryTouched) {
-        const category = suggestCategory(name);
-        if (category && category !== prev.category_id) {
-          next.category_id = category;
-          next.line_group_id = CATEGORY_DEFAULT_LINE_GROUP[category] || null;
-          next.subcategory_id = "";
-          next.subcategory = "";
-        }
-      }
-      return next;
-    });
-  }
-
   function openCreateModal() {
+    setFormKey((key) => key + 1);
     setIsEditing(false);
     setIsNewPresentation(false);
-    setBrandIsCustom(false);
-    setCategoryTouched(false);
     setImageUploading(false);
-    detectedRef.current = { viscosity: "", presentation: "", line: "" };
-    setIsCustomSubcategoryInput(false);
     setCurrentProduct({
       name: "",
       slug: "",
@@ -804,45 +762,26 @@ export default function ProductosPage() {
   }
 
   function openEditModal(prod: ProductItem) {
+    setFormKey((key) => key + 1);
     setIsEditing(true);
     setIsNewPresentation(false);
-    setCategoryTouched(true);
     setImageUploading(false);
-    detectedRef.current = { viscosity: "", presentation: "", line: "" };
-    setBrandIsCustom(
-      Boolean(prod.brand) && !availableBrands.some((brand) => brand.toLowerCase() === prod.brand!.toLowerCase())
-    );
-    const currentSubcat = prod.subcategory || "";
-    const currentSubcatId = prod.subcategory_id || prod.subcategoryId || "";
-    const currentCatId = prod.category_id || "automovil";
-    const cat = CATALOG_CATEGORIES.find((c) => c.id === currentCatId);
-    const subcats = cat ? cat.subcategories : [];
-    const isStandardSubcat = subcats.some(
-      (s) => s.id === currentSubcatId || s.name.toLowerCase() === currentSubcat.toLowerCase()
-    );
-    setIsCustomSubcategoryInput(Boolean(currentSubcat && !isStandardSubcat));
-
     setCurrentProduct({
       ...prod,
       viscosity: prod.viscosity !== undefined && prod.viscosity !== null ? prod.viscosity : "",
       type: prod.type !== undefined && prod.type !== null ? prod.type : "Lubricante Especializado",
-      subcategory_id: currentSubcatId,
-      subcategory: currentSubcat,
+      subcategory_id: prod.subcategory_id || prod.subcategoryId || "",
+      subcategory: prod.subcategory || "",
       presentation: prod.presentation || "",
     });
     setShowModal(true);
   }
 
   function openDuplicateModal(prod: ProductItem) {
+    setFormKey((key) => key + 1);
     setIsEditing(false);
     setIsNewPresentation(true);
-    setBrandIsCustom(
-      Boolean(prod.brand) && !availableBrands.some((brand) => brand.toLowerCase() === prod.brand!.toLowerCase())
-    );
-    setCategoryTouched(true);
     setImageUploading(false);
-    detectedRef.current = { viscosity: "", presentation: "", line: "" };
-    setIsCustomSubcategoryInput(false);
     setCurrentProduct({
       name: prod.name,
       slug: "",
@@ -1004,6 +943,10 @@ export default function ProductosPage() {
       category_id: currentProduct.category_id || "automovil",
       image_url: currentProduct.image_url?.trim() || null,
       line_group_id: currentProduct.line_group_id || null,
+      price:
+        currentProduct.price == null || String(currentProduct.price) === ""
+          ? null
+          : Number(currentProduct.price),
       updated_at: new Date().toISOString(),
     };
 
@@ -1043,7 +986,7 @@ export default function ProductosPage() {
           }
           toast.error("El resto del producto no se guardó", {
             id: toastId,
-            description: error?.message || "El stock y el mínimo sí quedaron guardados.",
+            description: explainProductSaveError(error?.message),
           });
           setSaving(false);
           return;
@@ -1711,18 +1654,20 @@ export default function ProductosPage() {
     }
   }
 
-  const detectedProductBits = [currentProduct.viscosity, currentProduct.short_description].filter(Boolean).join(" · ");
-  const sameNameCount = currentProduct.name?.trim()
-    ? products.filter((p) => normalize(p.name) === normalize(currentProduct.name) && p.id !== currentProduct.id).length
-    : 0;
-  const productFieldClass =
-    "w-full rounded-xl border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] placeholder:text-[var(--admin-faint)] focus:border-[var(--admin-accent)] focus:outline-none";
-  const choiceClass = (active: boolean) =>
-    `rounded-lg border px-2.5 py-1.5 text-xs ${
-      active
-        ? "border-[var(--admin-accent)] bg-[var(--admin-accent)] text-white"
-        : "border-[var(--admin-line)] bg-[var(--admin-input)] text-[var(--admin-ink)] hover:border-[var(--admin-accent)]"
-    }`;
+  const duplicateMatch = currentProduct.name?.trim()
+    ? products.find(
+        (item) =>
+          normalize(item.name) === normalize(currentProduct.name) &&
+          normalize(item.presentation || "") === normalize(currentProduct.presentation || "") &&
+          item.id !== currentProduct.id
+      )
+    : undefined;
+  const duplicateHint = duplicateMatch
+    ? `Ya existe "${duplicateMatch.name}"${duplicateMatch.presentation ? ` en ${duplicateMatch.presentation}` : ""}. Puedes guardarlo igual si es otra ficha.`
+    : "";
+  const suggestionHint = !isEditing
+    ? [currentProduct.viscosity, currentProduct.short_description].filter(Boolean).join(" · ")
+    : "";
 
   return (
     <div className="w-full space-y-6 pb-12">
@@ -2331,425 +2276,22 @@ export default function ProductosPage() {
         </div>
       )}
 
-      {/* MODAL 2: Crear / Editar Producto */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-          <div className="custom-scrollbar max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-5 text-[var(--admin-ink)] shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-base font-semibold text-[var(--admin-ink)]">
-                  {isEditing ? "Editar producto" : isNewPresentation ? "Otra presentación" : "Nuevo producto"}
-                </h3>
-                <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
-                  {isEditing
-                    ? "Los cambios se publican al guardar."
-                    : isNewPresentation
-                    ? "Misma ficha, otra cantidad y su propia foto."
-                    : "Nombre, marca y foto. La viscosidad y la línea se completan solas."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeProductModal}
-                className="rounded-lg p-1 text-zinc-400 hover:bg-white/5 hover:text-white"
-                aria-label="Cerrar"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProduct} className="mt-4 space-y-4">
-              <div className="grid items-start gap-5 lg:grid-cols-[300px_1fr]">
-                <MediaSelector
-                  compact
-                  label="Foto"
-                  categoryFilter="products"
-                  value={currentProduct.image_url || ""}
-                  onUploadingChange={setImageUploading}
-                  onChange={(url) => setCurrentProduct((prev) => ({ ...prev, image_url: url }))}
-                />
-
-                <div className="space-y-3">
-                  <div>
-                    <label htmlFor="product-name" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Nombre
-                    </label>
-                    <input
-                      id="product-name"
-                      type="text"
-                      value={currentProduct.name || ""}
-                      onChange={(e) => updateProductName(e.target.value)}
-                      className={productFieldClass}
-                      placeholder="Calcio Rojo 15W-40"
-                      autoFocus={!isNewPresentation}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-brand" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Marca
-                    </label>
-                    <select
-                      id="product-brand"
-                      value={brandIsCustom ? "__custom__" : currentProduct.brand || "Apolo"}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setBrandIsCustom(true);
-                          setCurrentProduct((prev) => ({ ...prev, brand: "" }));
-                        } else {
-                          setBrandIsCustom(false);
-                          setCurrentProduct((prev) => ({ ...prev, brand: e.target.value }));
-                        }
-                      }}
-                      className={productFieldClass}
-                      required={!brandIsCustom}
-                    >
-                      {availableBrands.map((brand) => (
-                        <option key={brand} value={brand}>
-                          {brand}
-                        </option>
-                      ))}
-                      <option value="__custom__">Otra marca…</option>
-                    </select>
-                    {brandIsCustom ? (
-                      <input
-                        type="text"
-                        value={currentProduct.brand || ""}
-                        onChange={(e) => setCurrentProduct((prev) => ({ ...prev, brand: e.target.value }))}
-                        className={`${productFieldClass} mt-2`}
-                        placeholder="Nombre de la marca nueva"
-                        autoComplete="off"
-                        required
-                      />
-                    ) : null}
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-presentation" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Presentación
-                    </label>
-                    <input
-                      id="product-presentation"
-                      type="text"
-                      value={currentProduct.presentation || ""}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, presentation: e.target.value }))}
-                      className={productFieldClass}
-                      placeholder="1 gal, balde, 4 oz"
-                      autoFocus={isNewPresentation}
-                    />
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {PRESENTATION_PRESETS.map((preset) => {
-                        const active = (currentProduct.presentation || "").toLowerCase() === preset.toLowerCase();
-                        return (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setCurrentProduct((prev) => ({ ...prev, presentation: preset }))}
-                            className={choiceClass(active)}
-                          >
-                            {preset}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-[88px_1fr] gap-3">
-                    <div>
-                      <label htmlFor="product-stock" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                        Stock
-                      </label>
-                      <input
-                        id="product-stock"
-                        type="number"
-                        min="0"
-                        value={currentProduct.stock ?? 15}
-                        onChange={(e) =>
-                          setCurrentProduct((prev) => ({ ...prev, stock: parseInt(e.target.value, 10) || 0 }))
-                        }
-                        className={productFieldClass}
-                      />
-                    </div>
-                    <div>
-                      <p className="mb-1 text-sm text-[var(--admin-muted)]">Categoría</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {CATEGORY_OPTIONS.map((cat) => {
-                          const active = (currentProduct.category_id || "automovil") === cat.id;
-                          return (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => {
-                                setCategoryTouched(true);
-                                setIsCustomSubcategoryInput(false);
-                                setCurrentProduct((prev) => ({
-                                  ...prev,
-                                  category_id: cat.id,
-                                  subcategory_id: "",
-                                  subcategory: "",
-                                  line_group_id: CATEGORY_DEFAULT_LINE_GROUP[cat.id] || null,
-                                }));
-                              }}
-                              className={choiceClass(active)}
-                            >
-                              {cat.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {detectedProductBits ? (
-                    <p className="text-[11px] text-zinc-400">
-                      Se completó: <span className="text-[#C7940A]">{detectedProductBits}</span>
-                    </p>
-                  ) : null}
-                  {!isEditing && !isNewPresentation && sameNameCount > 0 ? (
-                    <p className="text-[11px] text-zinc-400">
-                      Ya hay {sameNameCount} con este nombre. Esta queda como otra presentación.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 border-t border-[var(--admin-line)] pt-4 sm:grid-cols-2">
-                <p className="sm:col-span-2 text-sm font-medium text-[var(--admin-ink)]">Dónde aparece en el catálogo</p>
-                  <div>
-                    <div className="mb-1 flex items-center justify-between">
-                      <label className="text-sm text-[var(--admin-muted)]">Texto superior</label>
-                      <button
-                        type="button"
-                        onClick={() => setIsCustomSubcategoryInput(!isCustomSubcategoryInput)}
-                        className="text-[11px] text-[#C7940A] hover:underline"
-                      >
-                        {isCustomSubcategoryInput ? "Elegir de la lista" : "Escribir otro"}
-                      </button>
-                    </div>
-                    {isCustomSubcategoryInput ? (
-                      <input
-                        type="text"
-                        value={currentProduct.subcategory || ""}
-                        onChange={(e) =>
-                          setCurrentProduct((prev) => ({
-                            ...prev,
-                            subcategory: e.target.value,
-                            subcategory_id: e.target.value
-                              ? e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-")
-                              : "",
-                          }))
-                        }
-                        className={productFieldClass}
-                        placeholder="Vacío si no lleva texto"
-                      />
-                    ) : (
-                      <select
-                        value={
-                          currentProduct.subcategory_id ||
-                          (availableSubcategories.find(
-                            (s) => s.name.toLowerCase() === (currentProduct.subcategory || "").toLowerCase()
-                          )?.id ?? "")
-                        }
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "__custom__") {
-                            setIsCustomSubcategoryInput(true);
-                          } else if (val === "") {
-                            setCurrentProduct((prev) => ({ ...prev, subcategory_id: "", subcategory: "" }));
-                          } else {
-                            const found = availableSubcategories.find((s) => s.id === val);
-                            setCurrentProduct((prev) => ({
-                              ...prev,
-                              subcategory_id: val,
-                              subcategory: found ? found.name : val,
-                            }));
-                          }
-                        }}
-                        className={productFieldClass}
-                      >
-                        <option value="">Sin texto</option>
-                        {availableSubcategories.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </option>
-                        ))}
-                        <option value="__custom__">Otro texto…</option>
-                      </select>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-line" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Línea
-                    </label>
-                    <input
-                      id="product-line"
-                      type="text"
-                      value={currentProduct.short_description || ""}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, short_description: e.target.value }))}
-                      className={productFieldClass}
-                      placeholder="GASOLINERO, GRASAS, FRENOS"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-viscosity" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Viscosidad
-                    </label>
-                    <input
-                      id="product-viscosity"
-                      type="text"
-                      value={currentProduct.viscosity || ""}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, viscosity: e.target.value }))}
-                      className={productFieldClass}
-                      placeholder="15W-40"
-                    />
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {VISCOSITY_PRESETS.map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setCurrentProduct((prev) => ({ ...prev, viscosity: preset }))}
-                          className={choiceClass((currentProduct.viscosity || "").toLowerCase() === preset.toLowerCase())}
-                        >
-                          {preset}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-type" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Subtítulo
-                    </label>
-                    <input
-                      id="product-type"
-                      type="text"
-                      value={currentProduct.type || ""}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, type: e.target.value }))}
-                      className={productFieldClass}
-                      placeholder="Lubricante Especializado"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label htmlFor="product-line-group" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Grupo del catálogo
-                    </label>
-                    <select
-                      id="product-line-group"
-                      value={currentProduct.line_group_id || ""}
-                      onChange={(e) =>
-                        setCurrentProduct((prev) => ({ ...prev, line_group_id: e.target.value || null }))
-                      }
-                      className={productFieldClass}
-                    >
-                      <option value="">Según la línea</option>
-                      {lineGroupsList
-                        .filter((g) => g.is_active)
-                        .sort((a, b) => a.sort_order - b.sort_order)
-                        .map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label htmlFor="product-description" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Descripción
-                    </label>
-                    <textarea
-                      id="product-description"
-                      value={currentProduct.description || ""}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, description: e.target.value }))}
-                      className={`${productFieldClass} h-20 resize-none`}
-                      placeholder="Normas, uso y especificaciones"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-stock-min" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Stock mínimo
-                    </label>
-                    <input
-                      id="product-stock-min"
-                      type="number"
-                      min="0"
-                      value={currentProduct.stock_min ?? 0}
-                      onChange={(e) =>
-                        setCurrentProduct((prev) => ({
-                          ...prev,
-                          stock_min: parseInt(e.target.value, 10) || 0,
-                        }))
-                      }
-                      className={productFieldClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="product-slug" className="mb-1 block text-sm text-[var(--admin-muted)]">
-                      Ruta
-                    </label>
-                    <input
-                      id="product-slug"
-                      type="text"
-                      value={currentProduct.slug || ""}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, slug: e.target.value }))}
-                      className={`${productFieldClass} font-mono text-xs`}
-                      placeholder="Se arma con el nombre"
-                    />
-                  </div>
-                </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-line)] pt-3">
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-xs text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={currentProduct.is_active !== undefined ? currentProduct.is_active : true}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, is_active: e.target.checked }))}
-                      className="h-4 w-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
-                    />
-                    Activo
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={currentProduct.is_featured || false}
-                      onChange={(e) => setCurrentProduct((prev) => ({ ...prev, is_featured: e.target.checked }))}
-                      className="h-4 w-4 rounded border-white/20 bg-black text-[#C7940A] focus:ring-0"
-                    />
-                    Destacado
-                  </label>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={closeProductModal}
-                    disabled={saving}
-                    className="rounded-xl border border-white/10 px-4 py-2 text-xs font-medium text-zinc-400 hover:bg-white/5"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving || imageUploading}
-                    className="flex items-center gap-2 rounded-xl bg-[#C7940A] px-5 py-2 text-xs font-semibold text-black hover:bg-[#d9a311] disabled:opacity-50"
-                  >
-                    {(saving || imageUploading) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    <span>
-                      {imageUploading ? "Subiendo foto…" : isEditing ? "Guardar" : "Crear producto"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductForm
+        open={showModal}
+        resetKey={String(formKey)}
+        product={currentProduct}
+        mode={isEditing ? "edit" : isNewPresentation ? "presentation" : "create"}
+        brands={availableBrands}
+        lineGroups={lineGroupsList}
+        duplicateHint={duplicateHint}
+        suggestionHint={suggestionHint}
+        saving={saving}
+        imageUploading={imageUploading}
+        onChange={(partial) => setCurrentProduct((prev) => ({ ...prev, ...partial }))}
+        onUploadingChange={setImageUploading}
+        onClose={closeProductModal}
+        onSubmit={handleSaveProduct}
+      />
 
       <AlertDialog
         open={!!pendingDelete}

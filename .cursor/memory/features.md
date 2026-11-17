@@ -11,6 +11,8 @@
 - Catálogo público sin flash estático; skeleton hasta Supabase — `components/products.tsx` (2026-11-12)
 - Gate `/admin` con sesión + role admin — `proxy.ts` (2026-11-12)
 - Legales `/terminos` y `/privacidad` enlazados desde el footer (2026-11-12)
+- Catálogo 2026-11-17: grilla 2 columnas en móvil, marco de foto uniforme, chips de marca con scroll — `components/products.tsx`, `lib/catalog/display.ts`, `e2e/catalog-visual.spec.ts`
+- Alta de producto por familia (2026-11-17): el nombre sugiere familia, viscosidad o especificación, línea y presentación; un filtro no recibe SAE. Precio opcional en la columna `price`. `components/admin-product-form.tsx`, `lib/admin/product-heuristics.ts`, `app/admin/productos/page.tsx`
 - Storefront home/productos/detalle/nosotros/contacto/cotización por código — `app/**`
 - Admin módulos sidebar (productos, marcas, líneas, inventario, quotes, etc.) — `app/admin/**`. Tema del panel en `apolo-admin-theme` (claro, oscuro, sistema), aparte del tema de la tienda.
 - Líneas de catálogo paginadas (8) con orden del menú — `app/admin/lineas/page.tsx`
@@ -30,9 +32,6 @@
 - Home scroll 2026-11-11: entradas de ~64px, línea dorada y paralaje en hero, líneas, protección, vitrinas, bento, CTA y marcas — `components/home/scroll-reveal.tsx`, `hero.tsx`
 - Home acabado 2026-11-11: stats fuera del slide, flotantes compactos, sin rayas gruesas — `hero.tsx`, `stats-bar.tsx`, `FloatingWhatsApp.tsx`, `FloatingQuoteButton.tsx`
 - Vitrinas 2026-11-11: vendidos, populares y recomendados en un escenario de tres tarjetas — `components/home/featured-showcase.tsx`
-
-## In Progress
-- Alta de producto simplificada (foto, nombre, marca, presentación, stock). Viscosidad, línea, categoría y grupo se deducen del nombre. 2026-11-09. `app/admin/productos/page.tsx`, `components/MediaSelector.tsx`
 
 ## Planned
 - Aplicar `supabase_staff_roles.sql` en el proyecto Supabase

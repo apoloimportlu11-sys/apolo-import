@@ -42,8 +42,11 @@ import { scrollCatalogIntoView } from "@/lib/lenis-lock";
 
 import {
   brandEquals,
+  cardImageScale,
   formatViscosityBadge,
+  getBrandChipVisual,
   getPresentationVisual,
+  OFFICIAL_BRANDS,
   CATALOG_PAGE_SIZE as PAGE_SIZE,
 } from "@/lib/catalog/display";
 import {
@@ -400,28 +403,37 @@ export function Products() {
     return merged;
   }, [dbProducts, mounted, catalogStatus, dbInactiveKeys, adminCacheVersion]);
 
-  // Marcas del admin (Supabase) + las que aparezcan en productos activos
+  // Marcas del admin + productos (+ oficiales siempre, aunque no tengan stock)
   const availableBrands = useMemo(() => {
-    const brandSet = new Set<string>();
-    catalogBrands.forEach((b) => {
-      if (b.name?.trim()) brandSet.add(b.name.trim());
-    });
-    allMergedProducts.forEach((p) => {
-      if (p.brand && p.brand.trim()) brandSet.add(p.brand.trim());
+    const byKey = new Map<string, string>();
+    const remember = (raw?: string | null) => {
+      const name = raw?.trim();
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, name);
+    };
+
+    catalogBrands.forEach((b) => remember(b.name));
+    allMergedProducts.forEach((p) => remember(p.brand));
+    selectedBrands.forEach((b) => remember(b));
+    OFFICIAL_BRANDS.forEach((key) => {
+      if (!byKey.has(key)) {
+        byKey.set(key, key.charAt(0).toUpperCase() + key.slice(1));
+      }
     });
 
-    const officialPriority = ["apolo", "overts", "valtrom"];
-    return Array.from(brandSet).sort((a, b) => {
+    const official = OFFICIAL_BRANDS as readonly string[];
+    return Array.from(byKey.values()).sort((a, b) => {
       const strA = String(a || "").toLowerCase();
       const strB = String(b || "").toLowerCase();
-      const idxA = officialPriority.indexOf(strA);
-      const idxB = officialPriority.indexOf(strB);
+      const idxA = official.indexOf(strA);
+      const idxB = official.indexOf(strB);
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       if (idxA !== -1) return -1;
       if (idxB !== -1) return 1;
       return String(a || "").localeCompare(String(b || ""), "es");
     });
-  }, [allMergedProducts, catalogBrands]);
+  }, [allMergedProducts, catalogBrands, selectedBrands]);
 
   const displayedBrands = useMemo(() => {
     if (!brandFilterSearch.trim()) return availableBrands;
@@ -456,25 +468,47 @@ export function Products() {
         parseFloat(getComputedStyle(root).getPropertyValue("--site-header-height")) || 96;
       const sectionRect = catalogSection.getBoundingClientRect();
       const anchorRect = anchor.getBoundingClientRect();
+      const footerEl = document.querySelector("footer");
+      const footerRect = footerEl?.getBoundingClientRect();
 
       // Clavado bajo el header, pero nunca por encima del inicio de la sección
       const top = Math.max(header + 12, sectionRect.top + 8);
-      // No invadir el footer: el borde inferior es el mínimo entre viewport y fin de sección
-      const bottomLimit = Math.min(window.innerHeight - 16, sectionRect.bottom - 8);
+      // No invadir el footer CTA: clamp explícito a footerTop
+      const footerLimit = footerRect ? footerRect.top - 20 : Number.POSITIVE_INFINITY;
+      const bottomLimit = Math.min(
+        window.innerHeight - 16,
+        sectionRect.bottom - 8,
+        footerLimit
+      );
       const maxHeight = Math.max(0, bottomLimit - top);
       const stillInView = sectionRect.bottom > header + 80 && sectionRect.top < window.innerHeight - 40;
+      const footerTooClose = Boolean(footerRect && footerRect.top < top + 160);
+      const activeCandidate = stillInView && maxHeight >= 140 && !footerTooClose;
 
-      if (!stillInView || maxHeight < 120) {
+      if (!activeCandidate) {
         setSidebarDock((prev) => (prev.active ? { ...prev, active: false } : prev));
         return;
       }
 
-      setSidebarDock({
-        left: anchorRect.left,
-        top,
-        width: anchor.offsetWidth,
-        maxHeight,
-        active: true,
+      const nextLeft = anchorRect.left;
+      const nextWidth = anchor.offsetWidth;
+      setSidebarDock((prev) => {
+        if (
+          prev.active &&
+          Math.abs(prev.left - nextLeft) < 1 &&
+          Math.abs(prev.top - top) < 1 &&
+          Math.abs(prev.width - nextWidth) < 1 &&
+          Math.abs(prev.maxHeight - maxHeight) < 2
+        ) {
+          return prev;
+        }
+        return {
+          left: nextLeft,
+          top,
+          width: nextWidth,
+          maxHeight,
+          active: true,
+        };
       });
     };
 
@@ -1041,66 +1075,49 @@ export function Products() {
                   const isChecked = selectedBrands.some((item) =>
                     brandEquals(item, brand)
                   );
-
-                  const isApolo = brand.toLowerCase() === "apolo";
-                  const isOverts = brand.toLowerCase() === "overts";
-                  const isValtrom = brand.toLowerCase() === "valtrom";
+                  const tone = getBrandChipVisual(brand);
 
                   return (
                     <label
                       key={brand}
-                      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all duration-200 border ${
+                      className="flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all duration-200 border"
+                      style={
                         isChecked
-                          ? isApolo
-                            ? "bg-red-600/10 border-red-500/40 shadow-xs"
-                            : isOverts
-                            ? "bg-amber-500/10 border-amber-500/40 shadow-xs"
-                            : isValtrom
-                            ? "bg-purple-600/10 border-purple-500/40 shadow-xs"
-                            : "bg-primary/10 border-primary/40 shadow-xs"
-                          : "bg-muted/40 border-transparent hover:bg-muted hover:border-border"
-                      }`}
+                          ? {
+                              backgroundColor: tone.soft,
+                              borderColor: `${tone.accent}66`,
+                            }
+                          : undefined
+                      }
                     >
                       <div className="flex items-center gap-2.5">
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => handleBrandToggle(brand)}
-                          className={`border-muted-foreground/60 ${
-                            isOverts
-                              ? "data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                              : isValtrom
-                              ? "data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              : "data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          }`}
+                          className="border-muted-foreground/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
                         <div className="flex items-center gap-1.5">
                           <span
+                            className="h-1.5 w-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: tone.accent }}
+                          />
+                          <span
                             className={`text-sm font-medium transition-colors ${
-                              isChecked
-                                ? isApolo
-                                  ? "text-red-500 font-bold"
-                                  : isOverts
-                                  ? "text-amber-500 font-bold"
-                                  : isValtrom
-                                  ? "text-purple-400 font-bold"
-                                  : "text-primary font-bold"
-                                : "text-foreground/90"
+                              isChecked ? "font-bold" : "text-foreground/90"
                             }`}
+                            style={isChecked ? { color: tone.text } : undefined}
                           >
                             {brand}
                           </span>
-                          {isApolo && (
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-red-600/20 text-red-500 rounded border border-red-600/30">
-                              Oficial
-                            </span>
-                          )}
-                          {isOverts && (
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-amber-500/20 text-amber-500 dark:text-amber-400 rounded border border-amber-500/30 shadow-[0_0_6px_rgba(245,158,11,0.2)]">
-                              Oficial
-                            </span>
-                          )}
-                          {isValtrom && (
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-purple-600/20 text-purple-400 rounded border border-purple-600/30 shadow-[0_0_6px_rgba(168,85,247,0.2)]">
+                          {tone.isOfficial && (
+                            <span
+                              className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded border"
+                              style={{
+                                backgroundColor: tone.soft,
+                                color: tone.text,
+                                borderColor: `${tone.accent}55`,
+                              }}
+                            >
                               Oficial
                             </span>
                           )}
@@ -1108,16 +1125,15 @@ export function Products() {
                       </div>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                          isChecked
-                            ? isApolo
-                              ? "bg-red-600 text-white"
-                              : isOverts
-                              ? "bg-amber-500 text-white"
-                              : isValtrom
-                              ? "bg-purple-600 text-white"
-                              : "bg-primary text-white"
-                            : "bg-card text-muted-foreground border border-border/60"
+                          isChecked ? "text-white" : "bg-card text-muted-foreground border border-border/60"
                         }`}
+                        style={
+                          isChecked
+                            ? { backgroundColor: tone.active }
+                            : count === 0
+                              ? { opacity: 0.7 }
+                              : undefined
+                        }
                       >
                         {count}
                       </span>
@@ -1371,9 +1387,8 @@ export function Products() {
     const subcategoryText = product.subcategory || subcategory?.name || null;
     const topBadgeText = formatViscosityBadge(product.viscosity);
     const packVisual = getPresentationVisual(product.presentation);
-    const isApolo = (product.brand || "").toLowerCase() === "apolo";
-    const isOverts = (product.brand || "").toLowerCase() === "overts";
-    const isValtrom = (product.brand || "").toLowerCase() === "valtrom";
+    const imageScale = cardImageScale(product.presentation);
+    const tone = getBrandChipVisual(product.brand);
 
     const hasValidImage =
       Boolean(
@@ -1410,116 +1425,90 @@ export function Products() {
           className="group"
           style={{ contentVisibility: "auto", containIntrinsicSize: "0 220px" }}
         >
-          <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-5 hover:border-primary/60 transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-primary/5">
-            <div className="flex flex-col sm:flex-row gap-5">
-              {/* Imagen con fallback limpio */}
+          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm transition-colors duration-200 hover:border-primary/50 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-5">
               <button
                 type="button"
                 onClick={() => setQuickViewProduct(product)}
-                className="relative w-full sm:w-44 h-52 sm:h-44 flex-shrink-0 rounded-xl overflow-hidden border border-zinc-200/80 bg-white p-2 flex items-end justify-center group-hover:scale-[1.02] transition-transform duration-200 dark:border-white/10 dark:bg-zinc-50"
+                className="relative h-36 w-full shrink-0 overflow-hidden rounded-xl bg-[#f4f4f5] sm:h-44 sm:w-44"
               >
-                {hasValidImage ? (
-                  <div
-                    className="relative w-full origin-bottom transition-transform duration-300"
-                    style={{
-                      height: `${Math.round(packVisual.scale * 100)}%`,
-                      maxHeight: "100%",
-                    }}
-                  >
-                    <Image
-                      src={product.image}
-                      alt={`${product.name || "Producto"} · ${packVisual.label}`}
-                      fill
-                      unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
-                      sizes="(max-width: 640px) 100vw, 176px"
-                      className="object-contain object-bottom drop-shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
-                      style={{ objectFit: "contain", objectPosition: "bottom center" }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50 rounded-lg p-3 text-center border border-dashed border-zinc-200">
-                    <Package className="w-10 h-10 text-[#FFD000] opacity-70 mb-1" />
-                    <span className="text-[11px] font-medium text-zinc-500">Sin imagen</span>
+              {hasValidImage ? (
+                <Image
+                  src={product.image}
+                  alt={`${product.name || "Producto"} · ${packVisual.label}`}
+                  fill
+                  unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
+                  sizes="(max-width: 640px) 100vw, 176px"
+                  className="object-contain object-center p-3 drop-shadow-[0_8px_14px_rgba(0,0,0,0.16)]"
+                  style={{ transform: `scale(${imageScale})` }}
+                />
+              ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center text-zinc-400">
+                    <Package className="mb-1 h-8 w-8 opacity-70" />
+                    <span className="text-[11px] font-medium">Sin imagen</span>
                   </div>
                 )}
                 {product.presentation ? (
-                  <span className="absolute left-2 top-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute left-2 top-2 rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {packVisual.label}
                   </span>
                 ) : null}
               </button>
 
-              <div className="flex-1 min-w-0 flex flex-col justify-between">
+              <div className="flex min-w-0 flex-1 flex-col justify-between">
                 <button
                   type="button"
                   onClick={() => setQuickViewProduct(product)}
                   className="block w-full text-left"
                 >
-                  {/* Badges de Marca y Categoría */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span
-                      className={`text-xs uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${
-                        isApolo
-                          ? "bg-red-600 text-white border-red-500 shadow-xs shadow-red-500/20"
-                          : isOverts
-                          ? "bg-amber-500/20 text-amber-500 dark:text-amber-300 border-amber-500/40 shadow-xs shadow-amber-500/15"
-                          : isValtrom
-                          ? "bg-purple-600/20 text-purple-400 border-purple-500/40 shadow-xs shadow-purple-500/15"
-                          : "bg-blue-900/40 text-blue-300 border-blue-600/40"
-                      }`}
+                      className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide"
+                      style={{
+                        backgroundColor: tone.active,
+                        borderColor: tone.active,
+                        color: "#fff",
+                      }}
                     >
                       {product.brand || "Apolo"}
                     </span>
-
                     {topBadgeText ? (
-                      <span className="text-xs px-2.5 py-1 bg-amber-500/10 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300 font-semibold rounded-lg border border-amber-500/30 shadow-xs">
+                      <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
                         {topBadgeText}
                       </span>
                     ) : subcategoryText ? (
-                      <span className="text-xs px-2.5 py-1 bg-muted/80 text-muted-foreground font-semibold rounded-lg border border-border/80 shadow-xs">
+                      <span className="rounded-md border border-border bg-muted/80 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                         {subcategoryText}
                       </span>
                     ) : null}
                   </div>
-
-                  <h4 className="text-xs sm:text-sm font-bold text-primary uppercase tracking-wide">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wide text-primary sm:text-xs">
                     {product.line}
                   </h4>
-
-                  <h3 className="font-heading text-[length:var(--fs-card-title)] font-bold text-foreground break-words mt-1 group-hover:text-primary transition-colors">
+                  <h3 className="mt-1 line-clamp-2 text-base font-bold text-foreground">
                     {product.name}
                   </h3>
-
-                  <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2 break-words leading-relaxed">
+                  <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                     {product.type || product.description}
                   </p>
                 </button>
-
-                <div className="mt-4 pt-3.5 border-t border-border/40 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setQuickViewProduct(product)}
-                      className="text-primary hover:underline text-sm font-bold flex items-center gap-1"
-                    >
-                      Ver ficha y detalles →
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleQuoteClick}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                      title="Añadir a la lista de cotización"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>{isInQuote ? "Cotizado (+1)" : "Añadir a Cotización"}</span>
-                    </button>
-                  </div>
-
-                  {product.presentation && (
-                    <span className="text-xs px-3 py-1 bg-muted/80 text-foreground font-semibold rounded-lg border border-border/80 shadow-xs">
-                      {product.presentation}
-                    </span>
-                  )}
+                <div className="mt-3 flex items-center gap-2 border-t border-border/40 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuickViewProduct(product)}
+                    className="inline-flex min-h-9 items-center text-sm font-bold text-primary"
+                  >
+                    Ver ficha
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuoteClick}
+                    className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white"
+                    title="Añadir a la lista de cotización"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>{isInQuote ? "Cotizado (+1)" : "Cotizar"}</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1530,147 +1519,97 @@ export function Products() {
 
     return (
       <div
-        className="h-full group"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 460px" }}
+        data-catalog-card
+        className="group h-full"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 420px" }}
       >
-        <div className="bg-card backdrop-blur-sm border border-border rounded-2xl overflow-hidden hover:border-primary/60 transition-all duration-200 h-full flex flex-col shadow-xs hover:shadow-lg hover:shadow-primary/5">
-          <div
-            className={`h-1.5 w-full ${
-              isApolo
-                ? "bg-red-600"
-                : isOverts
-                ? "bg-amber-500"
-                : isValtrom
-                ? "bg-purple-600"
-                : "bg-blue-600"
-            }`}
-          />
+        <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-colors duration-200 hover:border-primary/50">
+          <div className="h-[3px] w-full" style={{ backgroundColor: tone.accent }} />
 
-          <div className="p-5 flex flex-col h-full">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setQuickViewProduct(product)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setQuickViewProduct(product);
-                }
-              }}
-              className="cursor-pointer text-left"
-            >
-              {/* Header de la tarjeta: Marca y Categoría */}
-              <div className="flex items-center justify-between gap-2 mb-3.5">
-                <span
-                  className={`text-xs uppercase font-bold tracking-wider px-3 py-1 rounded-full border ${
-                    isApolo
-                      ? "bg-red-600 text-white border-red-500 shadow-xs shadow-red-500/20"
-                      : isOverts
-                      ? "bg-amber-500/20 text-amber-500 dark:text-amber-300 border-amber-500/40 shadow-xs shadow-amber-500/15"
-                      : isValtrom
-                      ? "bg-purple-600/20 text-purple-400 border-purple-500/40 shadow-xs shadow-purple-500/15"
-                      : "bg-blue-900/40 text-blue-300 border-blue-600/40"
-                  }`}
-                >
-                  {product.brand || "Apolo"}
+          <div className="flex h-full flex-col p-2.5 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-1.5">
+              <span
+                className="max-w-[58%] truncate rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                style={{
+                  backgroundColor: tone.soft,
+                  borderColor: `${tone.accent}55`,
+                  color: tone.text,
+                }}
+              >
+                {product.brand || "Apolo"}
+              </span>
+              {topBadgeText ? (
+                <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                  {topBadgeText}
                 </span>
-
-                {topBadgeText ? (
-                  <span className="text-xs font-semibold px-2.5 py-1 bg-amber-500/10 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300 rounded-lg border border-amber-500/30 shadow-xs">
-                    {topBadgeText}
-                  </span>
-                ) : subcategoryText ? (
-                  <span className="text-xs text-muted-foreground truncate max-w-[140px] font-medium">
-                    {subcategoryText}
-                  </span>
-                ) : null}
-              </div>
-
-              {/* Imagen: fondo claro para que el envase destaque; escala por presentación */}
-              <div className="relative mb-4 flex h-56 items-end justify-center overflow-hidden rounded-xl border border-zinc-200/70 bg-white p-2 sm:h-60 dark:border-white/10 dark:bg-zinc-50">
-                <div
-                  className="pointer-events-none absolute inset-x-8 bottom-1.5 h-1.5 rounded-full bg-black/8 blur-[1px]"
-                  aria-hidden
-                />
-                {hasValidImage ? (
-                  <div
-                    className="relative z-[1] w-full origin-bottom transition-[height] duration-300"
-                    style={{
-                      height: `${Math.round(packVisual.scale * 100)}%`,
-                      maxHeight: "100%",
-                    }}
-                  >
-                    <Image
-                      src={product.image}
-                      alt={`${product.name || "Producto"} · ${packVisual.label}`}
-                      fill
-                      unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      className="object-contain object-bottom drop-shadow-[0_14px_24px_rgba(0,0,0,0.22)]"
-                      style={{ objectFit: "contain", objectPosition: "bottom center" }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-50/80 rounded-lg p-4 text-center border border-dashed border-zinc-200">
-                    <Package className="w-12 h-12 text-[#FFD000] opacity-70 mb-2" />
-                    <span className="text-xs font-medium text-zinc-500">Sin imagen asignada</span>
-                  </div>
-                )}
-                {product.presentation ? (
-                  <span
-                    className={`absolute left-2.5 top-2.5 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ${
-                      packVisual.size === "xl" || packVisual.size === "lg"
-                        ? "bg-red-600/90"
-                        : packVisual.size === "md"
-                          ? "bg-zinc-800/85"
-                          : "bg-zinc-700/80"
-                    }`}
-                  >
-                    {packVisual.label}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="flex-1 flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-primary uppercase tracking-wider">
-                  {product.line}
+              ) : subcategoryText ? (
+                <span className="max-w-[42%] truncate text-[10px] font-medium text-muted-foreground">
+                  {subcategoryText}
                 </span>
-
-                <h3 className="text-[length:var(--fs-card-title)] font-bold text-foreground break-words mt-1 group-hover:text-primary transition-colors line-clamp-1">
-                  {product.name}
-                </h3>
-
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 line-clamp-2 break-words leading-relaxed">
-                  {product.type || product.description}
-                </p>
-              </div>
+              ) : null}
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-border/40 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setQuickViewProduct(product)}
+              className="relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#f4f4f5] sm:mb-3 sm:aspect-[5/6]"
+            >
+              {hasValidImage ? (
+                <Image
+                  src={product.image}
+                  alt={`${product.name || "Producto"} · ${packVisual.label}`}
+                  fill
+                  unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
+                  sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                  className="object-contain object-center p-2 drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)]"
+                  style={{ transform: `scale(${imageScale})` }}
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center text-zinc-400">
+                  <Package className="mb-1 h-8 w-8 opacity-70" />
+                  <span className="text-[11px] font-medium">Sin imagen</span>
+                </div>
+              )}
+              {product.presentation ? (
+                <span className="absolute left-2 top-2 max-w-[70%] truncate rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  {packVisual.label}
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuickViewProduct(product)}
+              className="block min-w-0 flex-1 text-left"
+            >
+              <span className="block truncate text-[10px] font-bold uppercase tracking-wide text-primary sm:text-xs">
+                {product.line}
+              </span>
+              <h3 className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-foreground sm:text-base">
+                {product.name}
+              </h3>
+              <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground max-sm:hidden">
+                {product.type || product.description}
+              </p>
+            </button>
+
+            <div className="mt-2 flex items-center justify-between gap-1.5 border-t border-border/40 pt-2">
               <button
                 type="button"
                 onClick={() => setQuickViewProduct(product)}
-                className="text-primary hover:underline text-xs sm:text-sm font-bold"
+                className="inline-flex min-h-9 items-center text-xs font-bold text-primary sm:text-sm"
               >
-                Detalles →
+                Detalles
               </button>
-
-              <div className="flex items-center gap-2">
-                {product.presentation && (
-                  <span className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-1 bg-muted/80 text-foreground font-semibold rounded-lg border border-border/80 shadow-xs shrink-0 truncate max-w-[110px]">
-                    {product.presentation}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={handleQuoteClick}
-                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
-                  title="Añadir este producto a la cotización"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>{isInQuote ? "+1" : "Cotizar"}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleQuoteClick}
+                className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white"
+                title="Añadir este producto a la cotización"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>{isInQuote ? "+1" : "Cotizar"}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1685,6 +1624,13 @@ export function Products() {
     productsGroupedByBrand.length > 1 &&
     !searchQuery.trim();
 
+  const catalogGridClass =
+    viewMode === "list"
+      ? "grid gap-3 sm:gap-5"
+      : viewMode === "grid5"
+        ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+        : "grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 2xl:grid-cols-5";
+
   return (
     <section ref={sectionRef} className="relative min-h-screen bg-transparent py-4 md:py-6">
       {/* Ilustración Vectorial de Vehículos en el centro del lado izquierdo */}
@@ -1698,7 +1644,7 @@ export function Products() {
         {renderBreadcrumb()}
 
         <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-6">
-          {/* SIDEBAR DESKTOP: fixed acotado a la section (no invade el footer) */}
+          {/* SIDEBAR DESKTOP: fixed acotado a la section + footer CTA */}
           <aside className="relative hidden w-72 min-w-72 max-w-72 flex-shrink-0 lg:block">
             <div
               ref={sidebarAnchorRef}
@@ -1730,8 +1676,9 @@ export function Products() {
           <div className="flex-1 min-w-0 w-full">
             <div
               ref={toolbarRef}
-              className="sticky z-30 mb-4 space-y-2.5 border-b border-border/60 bg-background/95 pb-2.5 backdrop-blur-md"
+              className="sticky z-30 mb-4 space-y-2.5 bg-background/95 pb-2 pt-1 backdrop-blur-md"
               style={{ top: "var(--site-header-height, 6rem)" }}
+              data-catalog-toolbar="true"
             >
               <div className="mx-auto max-w-3xl">
                 <div className="relative">
@@ -1741,7 +1688,7 @@ export function Products() {
                     placeholder="Buscar por marca, nombre, viscosidad o código..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="rounded-2xl border-border bg-card py-3.5 pl-12 pr-12 text-sm text-foreground shadow-xs placeholder:text-muted-foreground focus-visible:ring-primary sm:text-base md:py-4"
+                    className="rounded-2xl border-border bg-card py-3 pl-12 pr-12 text-base text-foreground shadow-xs placeholder:text-muted-foreground focus-visible:ring-primary md:py-4"
                   />
                   {searchQuery && (
                     <button
@@ -1755,11 +1702,11 @@ export function Products() {
                 </div>
               </div>
 
-              <div className="flex flex-col items-center gap-2.5">
-                <div className="custom-scrollbar flex max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 shadow-xs sm:justify-center">
+              <div className="flex min-w-0 flex-col gap-2">
+                <div className="custom-scrollbar flex max-w-full snap-x snap-mandatory items-center gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]">
                   <button
                     onClick={() => handleBrandQuickSelect("all")}
-                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200 sm:text-sm ${
+                    className={`flex min-h-9 shrink-0 snap-start items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 sm:px-4 sm:text-sm ${
                       selectedBrands.length === 0
                         ? "bg-primary text-white shadow-sm shadow-primary/20"
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -1781,7 +1728,7 @@ export function Products() {
 
                   {availableBrands
                     .filter((brand) =>
-                      ["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
+                      (OFFICIAL_BRANDS as readonly string[]).includes(brand.toLowerCase())
                     )
                     .map((brand) => {
                       const count = allMergedProducts.filter((p) =>
@@ -1789,41 +1736,43 @@ export function Products() {
                       ).length;
                       const isSelected =
                         selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
-                      const isApolo = brand.toLowerCase() === "apolo";
-                      const isOverts = brand.toLowerCase() === "overts";
-                      const activeClasses = isApolo
-                        ? "bg-red-600 text-white shadow-sm shadow-red-600/30"
-                        : isOverts
-                          ? "bg-amber-600 text-white shadow-sm shadow-amber-600/30"
-                          : "bg-purple-600 text-white shadow-sm shadow-purple-600/30";
-                      const idleClasses = isApolo
-                        ? "border border-red-500/30 bg-red-600/10 text-red-500 hover:bg-red-600/20"
-                        : isOverts
-                          ? "border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
-                          : "border border-purple-500/30 bg-purple-600/10 text-purple-500 hover:bg-purple-600/20 dark:text-purple-400";
+                      const tone = getBrandChipVisual(brand);
 
                       return (
                         <button
                           key={brand}
                           onClick={() => handleBrandQuickSelect(brand)}
-                          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 sm:text-sm ${
-                            isSelected ? activeClasses : idleClasses
-                          }`}
+                          className="flex min-h-9 shrink-0 snap-start items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all duration-200 sm:px-4 sm:text-sm"
+                          style={
+                            isSelected
+                              ? {
+                                  backgroundColor: tone.active,
+                                  borderColor: tone.active,
+                                  color: "#fff",
+                                  boxShadow: `0 1px 8px ${tone.glow}`,
+                                }
+                              : {
+                                  backgroundColor: tone.soft,
+                                  borderColor: `${tone.accent}55`,
+                                  color: tone.text,
+                                }
+                          }
                         >
                           <span
-                            className={`h-2 w-2 rounded-full ${
-                              isApolo
-                                ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]"
-                                : isOverts
-                                  ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
-                                  : "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]"
-                            }`}
+                            className="h-2 w-2 rounded-full"
+                            style={{
+                              backgroundColor: tone.accent,
+                              boxShadow: `0 0 8px ${tone.glow}`,
+                            }}
                           />
                           <span>{brand}</span>
                           <span
-                            className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                              isSelected ? "bg-white/25 text-white" : "bg-black/10 dark:bg-white/10"
-                            }`}
+                            className="rounded-full px-1.5 py-0.2 text-[10px]"
+                            style={
+                              isSelected
+                                ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
+                                : { backgroundColor: "rgba(0,0,0,0.08)", color: tone.text }
+                            }
                           >
                             {count}
                           </span>
@@ -1834,37 +1783,55 @@ export function Products() {
 
                 {(() => {
                   const otherBrands = availableBrands.filter(
-                    (brand) => !["apolo", "overts", "valtrom"].includes(brand.toLowerCase())
+                    (brand) =>
+                      !(OFFICIAL_BRANDS as readonly string[]).includes(brand.toLowerCase())
                   );
                   if (otherBrands.length === 0) return null;
                   return (
-                    <div className="custom-scrollbar flex max-w-4xl items-center gap-1.5 overflow-x-auto pb-1">
+                    <div className="custom-scrollbar flex max-w-full snap-x snap-mandatory items-center gap-1.5 overflow-x-auto pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]">
                       {otherBrands.map((brand) => {
                         const count = allMergedProducts.filter((p) =>
                           brandEquals(p.brand, brand)
                         ).length;
                         const isSelected =
                           selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
+                        const tone = getBrandChipVisual(brand);
                         return (
                           <button
                             key={brand}
                             onClick={() => handleBrandQuickSelect(brand)}
-                            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
+                            className="flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors duration-200"
+                            style={
                               isSelected
-                                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30"
-                                : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                            }`}
+                                ? {
+                                    backgroundColor: tone.active,
+                                    borderColor: tone.active,
+                                    color: "#fff",
+                                    boxShadow: `0 1px 6px ${tone.glow}`,
+                                  }
+                                : {
+                                    backgroundColor: tone.soft,
+                                    borderColor: `${tone.accent}40`,
+                                    color: tone.text,
+                                  }
+                            }
+                            title={count === 0 ? `${brand} (sin productos activos)` : brand}
                           >
                             <span
-                              className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-blue-200" : "bg-blue-400"}`}
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ backgroundColor: isSelected ? "#fff" : tone.accent }}
                             />
                             <span>{brand}</span>
                             <span
-                              className={`rounded-full px-1.5 text-[10px] ${
+                              className="rounded-full px-1.5 text-[10px]"
+                              style={
                                 isSelected
-                                  ? "bg-white/25 text-white"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
+                                  ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
+                                  : {
+                                      backgroundColor: "rgba(0,0,0,0.06)",
+                                      color: count === 0 ? "#94a3b8" : tone.text,
+                                    }
+                              }
                             >
                               {count}
                             </span>
@@ -2003,10 +1970,10 @@ export function Products() {
               </div>
 
               {/* BARRA DE HERRAMIENTAS (Filtros móvil, Ordenar, Vista) */}
-              <div className="sticky z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border border-l-4 border-l-primary bg-card/95 px-4 py-2.5 shadow-xs backdrop-blur-md" style={{ top: "calc(var(--site-header-height, 6rem) + var(--catalog-toolbar-height, 0px) + 0.5rem)" }}>
+              <div className="sticky z-20 flex flex-nowrap items-center gap-2 overflow-x-auto rounded-xl border border-border border-l-4 border-l-primary bg-card/95 px-2.5 py-2 shadow-xs backdrop-blur-md sm:px-4" style={{ top: "calc(var(--site-header-height, 6rem) + var(--catalog-toolbar-height, 0px) + 0.5rem)" }}>
                 <button
                   onClick={() => setMobileSidebarOpen(true)}
-                  className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-muted/80 border border-border rounded-lg text-foreground text-xs sm:text-sm font-medium"
+                  className="lg:hidden flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-muted/80 px-3 text-xs font-medium text-foreground sm:text-sm"
                 >
                   <SlidersHorizontal className="h-4 w-4 text-primary" />
                   <span>Filtros</span>
@@ -2029,7 +1996,7 @@ export function Products() {
                 </button>
 
                 {/* Ordenamiento */}
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
                   <span className="text-xs text-muted-foreground font-medium hidden sm:block">
                     Ordenar:
@@ -2041,7 +2008,7 @@ export function Products() {
                         e.target.value as "featured" | "name-asc" | "name-desc"
                       )
                     }
-                    className="bg-card dark:bg-zinc-800/80 border border-border text-foreground font-medium text-xs sm:text-sm rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary shadow-xs cursor-pointer"
+                    className="min-h-9 w-full min-w-0 cursor-pointer truncate rounded-lg border border-border bg-card px-2 text-xs font-medium text-foreground shadow-xs focus:outline-none focus:ring-1 focus:ring-primary sm:px-2.5 sm:text-sm dark:bg-zinc-800/80"
                   >
                     <option value="featured" className="bg-card text-foreground">Destacados / Marca</option>
                     <option value="name-asc" className="bg-card text-foreground">Nombre (A - Z)</option>
@@ -2050,14 +2017,14 @@ export function Products() {
                 </div>
 
                 {/* Switch de Vista */}
-                <div className="flex items-center gap-2 ml-auto">
+                <div className="ml-auto flex shrink-0 items-center gap-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:block">
                     VER
                   </span>
 
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`p-1.5 sm:p-2 rounded-lg transition-colors cursor-pointer ${
+                    className={`inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg transition-colors cursor-pointer ${
                       viewMode === "list"
                         ? "bg-primary text-white shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -2069,7 +2036,7 @@ export function Products() {
 
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`p-1.5 sm:p-2 rounded-lg transition-colors cursor-pointer ${
+                    className={`inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg transition-colors cursor-pointer ${
                       viewMode === "grid"
                         ? "bg-primary text-white shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -2081,7 +2048,7 @@ export function Products() {
 
                   <button
                     onClick={() => setViewMode("grid5")}
-                    className={`p-1.5 sm:p-2 rounded-lg transition-colors cursor-pointer ${
+                    className={`inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg transition-colors cursor-pointer ${
                       viewMode === "grid5"
                         ? "bg-primary text-white shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -2099,7 +2066,7 @@ export function Products() {
             <div ref={gridRef}>
             {catalogStatus === "loading" ? (
               <div
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
+                className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5"
                 aria-busy="true"
                 aria-label="Cargando catálogo"
               >
@@ -2205,15 +2172,7 @@ export function Products() {
                               </div>
 
                               {/* PRODUCTOS DE ESTA LÍNEA */}
-                              <div
-                                className={
-                                  viewMode === "grid"
-                                    ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6 lg:gap-7"
-                                    : viewMode === "grid5"
-                                    ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5"
-                                    : "grid gap-5"
-                                }
-                              >
+                              <div data-catalog-grid className={catalogGridClass}>
                                 {lineGroup.products.map((product) => (
                                   <ProductCard key={product.id} product={product} />
                                 ))}
@@ -2246,15 +2205,7 @@ export function Products() {
                       </div>
 
                       {/* PRODUCTOS DE ESTA LÍNEA */}
-                      <div
-                        className={
-                          viewMode === "grid"
-                            ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6 lg:gap-7"
-                            : viewMode === "grid5"
-                            ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5"
-                            : "grid gap-5"
-                        }
-                      >
+                      <div data-catalog-grid className={catalogGridClass}>
                         {lineGroup.products.map((product) => (
                           <ProductCard key={product.id} product={product} />
                         ))}

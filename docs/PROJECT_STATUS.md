@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-14**. Playwright E2E + ESLint en 0 warnings.
+Última revisión de documentación: **2026-11-17**. Alta de productos por familia en el panel.
 
 ## Qué es
 
@@ -22,7 +22,8 @@ Sitio comercial + backoffice de **Apolo Lubricantes**: catálogo, cotizaciones W
 - SEO: `app/robots.ts`, `app/sitemap.ts`, Open Graph/Twitter/`metadataBase`, JSON-LD Organization; metadata por página storefront
 - LCP above-the-fold: `priority`/`loading="eager"` en PromoCarousel y featured showcase
 - Carrusel destacados dedupe por SKU + loop solo con suficientes ítems únicos
-- Modularización parcial: `lib/admin/product-heuristics.ts`, `CatalogPager`, `SortableProductRow`, `hooks/use-public-catalog.ts`, `lib/catalog/*`
+- Modularización parcial: `lib/admin/product-heuristics.ts`, `components/admin-product-form.tsx`, `CatalogPager`, `SortableProductRow`, `hooks/use-public-catalog.ts`, `lib/catalog/*`
+- Alta de productos: familia (lubricante, limpieza, fluido, aditivo, filtro, accesorio, otro) solo guía el formulario y se guarda en columnas existentes, incluido `price` opcional
 - Roles staff en UI (`lib/admin-permissions.ts`, proxy/login/sidebar); seed proveedores `db:suppliers`
 - Flotantes storefront reacomodados en móvil (hero libre hasta scroll)
 - Legales: `/terminos`, `/privacidad`, `/cookies`, banner de consentimiento y analytics condicional

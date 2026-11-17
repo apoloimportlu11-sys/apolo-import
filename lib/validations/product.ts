@@ -14,6 +14,10 @@ export const productUpsertSchema = z.object({
   description: z.string().trim().max(8000).nullable().optional(),
   stock: z.coerce.number().int().min(0).max(1_000_000).default(0),
   stock_min: z.coerce.number().int().min(0).max(1_000_000).optional().nullable(),
+  price: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? null : value),
+    z.coerce.number().min(0).max(1_000_000).nullable()
+  ).optional(),
   is_featured: z.boolean().default(false),
   is_active: z.boolean().default(true),
   category_id: z.string().trim().min(1).max(80).default("automovil"),

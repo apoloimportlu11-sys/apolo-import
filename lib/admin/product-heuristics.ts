@@ -159,6 +159,347 @@ export function suggestLineFromText(text: string): string {
   return "";
 }
 
+export type ProductFamily =
+  | "lubricante"
+  | "limpieza"
+  | "fluido"
+  | "aditivo"
+  | "filtro"
+  | "accesorio"
+  | "otro";
+
+export const FAMILY_OPTIONS: { id: ProductFamily; label: string }[] = [
+  { id: "lubricante", label: "Lubricante" },
+  { id: "limpieza", label: "Limpieza" },
+  { id: "fluido", label: "Fluido" },
+  { id: "aditivo", label: "Aditivo" },
+  { id: "filtro", label: "Filtro" },
+  { id: "accesorio", label: "Accesorio" },
+  { id: "otro", label: "Otro" },
+];
+
+export type FamilyProfile = {
+  showViscosity: boolean;
+  viscosityLabel: string;
+  viscosityPresets: readonly string[];
+  showLine: boolean;
+  linePresets: readonly string[];
+  showPresentation: boolean;
+  showApplication: boolean;
+  applicationLabel: string;
+  applicationPresets: readonly string[];
+  showCategory: boolean;
+  lockCategory: boolean;
+  defaultCategory: string;
+  defaultLine: string;
+  defaultType: string;
+  defaultLineGroup: string | null;
+};
+
+const SAE_PRESETS = [
+  "5W-30",
+  "5W-40",
+  "10W-30",
+  "10W-40",
+  "15W-40",
+  "20W-50",
+  "75W-90",
+  "80W-90",
+  "ISO VG 46",
+  "ISO VG 68",
+  "NLGI 2",
+  "2T",
+  "4T",
+] as const;
+
+const FLUID_PRESETS = ["DOT 3", "DOT 4", "ATF", "Coolant"] as const;
+
+const LUBRICANT_LINES = ["GASOLINERO", "DIESEL", "MOTOS", "TRANSMISIÓN", "HIDRÁULICOS", "GRASAS"] as const;
+
+export function familyProfile(family: ProductFamily): FamilyProfile {
+  switch (family) {
+    case "limpieza":
+      return {
+        showViscosity: false,
+        viscosityLabel: "Viscosidad",
+        viscosityPresets: [],
+        showLine: true,
+        linePresets: ["MANTENIMIENTO"],
+        showPresentation: true,
+        showApplication: true,
+        applicationLabel: "Aplicación",
+        applicationPresets: ["Motor", "Frenos", "Tapicería", "Llantas", "Multiuso"],
+        showCategory: false,
+        lockCategory: true,
+        defaultCategory: "aditivos",
+        defaultLine: "MANTENIMIENTO",
+        defaultType: "Limpiador",
+        defaultLineGroup: "limpieza-y-cuidado-automotriz",
+      };
+    case "fluido":
+      return {
+        showViscosity: true,
+        viscosityLabel: "Especificación",
+        viscosityPresets: FLUID_PRESETS,
+        showLine: true,
+        linePresets: ["FRENOS", "REFRIGERANTES", "HIDRÁULICOS"],
+        showPresentation: true,
+        showApplication: true,
+        applicationLabel: "Aplicación",
+        applicationPresets: ["Frenos", "Radiador", "Dirección", "Hidráulico"],
+        showCategory: true,
+        lockCategory: false,
+        defaultCategory: "automovil",
+        defaultLine: "FRENOS",
+        defaultType: "Fluido",
+        defaultLineGroup: "liquidos-de-freno-y-direccion",
+      };
+    case "aditivo":
+      return {
+        showViscosity: false,
+        viscosityLabel: "Viscosidad",
+        viscosityPresets: [],
+        showLine: false,
+        linePresets: [],
+        showPresentation: true,
+        showApplication: true,
+        applicationLabel: "Tipo de aditivo",
+        applicationPresets: ["Motor", "Combustible", "Radiador"],
+        showCategory: false,
+        lockCategory: true,
+        defaultCategory: "aditivos",
+        defaultLine: "",
+        defaultType: "Aditivo",
+        defaultLineGroup: "limpieza-y-cuidado-automotriz",
+      };
+    case "filtro":
+      return {
+        showViscosity: false,
+        viscosityLabel: "Viscosidad",
+        viscosityPresets: [],
+        showLine: true,
+        linePresets: ["FILTROS"],
+        showPresentation: true,
+        showApplication: true,
+        applicationLabel: "Tipo de filtro",
+        applicationPresets: ["Aceite", "Aire", "Combustible", "Cabina"],
+        showCategory: false,
+        lockCategory: true,
+        defaultCategory: "filtros",
+        defaultLine: "FILTROS",
+        defaultType: "Filtro",
+        defaultLineGroup: "filtros-automotrices",
+      };
+    case "accesorio":
+      return {
+        showViscosity: false,
+        viscosityLabel: "Viscosidad",
+        viscosityPresets: [],
+        showLine: false,
+        linePresets: [],
+        showPresentation: true,
+        showApplication: false,
+        applicationLabel: "Tipo",
+        applicationPresets: [],
+        showCategory: false,
+        lockCategory: true,
+        defaultCategory: "otros",
+        defaultLine: "",
+        defaultType: "Accesorio",
+        defaultLineGroup: "general-otros",
+      };
+    case "otro":
+      return {
+        showViscosity: false,
+        viscosityLabel: "Viscosidad",
+        viscosityPresets: [],
+        showLine: false,
+        linePresets: [],
+        showPresentation: true,
+        showApplication: false,
+        applicationLabel: "Tipo",
+        applicationPresets: [],
+        showCategory: true,
+        lockCategory: false,
+        defaultCategory: "otros",
+        defaultLine: "",
+        defaultType: "",
+        defaultLineGroup: "general-otros",
+      };
+    default:
+      return {
+        showViscosity: true,
+        viscosityLabel: "Viscosidad",
+        viscosityPresets: SAE_PRESETS,
+        showLine: true,
+        linePresets: LUBRICANT_LINES,
+        showPresentation: true,
+        showApplication: false,
+        applicationLabel: "Tipo",
+        applicationPresets: [],
+        showCategory: true,
+        lockCategory: false,
+        defaultCategory: "automovil",
+        defaultLine: "GASOLINERO",
+        defaultType: "Lubricante Especializado",
+        defaultLineGroup: "aceites-para-motores-gasolineros",
+      };
+  }
+}
+
+/** Familia sugerida por el nombre. No decide sola si el usuario ya eligió otra. */
+export function suggestFamily(text: string): ProductFamily {
+  const t = text.toLowerCase();
+  if (!t.trim()) return "lubricante";
+  if (/filtro/.test(t)) return "filtro";
+  if (/limpiador|desengrasan|detergente|shampoo|champ[uú]|abrillantador/.test(t)) return "limpieza";
+  if (/aditivo/.test(t)) return "aditivo";
+  if (/l[ií]quido de freno|\bdot\s*-?\s*[345]\b|refriger|anticongel|coolant/.test(t)) return "fluido";
+  if (/accesorio|repuesto|herramienta|bater[ií]a/.test(t)) return "accesorio";
+  if (/aceite|lubric|grasa|sint[eé]tic|valvulina|transmisi[oó]n|\b2t\b|\b4t\b/.test(t)) return "lubricante";
+  return "otro";
+}
+
+export type NameSuggestion = {
+  family: ProductFamily;
+  viscosity: string;
+  presentation: string;
+  line: string;
+  categoryId: string;
+  subcategoryId: string;
+  subcategory: string;
+  type: string;
+  lineGroupId: string | null;
+};
+
+function filterSubcategory(text: string): { id: string; name: string } {
+  const t = text.toLowerCase();
+  if (/cabina/.test(t)) return { id: "filtro-cabina", name: "Filtro de cabina" };
+  if (/combustible/.test(t)) return { id: "filtro-combustible", name: "Filtro de combustible" };
+  if (/aire/.test(t)) return { id: "filtro-aire", name: "Filtro de aire" };
+  if (/hidr[aá]ul/.test(t)) return { id: "filtro-hidraulico", name: "Filtro hidráulico" };
+  if (/aceite/.test(t)) return { id: "filtro-aceite", name: "Filtro de aceite" };
+  return { id: "", name: "" };
+}
+
+function fluidSubcategory(text: string): { id: string; name: string; line: string; group: string } {
+  const t = text.toLowerCase();
+  if (/refriger|anticongel|coolant/.test(t)) {
+    return {
+      id: "refrigerante-auto",
+      name: "Refrigerantes / coolants",
+      line: "REFRIGERANTES",
+      group: "refrigerantes-y-coolant",
+    };
+  }
+  return {
+    id: "frenos-auto",
+    name: "Frenos y dirección",
+    line: "FRENOS",
+    group: "liquidos-de-freno-y-direccion",
+  };
+}
+
+/** Completa ficha a partir del nombre, sin viscosidad SAE en familias que no la usan. */
+export function suggestFromName(text: string): NameSuggestion {
+  const family = suggestFamily(text);
+  const profile = familyProfile(family);
+  const presentation = detectPresentation(text);
+  const detectedLine = suggestLineFromText(text);
+  const detectedCategory = suggestCategory(text);
+
+  if (family === "filtro") {
+    const sub = filterSubcategory(text);
+    return {
+      family,
+      viscosity: "",
+      presentation,
+      line: profile.defaultLine,
+      categoryId: "filtros",
+      subcategoryId: sub.id,
+      subcategory: sub.name,
+      type: sub.name ? `Filtro de ${sub.name.replace(/^Filtro de /i, "").toLowerCase()}` : profile.defaultType,
+      lineGroupId: profile.defaultLineGroup,
+    };
+  }
+
+  if (family === "limpieza") {
+    return {
+      family,
+      viscosity: "",
+      presentation,
+      line: profile.defaultLine,
+      categoryId: "aditivos",
+      subcategoryId: "limpiadores",
+      subcategory: "Limpiadores",
+      type: profile.defaultType,
+      lineGroupId: profile.defaultLineGroup,
+    };
+  }
+
+  if (family === "fluido") {
+    const spec = detectViscosity(text);
+    const fluid = fluidSubcategory(text);
+    const allowed = new Set(profile.viscosityPresets.map((item) => item.toLowerCase()));
+    const coolant = /coolant|refriger|anticongel/.test(text.toLowerCase());
+    return {
+      family,
+      viscosity: allowed.has(spec.toLowerCase()) ? spec : coolant ? "Coolant" : "",
+      presentation,
+      line: fluid.line,
+      categoryId: detectedCategory && detectedCategory !== "filtros" ? detectedCategory : "automovil",
+      subcategoryId: fluid.id,
+      subcategory: fluid.name,
+      type: profile.defaultType,
+      lineGroupId: fluid.group,
+    };
+  }
+
+  if (family === "aditivo") {
+    const t = text.toLowerCase();
+    const kind = /combustible/.test(t) ? "Combustible" : /radiador|refriger/.test(t) ? "Radiador" : "Motor";
+    return {
+      family,
+      viscosity: "",
+      presentation,
+      line: "",
+      categoryId: "aditivos",
+      subcategoryId: kind === "Combustible" ? "aditivos-combustible" : "aditivos-motor",
+      subcategory: kind === "Combustible" ? "Aditivos de combustible" : "Aditivos de motor",
+      type: kind,
+      lineGroupId: profile.defaultLineGroup,
+    };
+  }
+
+  if (family === "accesorio" || family === "otro") {
+    return {
+      family,
+      viscosity: "",
+      presentation,
+      line: "",
+      categoryId: profile.defaultCategory,
+      subcategoryId: family === "accesorio" ? "herramientas-otros" : "",
+      subcategory: family === "accesorio" ? "Accesorios" : "",
+      type: profile.defaultType,
+      lineGroupId: profile.defaultLineGroup,
+    };
+  }
+
+  const viscosity = detectViscosity(text);
+  const categoryId = detectedCategory || profile.defaultCategory;
+  return {
+    family: "lubricante",
+    viscosity,
+    presentation,
+    line: detectedLine || profile.defaultLine,
+    categoryId,
+    subcategoryId: "",
+    subcategory: "",
+    type: profile.defaultType,
+    lineGroupId: CATEGORY_DEFAULT_LINE_GROUP[categoryId] || profile.defaultLineGroup,
+  };
+}
+
 export function suggestCategory(text: string): string {
   const t = text.toLowerCase();
   if (/filtro/.test(t)) return "filtros";

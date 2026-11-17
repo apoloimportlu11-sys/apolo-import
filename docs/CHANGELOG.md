@@ -4,6 +4,17 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-17 — Alta de productos por familia
+
+- El modal de productos es un asistente: familia, campos según el tipo y precio de venta opcional (columna `price` ya existente)
+- Un filtro no guarda viscosidad SAE; el nombre sugiere categoría, línea y presentación sin pisar lo editado a mano
+- Componente `components/admin-product-form.tsx` (no hay carpeta `components/admin`)
+
+## 2026-11-17 — Catálogo responsivo
+
+- Grilla de `/productos` a 2 columnas en móvil; tarjetas más compactas y fotos en marco uniforme
+- Chips de marca con scroll horizontal; spec visual `e2e/catalog-visual.spec.ts`
+
 ## 2026-11-14 — Playwright E2E
 
 - `@playwright/test` + Chromium: smoke storefront, cotización drawer, gate admin

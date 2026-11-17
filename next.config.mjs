@@ -30,6 +30,7 @@ const nextConfig = {
   compress: process.env.NODE_ENV === "production",
   poweredByHeader: false,
   reactStrictMode: true,
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
 
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -53,6 +54,17 @@ const nextConfig = {
 
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion', '@radix-ui/react-icons'],
+  },
+
+  // Evita que writes de debug/agent en .cursor disparen Fast Refresh / ChunkLoadError
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: /node_modules|\.git|\.cursor|\.agents|agent-transcripts/,
+      };
+    }
+    return config;
   },
 };
 
