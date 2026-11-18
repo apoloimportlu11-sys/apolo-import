@@ -87,24 +87,34 @@ function createPromoId() {
 
 const EMPTY_SLIDE: PromoSlide = {
   id: "",
-  tag: "Oferta especial",
-  badge: "Nuevo",
-  title: "Promoción exclusiva",
-  titleHighlight: "Apolo Lubricantes",
-  subtitle: "Calidad y rendimiento para el motor",
-  description: "Aprovecha las ofertas en lubricantes, grasas y refrigerantes.",
+  tag: "",
+  badge: "",
+  title: "",
+  titleHighlight: "",
+  subtitle: "",
+  description: "",
   type: "image",
-  mediaUrl: "/images/promociones/promo1.jpg",
+  mediaUrl: "",
   posterUrl: "",
-  primaryCtaText: "Ver productos",
-  primaryCtaLink: "/productos",
-  secondaryCtaText: "Consultar por WhatsApp",
-  secondaryCtaLink: "https://wa.me/51958400028",
+  primaryCtaText: "",
+  primaryCtaLink: "",
+  secondaryCtaText: "",
+  secondaryCtaLink: "",
   accentColor: "from-red-600 via-red-500 to-amber-500",
   isActive: true,
   startsOn: "",
   endsOn: "",
 };
+
+function slideLabel(slide: Pick<PromoSlide, "title">) {
+  return slide.title.trim() || "Solo imagen";
+}
+
+function slideHasCopy(slide: Pick<PromoSlide, "tag" | "badge" | "title" | "titleHighlight" | "subtitle" | "description">) {
+  return [slide.tag, slide.badge, slide.title, slide.titleHighlight, slide.subtitle, slide.description].some(
+    (value) => (value || "").trim()
+  );
+}
 
 function formatDay(iso?: string) {
   if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
@@ -149,8 +159,20 @@ function matchesQuery(slide: PromoSlide, query: string) {
 }
 
 function cleanSlide(slide: PromoSlide): PromoSlide {
+  const primaryText = slide.primaryCtaText.trim();
+  const secondaryText = (slide.secondaryCtaText || "").trim();
   return {
     ...slide,
+    tag: slide.tag.trim(),
+    badge: (slide.badge || "").trim(),
+    title: slide.title.trim(),
+    titleHighlight: slide.titleHighlight.trim(),
+    subtitle: slide.subtitle.trim(),
+    description: slide.description.trim(),
+    primaryCtaText: primaryText,
+    primaryCtaLink: primaryText ? slide.primaryCtaLink.trim() : "",
+    secondaryCtaText: secondaryText,
+    secondaryCtaLink: secondaryText ? (slide.secondaryCtaLink || "").trim() : "",
     startsOn: slide.startsOn || undefined,
     endsOn: slide.endsOn || undefined,
     posterUrl: slide.posterUrl || undefined,
@@ -185,7 +207,7 @@ function SlideStage({
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)]">
       {!compact ? <div aria-hidden className="h-px bg-gradient-to-r from-transparent via-[#E4C36A] to-transparent" /> : null}
-      <div className={`relative ${compact ? "h-52" : "h-[300px] sm:h-[360px]"}`}>
+      <div className="relative aspect-[2/1] w-full bg-black">
         {slide.type === "video" && slide.mediaUrl ? (
           <video
             key={slide.mediaUrl}
@@ -193,22 +215,26 @@ function SlideStage({
             poster={slide.posterUrl || undefined}
             muted
             playsInline
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
           />
         ) : slide.mediaUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={slide.mediaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <img src={slide.mediaUrl} alt="" className="absolute inset-0 h-full w-full object-contain" />
         ) : (
           <div className="absolute inset-0 bg-[#1a1a1a]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/25" />
+        {slideHasCopy(slide) ? (
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent" />
+        ) : null}
         <div className="admin-on-media absolute inset-0 flex flex-col justify-end p-5 sm:p-8">
+          <span className={`absolute left-4 top-4 rounded-full px-2 py-0.5 text-xs ${status.className}`}>{status.label}</span>
+          {slideHasCopy(slide) ? (
           <div className="max-w-xl">
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-              <span className={`rounded-full px-2 py-0.5 ${status.className}`}>{status.label}</span>
               {slide.tag ? <span className="text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">{slide.tag}</span> : null}
               {slide.badge ? <span className="text-amber-100 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">{slide.badge}</span> : null}
             </div>
+            {slide.title || slide.titleHighlight ? (
             <p className={`font-heading font-semibold uppercase leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.95),0_1px_2px_#000] ${compact ? "line-clamp-4 text-lg" : "text-3xl sm:text-5xl"}`}>
               {slide.title}{" "}
               {slide.titleHighlight ? (
@@ -217,20 +243,22 @@ function SlideStage({
                 </span>
               ) : null}
             </p>
+            ) : null}
             {slide.subtitle ? <p className={`mt-2 text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.95)] ${compact ? "line-clamp-2 text-xs" : "line-clamp-2 text-sm"}`}>{slide.subtitle}</p> : null}
             {!compact && slide.description ? (
               <p className="mt-2 line-clamp-2 max-w-lg text-sm text-zinc-100 [text-shadow:0_1px_8px_rgba(0,0,0,0.95)]">{slide.description}</p>
             ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {slide.primaryCtaText ? (
+          </div>
+          ) : null}
+          <div className="mt-4 flex flex-wrap gap-2">
+              {slide.primaryCtaText.trim() && slide.primaryCtaLink.trim() ? (
                 <span className="rounded-lg bg-red-700 px-3 py-1.5 text-sm font-semibold text-white">{slide.primaryCtaText}</span>
               ) : null}
-              {slide.secondaryCtaText ? (
+              {(slide.secondaryCtaText || "").trim() && (slide.secondaryCtaLink || "").trim() ? (
                 <span className="rounded-lg border border-white/30 px-3 py-1.5 text-sm text-white">{slide.secondaryCtaText}</span>
               ) : null}
             </div>
           </div>
-        </div>
       </div>
       {!compact && total > 1 && onPrev && onNext ? (
         <div className="flex items-center justify-end gap-2 border-t border-[var(--admin-line)] bg-[var(--admin-canvas)] px-4 py-2">
@@ -298,7 +326,7 @@ function BannerRow({
       <button
         type="button"
         className="cursor-grab touch-none rounded-md p-1 text-[var(--admin-faint)] hover:text-[var(--admin-ink)] disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--admin-accent)]"
-        aria-label={`Reordenar ${slide.title}`}
+        aria-label={`Reordenar ${slideLabel(slide)}`}
         disabled={!canReorder}
         {...attributes}
         {...listeners}
@@ -309,7 +337,7 @@ function BannerRow({
         type="button"
         onClick={onSelect}
         className="relative h-[72px] w-[112px] shrink-0 overflow-hidden rounded-lg bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
-        aria-label={`Ver ${slide.title}`}
+        aria-label={`Ver ${slideLabel(slide)}`}
       >
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -323,7 +351,7 @@ function BannerRow({
       </button>
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
         <p className="truncate text-sm font-semibold text-[var(--admin-ink)]">
-          {slide.title}
+          {slideLabel(slide)}
           {slide.titleHighlight ? <span className="font-medium text-[var(--admin-muted)]"> {slide.titleHighlight}</span> : null}
         </p>
         <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--admin-muted)]">
@@ -466,8 +494,8 @@ export default function AdminBannersPage() {
 
   async function handleSaveSlide(event: FormEvent) {
     event.preventDefault();
-    if (!formData.title.trim()) {
-      toast.error("El título es obligatorio.");
+    if (!formData.mediaUrl.trim()) {
+      toast.error("Sube una imagen o pega su enlace.");
       return;
     }
     if (formData.startsOn && formData.endsOn && formData.startsOn > formData.endsOn) {
@@ -784,7 +812,7 @@ export default function AdminBannersPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm text-[var(--admin-ink)]">
                   Etiqueta
-                  <input required value={formData.tag} onChange={(event) => setFormData({ ...formData, tag: event.target.value })} className={`${inputClass} mt-1.5`} />
+                  <input value={formData.tag} onChange={(event) => setFormData({ ...formData, tag: event.target.value })} placeholder="Opcional" className={`${inputClass} mt-1.5`} />
                 </label>
                 <label className="block text-sm text-[var(--admin-ink)]">
                   Insignia
@@ -792,7 +820,7 @@ export default function AdminBannersPage() {
                 </label>
                 <label className="block text-sm text-[var(--admin-ink)]">
                   Título
-                  <input required value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} className={`${inputClass} mt-1.5`} />
+                  <input value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} placeholder="Opcional" className={`${inputClass} mt-1.5`} />
                 </label>
                 <label className="block text-sm text-[var(--admin-ink)]">
                   Título resaltado
@@ -885,7 +913,7 @@ export default function AdminBannersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar banner</AlertDialogTitle>
             <AlertDialogDescription className="text-[var(--admin-muted)]">
-              Se quita «{pendingDelete?.title || "este banner"}» del carrusel.
+              Se quita «{pendingDelete ? slideLabel(pendingDelete) : "este banner"}» del carrusel.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

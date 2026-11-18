@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-17**. Alta de productos por familia en el panel.
+Última revisión de documentación: **2026-11-18**. La sección de marcas del inicio es una cuadrícula de tarjetas; banners del inicio en proporción 2:1.
 
 ## Qué es
 

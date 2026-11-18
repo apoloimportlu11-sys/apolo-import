@@ -52,7 +52,7 @@ export function Hero() {
     <section className="home-shell relative w-full bg-background">
       <div
         ref={heroRef}
-        className="relative h-[min(68vh,calc(100svh-var(--site-header-height,5.5rem)))] max-h-[68vh] min-h-[420px] overflow-hidden"
+        className="relative aspect-[2/1] w-full overflow-hidden bg-black"
       >
         <motion.div style={{ y: heroY, opacity: heroOpacity }} className="h-full w-full">
           <PromoCarousel />

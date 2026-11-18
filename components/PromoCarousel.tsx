@@ -268,9 +268,15 @@ export function PromoCarousel({
       aria-label="Carrusel de Ofertas y Novedades"
     >
       {/* Slides Container */}
-      <div className="relative h-full min-h-[420px] w-full">
+      <div className="relative h-full w-full">
         {activeSlides.map((slide, index) => {
           const isActive = index === currentIndex;
+          const hasCopy = [slide.tag, slide.badge, slide.title, slide.titleHighlight, slide.subtitle, slide.description].some(
+            (value) => (value || "").trim()
+          );
+          const hasButtons =
+            Boolean(slide.primaryCtaText.trim() && slide.primaryCtaLink.trim()) ||
+            Boolean((slide.secondaryCtaText || "").trim() && (slide.secondaryCtaLink || "").trim());
 
           return (
             <div
@@ -295,7 +301,7 @@ export function PromoCarousel({
                       muted={isMuted}
                       playsInline
                       poster={slide.posterUrl || undefined}
-                      className="w-full h-full object-cover object-center"
+                      className="h-full w-full object-contain object-center"
                       onTimeUpdate={() => handleVideoTimeUpdate(index)}
                       onEnded={() => handleVideoEnded(index)}
                     >
@@ -304,29 +310,33 @@ export function PromoCarousel({
                   ) : (
                     <Image
                       src={slide.mediaUrl}
-                      alt={`${slide.title} ${slide.titleHighlight || ""}`}
+                      alt={slide.title.trim() || "Banner"}
                       fill
                       priority={isActive || index === 0}
                       loading={isActive || index === 0 ? "eager" : "lazy"}
                       fetchPriority={isActive || index === 0 ? "high" : "auto"}
                       sizes="100vw"
-                      className={`object-cover object-center ${isActive ? "animate-ken-burns" : ""}`}
+                      className="object-contain object-center"
                     />
                   )
                 ) : (
                   <div className="w-full h-full bg-[#0d0d0d] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#111111] to-black" />
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/20" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-                <div className="hero-light-veil" aria-hidden="true" />
+                {hasCopy ? (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-r from-black from-[8%] via-black/85 via-[48%] to-black/10" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/35" />
+                    <div className="hero-light-veil" aria-hidden="true" />
+                  </>
+                ) : null}
               </div>
 
-              {/* Slide Content */}
-              <div className="relative z-20 mx-auto flex h-full items-center px-4 py-8 pb-16 sm:px-6 sm:pb-16 lg:px-12 xl:px-16">
-                <div className="max-w-xl pb-4 text-white sm:max-w-2xl lg:max-w-3xl">
+              {hasCopy ? (
+              <div className="relative z-20 mx-auto flex h-full items-start px-4 pb-16 pt-3 sm:items-center sm:px-6 sm:py-8 sm:pb-16 lg:px-12 xl:px-16">
+                <div className="max-w-md text-white sm:max-w-lg sm:pb-4 lg:max-w-xl">
                   <div
-                    className={`mb-3 flex flex-wrap items-center gap-2 sm:mb-5 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    className={`mb-1.5 flex flex-wrap items-center gap-2 sm:mb-5 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                       isActive ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
                     }`}
                   >
@@ -345,22 +355,26 @@ export function PromoCarousel({
                     )}
                   </div>
 
+                  {slide.title.trim() || slide.titleHighlight.trim() ? (
                   <h2
-                    className={`font-display text-3xl font-semibold uppercase leading-[0.95] tracking-tight text-balance text-white transition-[opacity,transform] delay-75 duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:text-4xl md:text-5xl lg:text-5xl ${
+                    className={`font-display text-2xl font-semibold uppercase leading-[0.92] tracking-tight text-balance text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-[opacity,transform] delay-75 duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:text-5xl lg:text-6xl ${
                       isActive ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
                     }`}
                   >
-                    <span>{slide.title}</span>{" "}
-                    {slide.titleHighlight && (
-                      <span className="mt-1 block text-[color:var(--gold)] sm:mt-2">
+                    {slide.title.trim() ? <span>{slide.title}</span> : null}
+                    {slide.titleHighlight.trim() ? (
+                      <span
+                        className={`mt-1 block bg-gradient-to-r ${slide.accentColor || "from-amber-400 via-yellow-300 to-amber-500"} bg-clip-text text-transparent sm:mt-2`}
+                      >
                         {slide.titleHighlight}
                       </span>
-                    )}
+                    ) : null}
                   </h2>
+                  ) : null}
 
                   {slide.subtitle && (
                     <p
-                      className={`mt-4 flex items-start gap-2 text-base font-medium text-zinc-100 transition-[opacity,transform] delay-150 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:mt-5 sm:text-lg md:text-xl ${
+                      className={`mt-1.5 flex items-start gap-2 text-xs font-semibold text-white transition-[opacity,transform] delay-150 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:mt-5 sm:text-lg ${
                         isActive ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
                       }`}
                     >
@@ -371,7 +385,7 @@ export function PromoCarousel({
 
                   {slide.description && (
                     <p
-                      className={`mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 line-clamp-4 transition-[opacity,transform] delay-200 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:mt-4 sm:line-clamp-none sm:text-base ${
+                      className={`mt-2 hidden max-w-md text-sm leading-relaxed text-white/80 line-clamp-2 transition-[opacity,transform] delay-200 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:mt-3 sm:block sm:text-base ${
                         isActive ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
                       }`}
                     >
@@ -379,34 +393,33 @@ export function PromoCarousel({
                     </p>
                   )}
 
-                  <div
-                    className={`mt-6 flex flex-wrap items-center gap-3 transition-[opacity,transform] delay-300 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:mt-8 sm:gap-4 ${
-                      isActive ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-                    }`}
-                  >
-                    {slide.primaryCtaText && slide.primaryCtaLink && (
-                      <Link
-                        href={slide.primaryCtaLink}
-                        className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-white transition-[transform,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-red-500 active:scale-[0.98] sm:h-12 sm:px-8 sm:text-base"
-                      >
-                        <span>{slide.primaryCtaText}</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    )}
-
-                    {slide.secondaryCtaText && slide.secondaryCtaLink && (
-                      <Link
-                        href={slide.secondaryCtaLink}
-                        target={slide.secondaryCtaLink.startsWith("http") ? "_blank" : undefined}
-                        rel={slide.secondaryCtaLink.startsWith("http") ? "noopener noreferrer" : undefined}
-                        className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-6 text-sm font-semibold text-white backdrop-blur-md transition-[transform,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/40 hover:bg-white/15 active:scale-[0.98] sm:h-12 sm:px-7 sm:text-base"
-                      >
-                        <span>{slide.secondaryCtaText}</span>
-                      </Link>
-                    )}
-                  </div>
                 </div>
               </div>
+              ) : null}
+
+              {hasButtons ? (
+                <div className="absolute inset-x-0 bottom-8 z-20 flex flex-wrap items-center gap-2 px-4 sm:bottom-16 sm:gap-3 sm:px-8 lg:px-12">
+                  {slide.primaryCtaText.trim() && slide.primaryCtaLink.trim() ? (
+                    <Link
+                      href={slide.primaryCtaLink}
+                      className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white transition-[transform,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-red-500 active:scale-[0.98] sm:h-11 sm:px-6"
+                    >
+                      <span>{slide.primaryCtaText}</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  ) : null}
+                  {(slide.secondaryCtaText || "").trim() && (slide.secondaryCtaLink || "").trim() ? (
+                    <Link
+                      href={slide.secondaryCtaLink || ""}
+                      target={(slide.secondaryCtaLink || "").startsWith("http") ? "_blank" : undefined}
+                      rel={(slide.secondaryCtaLink || "").startsWith("http") ? "noopener noreferrer" : undefined}
+                      className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full border border-white/25 bg-black/45 px-5 text-sm font-semibold text-white backdrop-blur-md transition-[transform,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/40 hover:bg-black/60 active:scale-[0.98] sm:h-11 sm:px-6"
+                    >
+                      <span>{slide.secondaryCtaText}</span>
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -449,7 +462,7 @@ export function PromoCarousel({
                     className={`relative h-2 rounded-full transition-all duration-300 cursor-pointer overflow-hidden ${
                       isActive ? "w-8 sm:w-12 bg-white/20" : "w-2 sm:w-2.5 bg-white/40 hover:bg-white/70"
                     }`}
-                    aria-label={`Ir al slide ${index + 1}: ${slide.title}`}
+                    aria-label={`Ir al slide ${index + 1}: ${slide.title.trim() || "Banner"}`}
                   >
                     {isActive && (
                       <div

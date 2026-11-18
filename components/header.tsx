@@ -522,6 +522,7 @@ export function Header() {
               </Sheet>
             </div>
           </div>
+          <SloganBar compact={compact} />
         </div>
 
         {showMegaMenu && (
@@ -572,22 +573,26 @@ export function Header() {
           onClose={() => setIsLoginModalOpen(false)}
         />
       </header>
-
-      {pathname !== "/" ? <SloganBar /> : null}
     </>
   );
 }
 
-export function SloganBar() {
+function SloganBar({ compact }: { compact: boolean }) {
   return (
-    <div className="relative overflow-hidden border-y border-border bg-muted dark:border-white/10 dark:bg-[#141414]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-      <div className="relative z-10 mx-auto flex w-full max-w-[1700px] items-center justify-center px-4 py-2 sm:px-8 sm:py-2.5">
-        <p className="max-w-4xl text-balance text-center font-heading text-sm font-semibold leading-snug tracking-tight text-foreground sm:text-base md:text-lg">
-          <span className="text-muted-foreground">No te vendemos un producto. </span>
-          <span className="text-primary">Te damos experiencia.</span>
-        </p>
-      </div>
+    <div className="slogan-bar">
+      <p
+        className={cn(
+          "slogan-line relative z-10 flex items-center justify-center gap-2.5 px-3 text-center font-heading font-bold leading-snug tracking-[0.01em]",
+          compact ? "py-1 text-[11px] sm:text-xs" : "py-2 text-[13px] sm:text-sm md:text-[15px]"
+        )}
+      >
+        <span className="slogan-spark" aria-hidden />
+        <span className="text-balance">
+          <span className="slogan-lead">No te vendemos un producto, </span>
+          <span className="slogan-accent">te damos experiencia.</span>
+        </span>
+        <span className="slogan-spark slogan-spark-delay" aria-hidden />
+      </p>
     </div>
   );
 }

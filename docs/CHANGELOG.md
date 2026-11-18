@@ -4,6 +4,24 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-18 — Marcas del inicio
+
+- La sección «Marcas con las que trabajamos» pasa de marquesina a una cuadrícula de tarjetas; los logos y el conteo siguen saliendo de Supabase
+
+## 2026-11-18 — Banners a 2:1
+
+- Un banner se guarda solo con la imagen; etiqueta, título y botones son opcionales. El botón se publica si tiene texto y enlace
+- El carrusel y la vista previa usan proporción 2:1 y muestran la foto completa, sin recorte ni zoom. El velo aparece solo cuando hay texto
+
+## 2026-11-18 — Banner del inicio
+
+- El texto del carrusel queda sobre un velo oscuro y el título resaltado usa el color elegido en el panel
+
+## 2026-11-18 — Eslogan en el encabezado
+
+- «No te vendemos un producto, te damos experiencia.» queda en el header de la tienda, también en el inicio
+- El eslogan usa blanco y oro, con un brillo corto, para que no se lea como texto gris
+
 ## 2026-11-17 — Alta de productos por familia
 
 - El modal de productos es un asistente: familia, campos según el tipo y precio de venta opcional (columna `price` ya existente)

@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useHomeContent } from "@/lib/home-content";
-import { ScrollReveal } from "@/components/home/scroll-reveal";
-import { LightAtmosphere } from "@/components/home/light-atmosphere";
 import { usePublicBrands } from "@/hooks/use-public-brands";
+import styles from "./brands-stage.module.css";
 
 export interface BrandItem {
   logo: string;
@@ -24,53 +23,6 @@ export const brands: BrandItem[] = [
 interface BrandsCarouselProps {
   showTitle?: boolean;
   className?: string;
-}
-
-function MarqueeRow({
-  items,
-  reverse,
-  paused,
-  onPick,
-}: {
-  items: BrandItem[];
-  reverse?: boolean;
-  paused: boolean;
-  onPick: (item: BrandItem) => void;
-}) {
-  const doubled = items.concat(items);
-
-  return (
-    <div className="marquee-fade relative w-full overflow-hidden py-3 sm:py-5">
-      <div
-        className={`flex w-max items-center gap-10 sm:gap-14 ${
-          reverse ? "animate-marquee-reverse" : "animate-marquee"
-        } ${paused ? "paused" : "pause-on-hover"}`}
-      >
-        {doubled.map((item, i) => (
-          <div
-            key={`${reverse ? "r" : "f"}-${item.name}-${i}`}
-            role="button"
-            tabIndex={0}
-            className="flex h-10 w-28 shrink-0 items-center justify-center sm:h-12 sm:w-36"
-            onClick={() => onPick(item)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onPick(item);
-              }
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={item.logo}
-              alt={item.name}
-              className="h-10 w-auto max-w-full object-contain opacity-70 grayscale transition-[opacity,filter] duration-300 hover:opacity-100 hover:grayscale-0 focus-visible:opacity-100 focus-visible:grayscale-0 sm:h-12"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export default function BrandsCarousel({
@@ -109,83 +61,83 @@ export default function BrandsCarousel({
   const pick = (item: BrandItem) => setActiveBrand(item);
 
   return (
-    <section
-      className={`section-brands relative w-full overflow-hidden border-y border-[color:color-mix(in_oklab,var(--gold)_35%,transparent)] bg-[#EAF1FF] py-[var(--space-section-y-sm)] text-foreground dark:border-white/10 dark:bg-[#141414] dark:text-white ${className}`}
-    >
-      <LightAtmosphere seam="red" variant="diagonal" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,162,39,0.12),transparent_55%)]" />
-
-      <div className="relative z-10 w-full space-y-8 lg:space-y-10">
-        {showTitle && (
-          <ScrollReveal className="px-4 text-center">
-            <div className="flex items-center justify-center gap-3 sm:gap-5">
-              <div className="oil-streak oil-streak-r hidden h-px w-12 sm:block sm:w-20 lg:w-28" />
-              <h2 className="font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl">
-                <span className="title-heat text-primary">{homeContent.brandsSection.highlight}</span>{" "}
+    <section className={`section-brands ${styles.stage} relative w-full overflow-hidden ${className}`}>
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        {showTitle ? (
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl lg:text-[2.75rem] lg:leading-none">
+                <span className={styles.accent}>{homeContent.brandsSection.highlight}</span>{" "}
                 {homeContent.brandsSection.rest}
               </h2>
-              <div className="oil-streak oil-streak-l hidden h-px w-12 sm:block sm:w-20 lg:w-28" />
-            </div>
-            <p className="mt-3 text-pretty text-base text-zinc-500 dark:text-zinc-400 sm:mt-4">
-              {homeContent.brandsSection.subtitle}
-            </p>
-            {status === "ready" ? (
-              <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
-                {displayBrands.length} marcas activas en catálogo
+              <p className="mt-2 max-w-xl text-sm text-pretty text-zinc-400 sm:text-base">
+                {homeContent.brandsSection.subtitle}
               </p>
+              <span className={styles.headerRule} aria-hidden="true" />
+            </div>
+            {status === "ready" ? (
+              <div className={styles.count}>
+                <span className={styles.countValue}>{displayBrands.length}</span>
+                <span className={styles.countLabel}>marcas activas</span>
+              </div>
             ) : null}
-          </ScrollReveal>
-        )}
+          </header>
+        ) : null}
 
         {displayBrands.length > 0 ? (
-          <>
-            <MarqueeRow items={displayBrands} paused={Boolean(activeBrand)} onPick={pick} />
-            <MarqueeRow items={displayBrands} reverse paused={Boolean(activeBrand)} onPick={pick} />
-          </>
+          <ul className={`mt-6 sm:mt-8 ${styles.grid}`}>
+            {displayBrands.map((item, index) => (
+              <li key={item.name} className="min-w-0">
+                <button
+                  type="button"
+                  className={styles.card}
+                  style={{ animationDelay: `${Math.min(index, 14) * 35}ms` }}
+                  onClick={() => pick(item)}
+                  aria-label={`Ver ${item.name}`}
+                >
+                  <span className={styles.logoFrame}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.logo} alt="" />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         ) : (
-          <p className="px-4 text-center text-sm text-zinc-500">Cargando marcas…</p>
+          <p className="mt-6 text-sm text-zinc-400">Cargando marcas…</p>
         )}
       </div>
 
-      {activeBrand && (
+      {activeBrand ? (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-label={`Marca ${activeBrand.name}`}
         >
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-md"
-            onClick={() => setActiveBrand(null)}
-          />
-          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:max-w-md">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setActiveBrand(null)} />
+          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#16181d] text-white shadow-2xl sm:max-w-md">
             <div className="p-6 sm:p-8">
               <button
                 onClick={() => setActiveBrand(null)}
-                className="absolute top-3 right-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-muted text-foreground hover:bg-primary hover:text-white sm:h-9 sm:w-9"
+                className="absolute top-3 right-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/5 text-white hover:bg-[#C90012] sm:h-9 sm:w-9"
                 aria-label="Cerrar ventana"
               >
                 ✕
               </button>
               <div className="mb-4 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={activeBrand.logo}
-                  className="h-14 object-contain sm:h-16"
-                  alt={activeBrand.name || "Marca"}
-                />
+                <img src={activeBrand.logo} className="h-14 object-contain sm:h-16" alt={activeBrand.name || "Marca"} />
               </div>
               <div className="mt-4 flex flex-col items-center text-center sm:mt-6">
-                <span className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase sm:text-[11px]">
+                <span className="text-[10px] font-semibold tracking-[0.2em] text-zinc-400 uppercase sm:text-[11px]">
                   Marca del catálogo
                 </span>
-                <h4 className="mt-1 font-display text-xl font-semibold text-foreground sm:text-2xl">
-                  {activeBrand.name}
-                </h4>
-                <div className="mt-2 h-[2px] w-12 rounded-full bg-gradient-to-r from-primary via-[color:var(--gold)] to-primary sm:w-16" />
+                <h4 className="mt-1 font-display text-xl font-semibold text-white sm:text-2xl">{activeBrand.name}</h4>
+                <div className="mt-2 h-[2px] w-12 rounded-full bg-[#C90012] sm:w-16" />
                 <Link
                   href={activeBrand.href || `/productos?brand=${encodeURIComponent(activeBrand.name)}`}
-                  className="mt-5 inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                  className="mt-5 inline-flex items-center rounded-xl bg-[#C90012] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                   onClick={() => setActiveBrand(null)}
                 >
                   Ver productos
@@ -194,7 +146,7 @@ export default function BrandsCarousel({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

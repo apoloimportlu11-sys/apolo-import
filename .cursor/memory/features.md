@@ -11,6 +11,9 @@
 - Catálogo público sin flash estático; skeleton hasta Supabase — `components/products.tsx` (2026-11-12)
 - Gate `/admin` con sesión + role admin — `proxy.ts` (2026-11-12)
 - Legales `/terminos` y `/privacidad` enlazados desde el footer (2026-11-12)
+- Eslogan 2026-11-18 en el header de la tienda: «No te vendemos un producto, te damos experiencia.» — `components/header.tsx`
+- Banners 2026-11-18: el alta exige solo la imagen; el carrusel es 2:1 con `object-contain` y sin Ken Burns. El velo sale solo si hay texto — `app/admin/banners/page.tsx`, `components/PromoCarousel.tsx`, `components/hero.tsx`
+- Marcas 2026-11-18: cuadrícula de tarjetas en lugar de marquesina. Datos y orden siguen en `usePublicBrands` — `components/BrandsCarousel.tsx`, `components/brands-stage.module.css`
 - Catálogo 2026-11-17: grilla 2 columnas en móvil, marco de foto uniforme, chips de marca con scroll — `components/products.tsx`, `lib/catalog/display.ts`, `e2e/catalog-visual.spec.ts`
 - Alta de producto por familia (2026-11-17): el nombre sugiere familia, viscosidad o especificación, línea y presentación; un filtro no recibe SAE. Precio opcional en la columna `price`. `components/admin-product-form.tsx`, `lib/admin/product-heuristics.ts`, `app/admin/productos/page.tsx`
 - Storefront home/productos/detalle/nosotros/contacto/cotización por código — `app/**`
