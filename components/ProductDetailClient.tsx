@@ -10,6 +10,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ProductDetailBody } from "@/components/catalog/product-detail-body";
 import { products as catalogProducts, type Product } from "@/lib/products-data";
+import { mapRowToProduct } from "@/lib/catalog/map-product";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
 
@@ -157,18 +158,29 @@ export function ProductDetailClient({
       }
 
       if (dbData) {
+        const record = dbData as Record<string, unknown>;
+        const productKey = String(record.id || "");
+        let nested = record.product_presentations;
+        if (!nested && productKey) {
+          const { data: presentationRows, error: presentationError } = await supabase
+            .from("product_presentations")
+            .select("*")
+            .eq("product_id", productKey)
+            .order("sort_order", { ascending: true });
+          if (!presentationError) nested = presentationRows;
+        }
+        const mapped = mapRowToProduct({ ...record, product_presentations: nested });
         merged = {
           ...merged,
-          name: dbData.name || merged.name,
-          image: dbData.image_url !== undefined ? (dbData.image_url || "") : merged.image,
-          presentation: dbData.presentation !== undefined ? (dbData.presentation || "") : merged.presentation,
-          description: dbData.description !== undefined ? (dbData.description || "") : merged.description,
-          brand: dbData.brand || merged.brand,
-          line: dbData.short_description !== undefined ? (dbData.short_description || "") : merged.line,
-          viscosity: dbData.viscosity !== undefined ? (dbData.viscosity || "") : merged.viscosity,
-          type: dbData.type !== undefined ? (dbData.type || "") : merged.type,
-          subcategoryId: dbData.subcategory_id || dbData.subcategoryId || merged.subcategoryId,
-          subcategory: dbData.subcategory !== undefined ? (dbData.subcategory || "") : merged.subcategory,
+          ...mapped,
+          images: merged.images,
+          tdsUrl: merged.tdsUrl,
+          specification: merged.specification,
+          baseType: merged.baseType,
+          color: merged.color,
+          aroma: merged.aroma,
+          description: record.description ? mapped.description : merged.description,
+          image: mapped.image || merged.image,
         };
       }
     } catch (_e) {}

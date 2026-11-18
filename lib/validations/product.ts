@@ -25,8 +25,31 @@ export const productUpsertSchema = z.object({
   image_is_placeholder: z.boolean().optional(),
   sort_order: z.coerce.number().int().optional().nullable(),
   line_group_id: z.string().trim().max(120).nullable().optional(),
+  family: z.string().trim().max(40).nullable().optional(),
+  attributes: z.record(z.string(), z.string().max(200)).optional(),
+  commercial: z
+    .object({
+      purpose: z.string().trim().max(2000).optional(),
+      applications: z.string().trim().max(2000).optional(),
+      benefits: z.string().trim().max(2000).optional(),
+      features: z.string().trim().max(2000).optional(),
+      usage: z.string().trim().max(2000).optional(),
+      precautions: z.string().trim().max(2000).optional(),
+    })
+    .partial()
+    .optional(),
   updated_at: z.string().optional(),
 });
+
+const EXTENDED_PRODUCT_KEYS = ["family", "attributes", "commercial"] as const;
+
+export function withoutExtendedProductFields(payload: object) {
+  const next: Record<string, unknown> = { ...(payload as Record<string, unknown>) };
+  for (const key of EXTENDED_PRODUCT_KEYS) {
+    delete next[key];
+  }
+  return next;
+}
 
 export type ProductUpsertInput = z.infer<typeof productUpsertSchema>;
 

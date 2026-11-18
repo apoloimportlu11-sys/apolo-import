@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { FileText, Plus, Minus, MessageCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,13 @@ import { ProductGallery } from "@/components/ProductGallery";
 import { useQuote } from "@/lib/quote-context";
 import type { Product } from "@/lib/products-data";
 import {
-  getPresentationSiblings,
   getRelatedProducts,
   normalizeProductKey,
 } from "@/lib/product-related";
 import { cn } from "@/lib/utils";
 import { getPresentationVisual } from "@/lib/catalog/display";
+import { formatPrice, presentationsOfProduct } from "@/lib/catalog/presentations";
+import { ProductKnowledge } from "@/components/catalog/product-detail-info";
 
 type ProductDetailBodyProps = {
   product: Product;
@@ -46,11 +47,15 @@ export function ProductDetailBody({
   const { addItem, openDrawer } = useQuote();
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
+  const options = useMemo(() => presentationsOfProduct(product), [product]);
+  const [selectedId, setSelectedId] = useState("");
+  useEffect(() => {
+    setSelectedId("");
+  }, [product.id]);
+  const selected = options.find((item) => item.id === selectedId) || options.find((item) => item.isActive) || options[0];
+  const selectedImage = selected?.imageUrl || product.image;
+  const galleryImages = selected?.imageUrl ? [selected.imageUrl] : product.images;
 
-  const siblings = useMemo(
-    () => getPresentationSiblings(product, catalog),
-    [product, catalog]
-  );
   const related = useMemo(
     () => getRelatedProducts(product, catalog, compact ? 6 : 8),
     [product, catalog, compact]
@@ -63,8 +68,9 @@ export function ProductDetailBody({
         name: product.name,
         brand: product.brand || "Apolo",
         line: product.line,
-        presentation: product.presentation || "Estándar",
-        image: product.image,
+        presentation: selected?.label || product.presentation || "Estándar",
+        presentationId: selected && !selected.virtual ? selected.id : undefined,
+        image: selectedImage,
         viscosity: product.viscosity,
       },
       quantity
@@ -80,14 +86,36 @@ export function ProductDetailBody({
     onQuoted?.();
   };
 
-  const facts = [
-    product.type ? ["Tipo", product.type] : null,
-    product.viscosity ? ["Viscosidad", product.viscosity] : null,
-    product.specification ? ["Espec.", product.specification] : null,
-    product.baseType ? ["Base", product.baseType] : null,
-    product.color ? ["Color", product.color] : null,
-    product.aroma ? ["Aroma", product.aroma] : null,
-  ].filter((item): item is [string, string] => Boolean(item));
+  const availability = selected && selected.stock > 0 ? "Disponible" : "Sin stock";
+  const offerLabel = [
+    selected?.price != null ? formatPrice(selected.price) : null,
+    availability,
+    selected?.sku ? `SKU ${selected.sku}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const presentationChoices = (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((item) => {
+        const active = item.id === selected?.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setSelectedId(item.id)}
+            aria-pressed={active}
+            className={
+              active
+                ? "rounded-md border border-[color:color-mix(in_oklab,var(--gold)_55%,transparent)] bg-[color:var(--gold-soft)] px-2.5 py-1 text-xs font-semibold text-foreground"
+                : "rounded-md border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            }
+          >
+            {item.label || "Estándar"}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   if (compact) {
     return (
@@ -96,8 +124,8 @@ export function ProductDetailBody({
           <div className="relative min-h-0 border-b border-border/70 lg:border-b-0 lg:border-r lg:border-r-[color:color-mix(in_oklab,var(--gold)_22%,transparent)]">
             <ProductGallery
               name={product.name}
-              images={product.images}
-              fallbackImage={product.image}
+              images={galleryImages}
+              fallbackImage={selectedImage}
               compact
             />
           </div>
@@ -124,42 +152,12 @@ export function ProductDetailBody({
                 ) : null}
               </div>
 
-              {product.description ? (
-                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                  {product.description}
-                </p>
-              ) : null}
-
-              {facts.length > 0 ? (
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                  {facts.map(([label, value]) => (
-                    <div key={label} className="min-w-0">
-                      <dt className="text-[11px] text-muted-foreground">{label}</dt>
-                      <dd className="truncate font-medium">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : null}
+              <ProductKnowledge product={product} compact />
 
               <div className="mt-3">
                 <p className="mb-1.5 text-[11px] text-muted-foreground">Presentación</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded-md border border-[color:color-mix(in_oklab,var(--gold)_55%,transparent)] bg-[color:var(--gold-soft)] px-2.5 py-1 text-xs font-semibold text-foreground">
-                    {product.presentation || "Estándar"}
-                    {product.viscosity ? ` · ${product.viscosity}` : ""}
-                  </span>
-                  {siblings.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => onSelectProduct?.(item)}
-                      title={`Ver ${item.presentation || item.viscosity || item.name}`}
-                      className="rounded-md border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:border-primary/50 hover:text-foreground"
-                    >
-                      {item.presentation || item.viscosity}
-                    </button>
-                  ))}
-                </div>
+                {presentationChoices}
+                <p className="mt-2 text-xs font-medium text-foreground">{offerLabel}</p>
               </div>
 
               {related.length > 0 ? (
@@ -263,8 +261,8 @@ export function ProductDetailBody({
       <div className="grid gap-8 lg:grid-cols-2">
         <ProductGallery
           name={product.name}
-          images={product.images}
-          fallbackImage={product.image}
+          images={galleryImages}
+          fallbackImage={selectedImage}
         />
 
         <div className="space-y-6 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-xs sm:p-6">
@@ -278,90 +276,17 @@ export function ProductDetailBody({
             <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
               {product.name}
             </h2>
-            <p className="text-sm text-muted-foreground">Código: {product.code}</p>
+            <p className="text-sm text-muted-foreground">
+              {product.brand ? <span className="font-medium text-foreground">{product.brand}</span> : null}
+              {product.brand ? " · " : null}
+              Código: {product.code}
+            </p>
           </div>
 
-          {product.description ? (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Descripción
-              </h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {product.description}
-              </p>
-            </div>
-          ) : null}
-
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Especificaciones
-            </h3>
-            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div className="flex">
-                <span className="pr-4 text-muted-foreground">Marca:</span>
-                <span className="font-medium">{product.brand}</span>
-              </div>
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <span className="text-muted-foreground">Presentación:</span>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-lg border border-primary/30 bg-primary/15 px-3 py-1 text-xs font-bold text-primary">
-                    {product.presentation || "Estándar"}
-                    {product.viscosity ? ` · ${product.viscosity}` : ""}
-                  </span>
-                  {siblings.map((item) => {
-                    const label =
-                      item.presentation || item.viscosity || item.name;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => onSelectProduct?.(item)}
-                        title={`Ver ${label}`}
-                        className="rounded-lg border border-border bg-muted/40 px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors duration-200 hover:border-primary/60 hover:bg-card hover:text-foreground"
-                      >
-                        {item.presentation || item.viscosity}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {product.type ? (
-                <div className="flex">
-                  <span className="pr-4 text-muted-foreground">Tipo:</span>
-                  <span className="font-medium">{product.type}</span>
-                </div>
-              ) : null}
-              {product.viscosity ? (
-                <div className="flex">
-                  <span className="pr-4 text-muted-foreground">Viscosidad:</span>
-                  <span className="font-medium">{product.viscosity}</span>
-                </div>
-              ) : null}
-              {product.specification ? (
-                <div className="flex">
-                  <span className="pr-4 text-muted-foreground">Especificación:</span>
-                  <span className="font-medium">{product.specification}</span>
-                </div>
-              ) : null}
-              {product.baseType ? (
-                <div className="flex">
-                  <span className="pr-4 text-muted-foreground">Base:</span>
-                  <span className="font-medium">{product.baseType}</span>
-                </div>
-              ) : null}
-              {product.color ? (
-                <div className="flex">
-                  <span className="pr-4 text-muted-foreground">Color:</span>
-                  <span className="font-medium">{product.color}</span>
-                </div>
-              ) : null}
-              {product.aroma ? (
-                <div className="flex">
-                  <span className="pr-4 text-muted-foreground">Aroma:</span>
-                  <span className="font-medium">{product.aroma}</span>
-                </div>
-              ) : null}
-            </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Presentación</p>
+            {presentationChoices}
+            <p className="text-sm font-medium">{offerLabel}</p>
           </div>
 
           {product.tdsUrl?.trim() ? (
@@ -423,6 +348,8 @@ export function ProductDetailBody({
           </div>
         </div>
       </div>
+
+      <ProductKnowledge product={product} />
 
       {related.length > 0 ? (
         <div className="space-y-4">

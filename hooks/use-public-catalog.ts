@@ -16,6 +16,8 @@ export type CatalogStatus = "loading" | "ready" | "error";
 const PRODUCT_SELECT =
   "id, name, slug, brand, short_description, description, presentation, stock, is_featured, is_active, category_id, image_url, viscosity, type, subcategory_id, subcategory, sort_order, line_group_id";
 
+const PRODUCT_SELECT_EXTENDED = `${PRODUCT_SELECT}, price, family, attributes, commercial, product_presentations(id, label, quantity, unit, package_type, sku, price, stock, stock_min, image_url, is_active, sort_order)`;
+
 /**
  * Carga el catálogo público desde Supabase + suscripciones realtime/cache.
  */
@@ -34,17 +36,35 @@ export function usePublicCatalog() {
       // Solo activos, en páginas de 200 (menos payload que un select completo).
       const pageSize = 200;
       const activeRows: Record<string, unknown>[] = [];
-      for (let from = 0; ; from += pageSize) {
-        const to = from + pageSize - 1;
-        const { data, error } = await supabase
+      let extendedSelect = true;
+      const loadPage = async (columns: string, from: number, to: number) => {
+        const result = await supabase
           .from("products")
-          .select(PRODUCT_SELECT)
+          .select(columns)
           .eq("is_active", true)
           .order("sort_order", { ascending: true })
           .order("name", { ascending: true })
           .range(from, to);
+        return result as unknown as {
+          data: Record<string, unknown>[] | null;
+          error: { message: string } | null;
+        };
+      };
+      for (let from = 0; ; from += pageSize) {
+        const to = from + pageSize - 1;
+        let { data, error } = await loadPage(
+          extendedSelect ? PRODUCT_SELECT_EXTENDED : PRODUCT_SELECT,
+          from,
+          to
+        );
+        if (error && extendedSelect) {
+          extendedSelect = false;
+          const fallback = await loadPage(PRODUCT_SELECT, from, to);
+          data = fallback.data;
+          error = fallback.error;
+        }
         if (error) throw error;
-        const chunk = (data || []) as Record<string, unknown>[];
+        const chunk = data || [];
         activeRows.push(...chunk);
         if (chunk.length < pageSize) break;
       }

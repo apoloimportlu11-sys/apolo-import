@@ -9,6 +9,7 @@ export interface QuoteItem {
   name: string;
   brand: string;
   presentation?: string;
+  presentationId?: string;
   line?: string;
   viscosity?: string;
   code?: string;
@@ -21,6 +22,7 @@ type QuoteProductInput = {
   name?: string;
   brand?: string;
   presentation?: string;
+  presentationId?: string;
   line?: string;
   short_description?: string;
   viscosity?: string;
@@ -93,13 +95,16 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
 
       const normPres = (product.presentation || "").trim().toLowerCase();
       const validQty = Math.max(1, quantity);
+      const sameLine = (item: QuoteItem) => {
+        if (item.id !== product.id) return false;
+        if (item.presentationId && product.presentationId) {
+          return item.presentationId === product.presentationId;
+        }
+        return (item.presentation || "").trim().toLowerCase() === normPres;
+      };
 
       persistItems((prev) => {
-        const existingIndex = prev.findIndex(
-          (item) =>
-            item.id === product.id &&
-            (item.presentation || "").trim().toLowerCase() === normPres
-        );
+        const existingIndex = prev.findIndex(sameLine);
 
         if (existingIndex >= 0) {
           const updated = [...prev];
@@ -123,6 +128,7 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
           name: product.name || "Producto",
           brand: product.brand || "Apolo",
           presentation: product.presentation || undefined,
+          presentationId: product.presentationId || undefined,
           line: product.line || product.short_description || undefined,
           viscosity: product.viscosity || undefined,
           code: product.code || product.slug || undefined,

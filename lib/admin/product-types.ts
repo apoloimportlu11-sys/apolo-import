@@ -1,3 +1,5 @@
+import type { PresentationDraft, CommercialInfo } from "@/lib/catalog/presentations";
+
 export interface ProductItem {
   id: string;
   name: string;
@@ -20,6 +22,10 @@ export interface ProductItem {
   image_is_placeholder?: boolean | null;
   stock_min?: number | null;
   price?: number | null;
+  family?: string | null;
+  attributes?: Record<string, string> | null;
+  commercial?: CommercialInfo | null;
+  presentations?: PresentationDraft[] | null;
   created_at: string;
   updated_at?: string;
   sort_order?: number;

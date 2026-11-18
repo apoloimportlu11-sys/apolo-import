@@ -1870,3 +1870,169 @@ html.admin-tone-dark .admin-layout-root [class*="ring-[#C7940A]"]:focus-visible 
   }
 }
 
+/* Fondo vivo de la tienda pública. El panel conserva su superficie. */
+html.dark:not(.admin-tone-light):not(.admin-tone-dark) {
+  background-color: #070b14;
+}
+
+html.light:not(.admin-tone-light):not(.admin-tone-dark) {
+  background-color: #f6f7fb;
+}
+
+html.dark:not(.admin-tone-light):not(.admin-tone-dark) body,
+html.light:not(.admin-tone-light):not(.admin-tone-dark) body {
+  position: relative;
+  z-index: 0;
+  background-color: transparent;
+}
+
+html.dark:not(.admin-tone-light):not(.admin-tone-dark) :is(main.bg-background, .home-shell, .section-protect, .section-experience) {
+  background-color: transparent;
+}
+
+.public-atmosphere {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: -24px;
+  z-index: -1;
+  height: calc(100% + 48px);
+  overflow: hidden;
+  pointer-events: none;
+  background: #070b14;
+  animation: atmosphere-in 0.6s ease-out both;
+}
+
+.atmosphere-glow,
+.atmosphere-oil,
+.atmosphere-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.atmosphere-glow-red {
+  inset: auto;
+  top: -12vh;
+  left: -10vw;
+  width: 48vw;
+  height: 48vw;
+  background: radial-gradient(circle, rgba(201, 0, 18, 0.42), transparent 68%);
+  filter: blur(10px);
+  animation: atmosphere-breathe 9s ease-in-out infinite;
+}
+
+.atmosphere-glow-blue {
+  inset: auto;
+  right: -8vw;
+  bottom: -14vh;
+  width: 44vw;
+  height: 44vw;
+  background: radial-gradient(circle, rgba(56, 147, 202, 0.38), transparent 70%);
+  filter: blur(12px);
+  animation: atmosphere-breathe 11s ease-in-out infinite reverse;
+}
+
+.atmosphere-oil {
+  inset: auto;
+  right: -12%;
+  bottom: -12%;
+  left: -12%;
+  height: 36%;
+  background:
+    radial-gradient(55% 80% at 28% 70%, rgba(255, 176, 64, 0.2), transparent 72%),
+    radial-gradient(48% 70% at 72% 40%, rgba(160, 72, 16, 0.16), transparent 74%);
+  filter: blur(20px);
+  opacity: 0.75;
+  animation: atmosphere-oil 22s ease-in-out infinite;
+}
+
+.atmosphere-particles {
+  width: 100%;
+  height: 100%;
+}
+
+html.light .public-atmosphere {
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(201, 0, 18, 0.16), transparent 46%),
+    radial-gradient(90% 70% at 100% 100%, rgba(18, 92, 196, 0.2), transparent 48%),
+    #f4f6fb;
+}
+
+html.light .public-atmosphere::before {
+  content: "";
+  position: absolute;
+  top: 6vh;
+  left: 28vw;
+  width: 42vw;
+  height: 32vw;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 184, 0, 0.5), transparent 68%);
+  filter: blur(16px);
+  animation: atmosphere-breathe-light 13s ease-in-out infinite;
+}
+
+html.light .atmosphere-glow-red {
+  top: -8vh;
+  left: -6vw;
+  width: 62vw;
+  height: 62vw;
+  background: radial-gradient(circle, rgba(201, 0, 18, 0.5) 0%, rgba(201, 0, 18, 0.2) 38%, transparent 70%);
+  filter: blur(4px);
+  animation-name: atmosphere-breathe-light;
+}
+
+html.light .atmosphere-glow-blue {
+  right: -6vw;
+  bottom: -10vh;
+  width: 58vw;
+  height: 58vw;
+  background: radial-gradient(circle, rgba(12, 84, 196, 0.55) 0%, rgba(39, 110, 190, 0.22) 42%, transparent 72%);
+  filter: blur(6px);
+  animation-name: atmosphere-breathe-light;
+}
+
+html.light .atmosphere-oil {
+  height: 46%;
+  opacity: 1;
+  filter: blur(12px);
+  background:
+    radial-gradient(50% 90% at 24% 78%, rgba(255, 176, 0, 0.72), transparent 68%),
+    radial-gradient(40% 80% at 74% 36%, rgba(201, 0, 18, 0.28), transparent 70%);
+}
+
+html.admin-tone-light .public-atmosphere,
+html.admin-tone-dark .public-atmosphere {
+  display: none;
+}
+
+@keyframes atmosphere-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes atmosphere-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+
+@keyframes atmosphere-breathe-light {
+  0%, 100% { opacity: 0.82; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes atmosphere-oil {
+  0%, 100% { transform: translate3d(-4%, 0, 0); }
+  50% { transform: translate3d(5%, -3%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-atmosphere,
+  .atmosphere-glow-red,
+  .atmosphere-glow-blue,
+  .atmosphere-oil,
+  html.light .public-atmosphere::before {
+    animation: none;
+  }
+}
+

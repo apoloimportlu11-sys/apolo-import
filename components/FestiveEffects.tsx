@@ -18,6 +18,15 @@ function FestiveEffectsInternal({ disabled = false }: { disabled?: boolean }) {
     : "";
 
   useEffect(() => {
+    const root = document.documentElement;
+    if (show) root.dataset.festiveCanvas = "on";
+    else delete root.dataset.festiveCanvas;
+    return () => {
+      delete root.dataset.festiveCanvas;
+    };
+  }, [show]);
+
+  useEffect(() => {
     const theme = themeRef.current;
     if (!show || !theme || !canvasRef.current) return;
     return mountFestiveCanvas(canvasRef.current, {

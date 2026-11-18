@@ -37,9 +37,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { parseProductUpsert } from "@/lib/validations/product";
+import { parseProductUpsert, withoutExtendedProductFields } from "@/lib/validations/product";
+import {
+  blankPresentation,
+  draftFromLegacy,
+  isMissingSchemaError,
+  parseAttributeValues,
+  parseCommercial,
+  snapshotFromDrafts,
+} from "@/lib/catalog/presentations";
+import {
+  loadPresentationDrafts,
+  presentationRemovalNote,
+  recordPresentationDeltas,
+  syncPresentations,
+} from "@/lib/catalog/presentation-store";
 import { adjustStock, isLowStock, setStockMin } from "@/lib/inventory";
-import { products as BASE_PRODUCTS, categories as CATALOG_CATEGORIES } from "@/lib/products-data";
+import { products as BASE_PRODUCTS } from "@/lib/products-data";
 import { groupProductsByLine } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
 import type { ProductItem } from "@/lib/admin/product-types";
@@ -50,6 +64,7 @@ import {
   PAGE_SIZE_OPTIONS,
   explainProductSaveError,
   packCatalogPages,
+  suggestFromName,
   type CatalogBlock,
 } from "@/lib/admin/product-heuristics";
 import {
@@ -147,6 +162,7 @@ export default function ProductosPage() {
     return list;
   });
   const [isNewPresentation, setIsNewPresentation] = useState(false);
+  const [formSection, setFormSection] = useState<"general" | "comercial" | "tecnicos" | "presentaciones">("general");
   const [imageUploading, setImageUploading] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -172,11 +188,6 @@ export default function ProductosPage() {
     is_active: true,
     image_url: "",
   });
-
-  const availableSubcategories = useMemo(() => {
-    const currentCatId = currentProduct.category_id || "automovil";
-    return CATALOG_CATEGORIES.find((c) => c.id === currentCatId)?.subcategories || [];
-  }, [currentProduct.category_id]);
 
   const featuredCount = useMemo(() => {
     return products.filter((p) => p.is_featured).length;
@@ -249,6 +260,8 @@ export default function ProductosPage() {
           stock_min: Number(p.stock_min) || 0,
           is_featured: Boolean(p.is_featured),
           is_active: p.is_active !== false,
+          attributes: parseAttributeValues(p.attributes),
+          commercial: parseCommercial(p.commercial),
           subcategory_id:
             p.subcategory_id ||
             (p as { subcategoryId?: string }).subcategoryId ||
@@ -258,6 +271,15 @@ export default function ProductosPage() {
             (p as { subcategoryId?: string }).subcategoryId ||
             "",
         }));
+        const presentationMap = await loadPresentationDrafts(
+          supabase,
+          normalized.map((item) => item.id)
+        );
+        if (presentationMap) {
+          for (const item of normalized) {
+            item.presentations = presentationMap.get(item.id) || null;
+          }
+        }
         // Vacío en DB = vacío en admin (no resucitar caché ni catálogo estático)
         persistProductsState(() => normalized);
         return;
@@ -739,6 +761,7 @@ export default function ProductosPage() {
     setFormKey((key) => key + 1);
     setIsEditing(false);
     setIsNewPresentation(false);
+    setFormSection("general");
     setImageUploading(false);
     setCurrentProduct({
       name: "",
@@ -757,6 +780,7 @@ export default function ProductosPage() {
       category_id: "automovil",
       line_group_id: CATEGORY_DEFAULT_LINE_GROUP["automovil"],
       image_url: "",
+      presentations: [draftFromLegacy({ presentation: "", price: null, stock: 15, stock_min: 0 })],
     });
     setShowModal(true);
   }
@@ -765,6 +789,7 @@ export default function ProductosPage() {
     setFormKey((key) => key + 1);
     setIsEditing(true);
     setIsNewPresentation(false);
+    setFormSection("general");
     setImageUploading(false);
     setCurrentProduct({
       ...prod,
@@ -773,36 +798,28 @@ export default function ProductosPage() {
       subcategory_id: prod.subcategory_id || prod.subcategoryId || "",
       subcategory: prod.subcategory || "",
       presentation: prod.presentation || "",
+      family: prod.family || suggestFromName(prod.name || "").family,
+      presentations: prod.presentations?.length
+        ? prod.presentations
+        : [draftFromLegacy(prod)],
     });
     setShowModal(true);
   }
 
   function openDuplicateModal(prod: ProductItem) {
+    const existing = prod.presentations?.length ? prod.presentations : [draftFromLegacy(prod)];
+    const extra = blankPresentation(existing.length);
     setFormKey((key) => key + 1);
-    setIsEditing(false);
+    setIsEditing(true);
     setIsNewPresentation(true);
+    setFormSection("presentaciones");
     setImageUploading(false);
     setCurrentProduct({
-      name: prod.name,
-      slug: "",
-      brand: prod.brand || "Apolo",
-      short_description: prod.short_description || "",
-      presentation: "",
-      viscosity: prod.viscosity || "",
-      type: prod.type || "Lubricante Especializado",
-      subcategory_id: prod.subcategory_id || prod.subcategoryId || "",
-      subcategory: prod.subcategory || "",
-      description: prod.description || "",
-      stock: 15,
-      stock_min: prod.stock_min ?? 0,
-      is_featured: false,
-      is_active: true,
-      category_id: prod.category_id || "automovil",
-      line_group_id: prod.line_group_id || null,
-      image_url: prod.image_url || "",
+      ...prod,
+      presentations: [...existing, extra],
     });
     setShowModal(true);
-    toast.info(`Otra presentación de "${prod.name}". Indica la cantidad.`);
+    toast.info(`Nueva presentación de "${prod.name}". Sigue siendo el mismo producto.`);
   }
 
   // Quick Image Modal handler
@@ -885,7 +902,13 @@ export default function ProductosPage() {
     }
 
     const rawName = currentProduct.name?.trim() || "Sin nombre";
-    const rawPresentation = currentProduct.presentation?.trim() || null;
+    const presentationDrafts = currentProduct.presentations?.length
+      ? currentProduct.presentations
+      : [draftFromLegacy(currentProduct)];
+    const presentationSnapshot = snapshotFromDrafts(presentationDrafts);
+    const persistChildren =
+      presentationDrafts.length > 1 || presentationDrafts.some((draft) => draft.persisted);
+    const rawPresentation = presentationSnapshot.presentation;
 
     // Unique Final ID
     const finalId =
@@ -933,20 +956,17 @@ export default function ProductosPage() {
       subcategory_id: currentProduct.subcategory_id !== undefined && currentProduct.subcategory_id !== null ? currentProduct.subcategory_id.trim() : null,
       subcategory: currentProduct.subcategory !== undefined && currentProduct.subcategory !== null ? currentProduct.subcategory.trim() : null,
       description: currentProduct.description?.trim() || null,
-      stock: Number(currentProduct.stock) || 0,
-      stock_min:
-        currentProduct.stock_min === undefined || currentProduct.stock_min === null
-          ? 0
-          : Number(currentProduct.stock_min) || 0,
+      stock: presentationSnapshot.stock,
+      stock_min: presentationSnapshot.stockMin,
       is_featured: Boolean(currentProduct.is_featured),
       is_active: currentProduct.is_active !== undefined ? currentProduct.is_active : true,
       category_id: currentProduct.category_id || "automovil",
       image_url: currentProduct.image_url?.trim() || null,
       line_group_id: currentProduct.line_group_id || null,
-      price:
-        currentProduct.price == null || String(currentProduct.price) === ""
-          ? null
-          : Number(currentProduct.price),
+      price: presentationSnapshot.price,
+      family: currentProduct.family || null,
+      attributes: currentProduct.attributes || {},
+      commercial: currentProduct.commercial || {},
       updated_at: new Date().toISOString(),
     };
 
@@ -968,21 +988,35 @@ export default function ProductosPage() {
 
     try {
       if (isEditing) {
-        const stockResult = await adjustStock(supabase, finalId, Number(payload.stock) || 0, "ajuste_manual");
+        const savedStock = persistChildren
+          ? Number(payload.stock) || 0
+          : (await adjustStock(supabase, finalId, Number(payload.stock) || 0, "ajuste_manual")).stock;
         const savedMin = await setStockMin(supabase, finalId, Number(payload.stock_min) || 0);
         const { id: _ignoredId, stock: _ignoredStock, stock_min: _ignoredMin, ...rest } = payload;
-        const { data, error } = await supabase
+        const nextRow = { ...rest, stock: savedStock, stock_min: savedMin };
+        let { data, error } = await supabase
           .from("products")
-          .update({ ...rest, stock: stockResult.stock, stock_min: savedMin })
+          .update(nextRow)
           .eq("id", finalId)
           .select()
           .maybeSingle();
+        if (error && isMissingSchemaError(error.message)) {
+          const legacy = withoutExtendedProductFields(nextRow);
+          const retry = await supabase
+            .from("products")
+            .update(legacy)
+            .eq("id", finalId)
+            .select()
+            .maybeSingle();
+          data = retry.data;
+          error = retry.error;
+        }
         if (error || !data) {
           persistProductsState((prev) =>
-            prev.map((p) => (p.id === finalId ? { ...p, stock: stockResult.stock, stock_min: savedMin } : p))
+            prev.map((p) => (p.id === finalId ? { ...p, stock: savedStock, stock_min: savedMin } : p))
           );
           if (realtimeBus) {
-            realtimeBus.emit("products_updated", { id: finalId, stock: stockResult.stock, stock_min: savedMin });
+            realtimeBus.emit("products_updated", { id: finalId, stock: savedStock, stock_min: savedMin });
           }
           toast.error("El resto del producto no se guardó", {
             id: toastId,
@@ -991,9 +1025,18 @@ export default function ProductosPage() {
           setSaving(false);
           return;
         }
-        savedData = { ...data, stock: stockResult.stock, stock_min: savedMin };
+        savedData = { ...data, stock: savedStock, stock_min: savedMin };
       } else {
-        const { data, error } = await supabase.from("products").insert(payload).select().maybeSingle();
+        let { data, error } = await supabase.from("products").insert(payload).select().maybeSingle();
+        if (error && isMissingSchemaError(error.message)) {
+          const retry = await supabase
+            .from("products")
+            .insert(withoutExtendedProductFields(payload))
+            .select()
+            .maybeSingle();
+          data = retry.data;
+          error = retry.error;
+        }
         if (error || !data) {
           toast.error("No se guardó el producto", {
             id: toastId,
@@ -1015,11 +1058,20 @@ export default function ProductosPage() {
       return;
     }
 
+    const previousDrafts = products.find((item) => item.id === finalId)?.presentations || [];
+    const synced = await syncPresentations(supabase, finalId, presentationDrafts);
+    if (synced.ok && !synced.skipped) {
+      await recordPresentationDeltas(supabase, finalId, previousDrafts, synced.drafts);
+    }
+
     const savedItem = {
       ...(savedData || {}),
       ...payload,
       id: (savedData && savedData.id) || finalId,
       created_at: (savedData && savedData.created_at) || currentProduct.created_at || new Date().toISOString(),
+      presentations: synced.skipped ? presentationDrafts : synced.drafts,
+      attributes: parseAttributeValues(payload.attributes),
+      commercial: parseCommercial(payload.commercial),
     } as ProductItem;
 
     // Save to state and localStorage strictly by id
@@ -1038,9 +1090,11 @@ export default function ProductosPage() {
     showAppToast({
       tone: "success",
       title: isEditing ? "Producto actualizado" : "Producto creado",
-      description: isEditing
-        ? `"${payload.name}" quedó guardado en el catálogo.`
-        : `"${payload.name}" (${payload.presentation || "sin presentación"}) ya está disponible.`,
+      description: synced.message
+        ? synced.message
+        : isEditing
+          ? `"${payload.name}" quedó guardado en el catálogo.`
+          : `"${payload.name}" (${payload.presentation || "sin presentación"}) ya está disponible.`,
     });
 
     closeProductModal();
@@ -1069,6 +1123,14 @@ export default function ProductosPage() {
         localStorage.setItem(DELETED_KEY, JSON.stringify(storedDeleted));
       } catch (e) {
         console.warn("Could not save to DELETED_KEY:", e);
+      }
+
+      const removedPresentations = await supabase
+        .from("product_presentations")
+        .delete()
+        .eq("product_id", id);
+      if (removedPresentations.error && !isMissingSchemaError(removedPresentations.error.message)) {
+        throw removedPresentations.error;
       }
 
       // 2. Borrado duro (no pausar: eso dejaba fantasmas en el admin)
@@ -1175,8 +1237,27 @@ export default function ProductosPage() {
     };
 
     try {
-      const result = await adjustStock(supabase, id, validStock, "ajuste_manual");
-      const savedProduct = { ...updatedProduct, stock: result.stock };
+      const primary = (targetProduct.presentations || []).find((draft) => draft.persisted);
+      const result = primary
+        ? await adjustStock(
+            supabase,
+            id,
+            Math.max(0, Number(primary.stock) + (validStock - targetProduct.stock)),
+            "ajuste_manual",
+            { presentationId: primary.id }
+          )
+        : await adjustStock(supabase, id, validStock, "ajuste_manual");
+      const savedProduct = {
+        ...updatedProduct,
+        stock: result.stock,
+        presentations: primary
+          ? (targetProduct.presentations || []).map((draft) =>
+              draft.id === primary.id
+                ? { ...draft, stock: String(Math.max(0, Number(primary.stock) + (validStock - targetProduct.stock))) }
+                : draft
+            )
+          : targetProduct.presentations,
+      };
       persistProductsState((prev) => prev.map((p) => (p.id === id ? savedProduct : p)));
       setRecentlyUpdatedId(id);
       if (realtimeBus) {
@@ -2287,6 +2368,8 @@ export default function ProductosPage() {
         suggestionHint={suggestionHint}
         saving={saving}
         imageUploading={imageUploading}
+        initialSection={formSection}
+        onInspectRemoval={(draft) => presentationRemovalNote(supabase, draft)}
         onChange={(partial) => setCurrentProduct((prev) => ({ ...prev, ...partial }))}
         onUploadingChange={setImageUploading}
         onClose={closeProductModal}

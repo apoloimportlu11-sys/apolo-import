@@ -1,3 +1,5 @@
+import type { CatalogPresentation, CommercialInfo } from "@/lib/catalog/presentations";
+
 export type Product = {
   id: string;
   name: string;
@@ -23,6 +25,11 @@ export type Product = {
   is_featured?: boolean;
   is_active?: boolean;
   stock?: number;
+  price?: number | null;
+  family?: string | null;
+  attributes?: Record<string, string>;
+  commercial?: CommercialInfo;
+  presentations?: CatalogPresentation[];
   slug?: string;
   sort_order?: number;
   line_group_id?: string | null;

@@ -121,11 +121,13 @@ export function SortableProductRow({
           <div className="min-w-0">
             <p className="font-bold text-white truncate max-w-xs">{prod.name}</p>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
-              {prod.presentation && (
+              {(prod.presentations && prod.presentations.length > 1) || prod.presentation ? (
                 <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/10 text-amber-300 border border-white/10">
-                  {prod.presentation}
+                  {prod.presentations && prod.presentations.length > 1
+                    ? `${prod.presentations.length} presentaciones`
+                    : prod.presentation}
                 </span>
-              )}
+              ) : null}
               {prod.viscosity && (
                 <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   {prod.viscosity.toUpperCase().startsWith("SAE")

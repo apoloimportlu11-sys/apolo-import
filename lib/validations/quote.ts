@@ -5,6 +5,7 @@ export const quoteItemSchema = z.object({
   name: z.string().min(1),
   brand: z.string().default("Apolo"),
   presentation: z.string().optional(),
+  presentationId: z.string().optional(),
   line: z.string().optional(),
   viscosity: z.string().optional(),
   code: z.string().optional(),

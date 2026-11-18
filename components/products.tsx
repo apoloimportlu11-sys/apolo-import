@@ -50,6 +50,16 @@ import {
   CATALOG_PAGE_SIZE as PAGE_SIZE,
 } from "@/lib/catalog/display";
 import {
+  matchesPresentation,
+  matchesPrice,
+  presentationLabelsOf,
+  presentationRangeLabel,
+  presentationsOfProduct,
+  priceBounds,
+  priceRangeLabel,
+  activePresentations,
+} from "@/lib/catalog/presentations";
+import {
   ADMIN_DELETED_PRODUCTS_KEY as DELETED_KEY,
   ADMIN_PRODUCTS_CACHE_KEY as ADMIN_STORAGE_KEY,
   KNOWN_DELETED_PRODUCT_KEYS as KNOWN_DELETED,
@@ -76,6 +86,16 @@ export function Products() {
   const [selectedSubcategory, setSelectedSubcategory] =
     useState<Subcategory | null>(null);
   const [selectedViscosities, setSelectedViscosities] = useState<string[]>([]);
+  const [selectedPresentations, setSelectedPresentations] = useState<string[]>(() => {
+    const value = searchParams.get("presentation");
+    return value ? value.split(",").filter(Boolean) : [];
+  });
+  const [selectedApplications, setSelectedApplications] = useState<string[]>(() => {
+    const value = searchParams.get("aplicacion");
+    return value ? value.split(",").filter(Boolean) : [];
+  });
+  const [priceMin, setPriceMin] = useState(() => searchParams.get("priceMin") || "");
+  const [priceMax, setPriceMax] = useState(() => searchParams.get("priceMax") || "");
   const [viewMode, setViewMode] = useState<"grid" | "grid5" | "list">("grid");
   const [sortBy, setSortBy] = useState<"featured" | "name-asc" | "name-desc">("featured");
 
@@ -83,6 +103,8 @@ export function Products() {
   const [lineOpen, setLineOpen] = useState(true);
   const [categoryOpen, setCategoryOpen] = useState(true);
   const [viscosityOpen, setViscosityOpen] = useState(true);
+  const [presentationOpen, setPresentationOpen] = useState(true);
+  const [priceOpen, setPriceOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [, setShowAllProducts] = useState(true);
   const [brandFilterSearch, setBrandFilterSearch] = useState("");
@@ -564,6 +586,15 @@ export function Products() {
       setShowAllProducts(false);
     }
 
+    const presentationParam = searchParams.get("presentation");
+    if (presentationParam) setSelectedPresentations(presentationParam.split(",").filter(Boolean));
+    const applicationParam = searchParams.get("aplicacion");
+    if (applicationParam) setSelectedApplications(applicationParam.split(",").filter(Boolean));
+    const minParam = searchParams.get("priceMin");
+    const maxParam = searchParams.get("priceMax");
+    if (minParam) setPriceMin(minParam);
+    if (maxParam) setPriceMax(maxParam);
+
     if (categoryId) {
       const category = getCategoryById(categoryId);
       if (category) {
@@ -579,6 +610,21 @@ export function Products() {
       }
     }
   }, [searchParams, lineGroupsById]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const apply = (key: string, value: string) => {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    };
+    apply("presentation", selectedPresentations.join(","));
+    apply("aplicacion", selectedApplications.join(","));
+    apply("priceMin", priceMin.trim());
+    apply("priceMax", priceMax.trim());
+    const next = `${url.pathname}${url.search}`;
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (next !== current) window.history.replaceState(null, "", next);
+  }, [selectedPresentations, selectedApplications, priceMin, priceMax]);
 
   // Filtrado de productos con soporte para tildes y búsqueda robusta 100% libre de errores
   const filteredProducts = useMemo(() => {
@@ -630,6 +676,7 @@ export function Products() {
             p.brand,
             p.description,
             p.presentation,
+            presentationLabelsOf(presentationsOfProduct(p)).join(" "),
             p.subcategory,
             p.subcategoryId,
           ]
@@ -686,6 +733,37 @@ export function Products() {
       });
     }
 
+    if (selectedPresentations.length > 0) {
+      filtered = filtered.filter((p) =>
+        matchesPresentation(presentationsOfProduct(p), selectedPresentations)
+      );
+    }
+
+    const minPrice = priceMin.trim() === "" ? null : Number(priceMin);
+    const maxPrice = priceMax.trim() === "" ? null : Number(priceMax);
+    if (
+      (minPrice !== null && !Number.isNaN(minPrice)) ||
+      (maxPrice !== null && !Number.isNaN(maxPrice))
+    ) {
+      filtered = filtered.filter((p) =>
+        matchesPrice(
+          presentationsOfProduct(p),
+          minPrice !== null && !Number.isNaN(minPrice) ? minPrice : null,
+          maxPrice !== null && !Number.isNaN(maxPrice) ? maxPrice : null
+        )
+      );
+    }
+
+    if (selectedApplications.length > 0) {
+      filtered = filtered.filter((p) => {
+        const application = (p.attributes?.application || "").trim().toLowerCase();
+        return (
+          application &&
+          selectedApplications.some((item) => item.trim().toLowerCase() === application)
+        );
+      });
+    }
+
     // Ordenamiento seguro
     if (sortBy === "name-asc") {
       filtered = [...filtered].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -702,6 +780,10 @@ export function Products() {
     selectedCategory,
     selectedSubcategory,
     selectedViscosities,
+    selectedPresentations,
+    selectedApplications,
+    priceMin,
+    priceMax,
     sortBy,
     lineGroupsById,
   ]);
@@ -715,6 +797,10 @@ export function Products() {
     selectedCategory,
     selectedSubcategory,
     selectedViscosities,
+    selectedPresentations,
+    selectedApplications,
+    priceMin,
+    priceMax,
     sortBy,
   ]);
 
@@ -854,6 +940,28 @@ export function Products() {
     return [...known, ...extra];
   }, [allMergedProducts, selectedBrands, selectedLines, selectedCategory, selectedSubcategory, lineGroupsById]);
 
+  const availablePresentations = useMemo(() => {
+    const labels = new Set<string>();
+    allMergedProducts.forEach((product) => {
+      presentationLabelsOf(presentationsOfProduct(product)).forEach((label) => labels.add(label));
+    });
+    return Array.from(labels).sort((a, b) => a.localeCompare(b));
+  }, [allMergedProducts]);
+
+  const availableApplications = useMemo(() => {
+    const values = new Set<string>();
+    allMergedProducts.forEach((product) => {
+      const application = product.attributes?.application?.trim();
+      if (application) values.add(application);
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [allMergedProducts]);
+
+  const catalogHasPrices = useMemo(
+    () => allMergedProducts.some((product) => priceBounds(presentationsOfProduct(product)).min !== null),
+    [allMergedProducts]
+  );
+
   const handleBrandToggle = (brand: string) => {
     setSelectedBrands((prev) =>
       prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
@@ -887,6 +995,18 @@ export function Products() {
     );
   };
 
+  const handlePresentationToggle = (label: string) => {
+    setSelectedPresentations((prev) =>
+      prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]
+    );
+  };
+
+  const handleApplicationToggle = (value: string) => {
+    setSelectedApplications((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    );
+  };
+
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
     setSelectedSubcategory(null);
@@ -913,6 +1033,10 @@ export function Products() {
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setSelectedViscosities([]);
+    setSelectedPresentations([]);
+    setSelectedApplications([]);
+    setPriceMin("");
+    setPriceMax("");
     setSearchQuery("");
     setShowAllProducts(true);
     setMobileSidebarOpen(false);
@@ -924,6 +1048,10 @@ export function Products() {
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setSelectedViscosities([]);
+    setSelectedPresentations([]);
+    setSelectedApplications([]);
+    setPriceMin("");
+    setPriceMax("");
     setSearchQuery("");
     setShowAllProducts(true);
     setMobileSidebarOpen(false);
@@ -935,6 +1063,10 @@ export function Products() {
     selectedCategory !== null ||
     selectedSubcategory !== null ||
     selectedViscosities.length > 0 ||
+    selectedPresentations.length > 0 ||
+    selectedApplications.length > 0 ||
+    priceMin.trim().length > 0 ||
+    priceMax.trim().length > 0 ||
     searchQuery.trim().length > 0;
 
   const renderBreadcrumb = () => (
@@ -1288,6 +1420,103 @@ export function Products() {
           </div>
         )}
 
+        {availablePresentations.length > 0 && (
+          <div className="border-b border-border pb-5">
+            <button
+              type="button"
+              onClick={() => setPresentationOpen(!presentationOpen)}
+              className="flex w-full items-center justify-between py-2 font-semibold text-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                PRESENTACIÓN
+              </span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground ${presentationOpen ? "rotate-180" : ""}`} />
+            </button>
+            {presentationOpen && (
+              <div className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-0.5">
+                {availablePresentations.map((label) => {
+                  const count = allMergedProducts.filter((product) =>
+                    matchesPresentation(presentationsOfProduct(product), [label])
+                  ).length;
+                  const isChecked = selectedPresentations.includes(label);
+                  return (
+                    <label
+                      key={label}
+                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-2 ${
+                        isChecked ? "border-primary/40 bg-primary/10" : "border-transparent bg-muted/40"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => handlePresentationToggle(label)}
+                        />
+                        <span className={`text-sm ${isChecked ? "font-bold text-primary" : ""}`}>{label}</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">{count}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {catalogHasPrices && (
+          <div className="border-b border-border pb-5">
+            <button
+              type="button"
+              onClick={() => setPriceOpen(!priceOpen)}
+              className="flex w-full items-center justify-between py-2 font-semibold text-foreground"
+            >
+              <span>PRECIO</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground ${priceOpen ? "rotate-180" : ""}`} />
+            </button>
+            {priceOpen && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  inputMode="decimal"
+                  value={priceMin}
+                  onChange={(event) => setPriceMin(event.target.value)}
+                  placeholder="Mín."
+                  aria-label="Precio mínimo"
+                  className="h-9 rounded-lg border border-border bg-card px-2 text-sm"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  inputMode="decimal"
+                  value={priceMax}
+                  onChange={(event) => setPriceMax(event.target.value)}
+                  placeholder="Máx."
+                  aria-label="Precio máximo"
+                  className="h-9 rounded-lg border border-border bg-card px-2 text-sm"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {availableApplications.length >= 2 && (
+          <div className="border-b border-border pb-5">
+            <p className="py-2 text-sm font-semibold text-foreground">APLICACIÓN</p>
+            <div className="space-y-1.5">
+              {availableApplications.map((value) => {
+                const isChecked = selectedApplications.includes(value);
+                return (
+                  <label key={value} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox checked={isChecked} onCheckedChange={() => handleApplicationToggle(value)} />
+                    <span>{value}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* FILTRO POR CATEGORÍAS */}
         <div className="pb-2">
           <button
@@ -1386,7 +1615,11 @@ export function Products() {
     const subcategory = product.subcategoryId ? getSubcategoryById(product.subcategoryId) : null;
     const subcategoryText = product.subcategory || subcategory?.name || null;
     const topBadgeText = formatViscosityBadge(product.viscosity);
-    const packVisual = getPresentationVisual(product.presentation);
+    const packOptions = presentationsOfProduct(product);
+    const primaryPack = activePresentations(packOptions)[0];
+    const packRange = presentationRangeLabel(packOptions, product.presentation);
+    const packPrice = priceRangeLabel(packOptions);
+    const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
     const imageScale = cardImageScale(product.presentation);
     const tone = getBrandChipVisual(product.brand);
 
@@ -1410,7 +1643,8 @@ export function Products() {
           name: product.name,
           brand: product.brand || "Apolo",
           line: product.line,
-          presentation: product.presentation || "Estándar",
+          presentation: primaryPack?.label || product.presentation || "Estándar",
+          presentationId: primaryPack && !primaryPack.virtual ? primaryPack.id : undefined,
           image: product.image,
           viscosity: product.viscosity,
         },
@@ -1488,6 +1722,10 @@ export function Products() {
                   <h3 className="mt-1 line-clamp-2 text-base font-bold text-foreground">
                     {product.name}
                   </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {packRange}
+                    {packPrice ? ` · ${packPrice}` : ""}
+                  </p>
                   <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                     {product.type || product.description}
                   </p>
@@ -1588,6 +1826,10 @@ export function Products() {
               <h3 className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-foreground sm:text-base">
                 {product.name}
               </h3>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                {packRange}
+                {packPrice ? ` · ${packPrice}` : ""}
+              </p>
               <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground max-sm:hidden">
                 {product.type || product.description}
               </p>
@@ -1906,6 +2148,54 @@ export function Products() {
                       </button>
                     </span>
                   )}
+                  {selectedPresentations.map((label) => (
+                    <span
+                      key={label}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                    >
+                      Presentación: <strong>{label}</strong>
+                      <button
+                        type="button"
+                        onClick={() => handlePresentationToggle(label)}
+                        className="rounded p-0.5 hover:bg-primary/20"
+                        aria-label={`Quitar presentación ${label}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {(priceMin.trim() || priceMax.trim()) && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/80 px-2.5 py-1 text-xs font-medium">
+                      Precio: <strong>{priceMin || "0"} – {priceMax || "∞"}</strong>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPriceMin("");
+                          setPriceMax("");
+                        }}
+                        className="rounded p-0.5 hover:bg-muted"
+                        aria-label="Quitar filtro de precio"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {selectedApplications.map((value) => (
+                    <span
+                      key={value}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/80 px-2.5 py-1 text-xs font-medium"
+                    >
+                      Aplicación: <strong>{value}</strong>
+                      <button
+                        type="button"
+                        onClick={() => handleApplicationToggle(value)}
+                        className="rounded p-0.5 hover:bg-muted"
+                        aria-label={`Quitar aplicación ${value}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
                   {selectedViscosities.map((viscosity) => (
                     <span
                       key={viscosity}
@@ -1982,6 +2272,9 @@ export function Products() {
                     (selectedCategory ? 1 : 0) +
                     (selectedSubcategory ? 1 : 0) +
                     selectedViscosities.length +
+                    selectedPresentations.length +
+                    selectedApplications.length +
+                    (priceMin.trim() || priceMax.trim() ? 1 : 0) +
                     (searchQuery.trim() ? 1 : 0) >
                     0 && (
                     <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
@@ -1990,6 +2283,9 @@ export function Products() {
                         (selectedCategory ? 1 : 0) +
                         (selectedSubcategory ? 1 : 0) +
                         selectedViscosities.length +
+                        selectedPresentations.length +
+                        selectedApplications.length +
+                        (priceMin.trim() || priceMax.trim() ? 1 : 0) +
                         (searchQuery.trim() ? 1 : 0)}
                     </span>
                   )}

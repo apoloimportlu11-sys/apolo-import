@@ -12,6 +12,7 @@ import QuoteDrawer from '@/components/QuoteDrawer'
 import FloatingQuoteButton from '@/components/FloatingQuoteButton'
 import ImageProtection from '@/components/ImageProtection'
 import FestiveEffects from '@/components/FestiveEffects'
+import { PublicAtmosphere } from '@/components/public-atmosphere'
 import { SmoothScroll } from '@/components/smooth-scroll'
 import { JsonLd } from '@/components/JsonLd'
 import { getSiteUrl } from '@/lib/site-url'
@@ -163,6 +164,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.className} font-sans antialiased bg-background text-foreground`} suppressHydrationWarning>
+        <PublicAtmosphere />
         <JsonLd
           data={{
             '@context': 'https://schema.org',
