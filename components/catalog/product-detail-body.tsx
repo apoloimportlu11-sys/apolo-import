@@ -14,8 +14,10 @@ import {
 } from "@/lib/product-related";
 import { cn } from "@/lib/utils";
 import { getPresentationVisual } from "@/lib/catalog/display";
-import { formatPrice, presentationsOfProduct } from "@/lib/catalog/presentations";
+import { presentationsOfProduct } from "@/lib/catalog/presentations";
 import { ProductKnowledge } from "@/components/catalog/product-detail-info";
+import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
+import { stockLabel, stockLevel } from "@/lib/catalog/stock-status";
 
 type ProductDetailBodyProps = {
   product: Product;
@@ -86,31 +88,38 @@ export function ProductDetailBody({
     onQuoted?.();
   };
 
-  const availability = selected && selected.stock > 0 ? "Disponible" : "Sin stock";
-  const offerLabel = [
-    selected?.price != null ? formatPrice(selected.price) : null,
-    availability,
-    selected?.sku ? `SKU ${selected.sku}` : null,
-  ]
+  const selectedLevel = stockLevel({
+    stock: selected?.stock ?? product.stock,
+    stockMin: selected?.stockMin ?? product.stockMin,
+  });
+  const productLevel = stockLevel({
+    stock: product.stock,
+    stockMin: product.stockMin,
+  });
+  const availability = stockLabel(selectedLevel);
+  const offerLabel = [availability, selected?.sku ? `SKU ${selected.sku}` : null]
     .filter(Boolean)
     .join(" · ");
   const presentationChoices = (
     <div className="flex flex-wrap gap-1.5">
       {options.map((item) => {
         const active = item.id === selected?.id;
+        const itemLevel = stockLevel({ stock: item.stock, stockMin: item.stockMin });
         return (
           <button
             key={item.id}
             type="button"
             onClick={() => setSelectedId(item.id)}
             aria-pressed={active}
-            className={
+            className={cn(
               active
                 ? "rounded-md border border-[color:color-mix(in_oklab,var(--gold)_55%,transparent)] bg-[color:var(--gold-soft)] px-2.5 py-1 text-xs font-semibold text-foreground"
-                : "rounded-md border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground"
-            }
+                : "rounded-md border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground",
+              itemLevel === "out" ? "opacity-70 line-through decoration-red-500/70" : null
+            )}
           >
             {item.label || "Estándar"}
+            {itemLevel === "out" ? " · agotado" : itemLevel === "low" ? " · últimas" : ""}
           </button>
         );
       })}
@@ -158,6 +167,7 @@ export function ProductDetailBody({
                 <p className="mb-1.5 text-[11px] text-muted-foreground">Presentación</p>
                 {presentationChoices}
                 <p className="mt-2 text-xs font-medium text-foreground">{offerLabel}</p>
+                <StockStatusBadge level={selectedLevel} variant="banner" className="mt-2.5" />
               </div>
 
               {related.length > 0 ? (
@@ -239,9 +249,12 @@ export function ProductDetailBody({
           <Button
             type="button"
             onClick={() => addToQuote(false)}
-            className="h-10 flex-1 rounded-lg font-semibold"
+            className={cn(
+              "h-10 flex-1 rounded-lg font-semibold",
+              selectedLevel === "out" ? "bg-zinc-700 text-white hover:bg-zinc-600" : null
+            )}
           >
-            {addedAnimation ? "Añadido" : "Cotizar"}
+            {addedAnimation ? "Añadido" : selectedLevel === "out" ? "Consultar" : "Cotizar"}
           </Button>
           <button
             type="button"
@@ -287,6 +300,7 @@ export function ProductDetailBody({
             <p className="text-sm text-muted-foreground">Presentación</p>
             {presentationChoices}
             <p className="text-sm font-medium">{offerLabel}</p>
+            <StockStatusBadge level={selectedLevel !== "ok" ? selectedLevel : productLevel} variant="banner" />
           </div>
 
           {product.tdsUrl?.trim() ? (
@@ -298,14 +312,27 @@ export function ProductDetailBody({
             </Button>
           ) : null}
 
-          <div className="space-y-4 rounded-2xl border border-border/80 bg-muted/40 p-4 shadow-xs sm:p-5">
+          <div
+            className={cn(
+              "space-y-4 rounded-2xl border p-4 shadow-xs sm:p-5",
+              selectedLevel === "out"
+                ? "border-red-500/35 bg-red-500/5"
+                : selectedLevel === "low"
+                  ? "border-amber-500/35 bg-amber-500/5"
+                  : "border-border/80 bg-muted/40"
+            )}
+          >
             <div>
               <h4 className="flex items-center gap-2 text-base font-bold text-foreground">
-                <FileText className="h-5 w-5 text-emerald-500" />
-                Cotizar este producto
+                <FileText className={cn("h-5 w-5", selectedLevel === "out" ? "text-red-500" : "text-emerald-500")} />
+                {selectedLevel === "out" ? "Consultar reposición" : "Cotizar este producto"}
               </h4>
               <p className="mt-1 text-xs text-muted-foreground">
-                Añádelo a tu lista para consultar precios y disponibilidad.
+                {selectedLevel === "out"
+                  ? "Está agotado, pero puedes pedirnos fecha de llegada o una alternativa."
+                  : selectedLevel === "low"
+                    ? "Quedan pocas unidades. Añádelo a tu lista para asegurar disponibilidad."
+                    : "Añádelo a tu lista para consultar disponibilidad y cotización."}
               </p>
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
@@ -331,10 +358,19 @@ export function ProductDetailBody({
               <Button
                 type="button"
                 onClick={() => addToQuote(false)}
-                className="h-11 flex-1 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+                className={cn(
+                  "h-11 flex-1 rounded-xl font-bold text-white",
+                  selectedLevel === "out"
+                    ? "bg-zinc-800 hover:bg-zinc-700"
+                    : "bg-emerald-600 hover:bg-emerald-700"
+                )}
               >
                 <FileText className="h-4 w-4" />
-                {addedAnimation ? "¡Añadido a cotización!" : "Añadir a cotización"}
+                {addedAnimation
+                  ? "¡Añadido a cotización!"
+                  : selectedLevel === "out"
+                    ? "Consultar reposición"
+                    : "Añadir a cotización"}
               </Button>
             </div>
             <button

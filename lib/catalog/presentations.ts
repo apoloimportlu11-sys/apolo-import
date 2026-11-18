@@ -113,6 +113,51 @@ export function blankPresentation(sortOrder = 0): PresentationDraft {
   };
 }
 
+const PACKAGE_ONLY = new Set(["Pote", "Balde", "Tambor", "Caja", "Cartucho", "Galón"]);
+
+/** Crea un borrador desde un tamaño preset (1 L, 280 ml, Pote…). */
+export function draftFromSizeLabel(label: string, sortOrder = 0): PresentationDraft {
+  const trimmed = label.trim();
+  const base = blankPresentation(sortOrder);
+  if (!trimmed) return base;
+
+  if (PACKAGE_ONLY.has(trimmed)) {
+    return { ...base, label: trimmed, packageType: trimmed };
+  }
+
+  const measure = trimmed.match(/^(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(ml|L|oz|gal|g|kg|und)$/i);
+  if (measure) {
+    const rawQty = measure[1].replace(",", ".");
+    const unitRaw = measure[2];
+    const unit = /^l$/i.test(unitRaw) ? "L" : unitRaw.toLowerCase();
+    return {
+      ...base,
+      label: trimmed,
+      // Las fracciones (1/4) no son Number; la etiqueta ya carga el tamaño.
+      quantity: rawQty.includes("/") ? "" : rawQty,
+      unit,
+    };
+  }
+
+  return { ...base, label: trimmed };
+}
+
+export function isEmptyPresentationDraft(draft: PresentationDraft) {
+  return (
+    !draft.persisted &&
+    !presentationLabel(draft) &&
+    !draft.price.trim() &&
+    !draft.sku.trim() &&
+    !draft.imageUrl.trim()
+  );
+}
+
+export function labelAlreadyUsed(drafts: PresentationDraft[], label: string) {
+  const target = label.trim().toLowerCase();
+  if (!target) return false;
+  return drafts.some((draft) => presentationLabel(draft).toLowerCase() === target);
+}
+
 export function duplicatePresentation(source: PresentationDraft, sortOrder: number): PresentationDraft {
   return {
     ...source,

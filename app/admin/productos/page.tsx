@@ -20,6 +20,7 @@ import {
   BookmarkCheck,
   History,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
@@ -52,6 +53,7 @@ import {
   recordPresentationDeltas,
   syncPresentations,
 } from "@/lib/catalog/presentation-store";
+import { enrichProductList } from "@/lib/catalog/enrich-product";
 import { adjustStock, isLowStock, setStockMin } from "@/lib/inventory";
 import { products as BASE_PRODUCTS } from "@/lib/products-data";
 import { groupProductsByLine } from "@/lib/product-grouping";
@@ -116,6 +118,14 @@ export default function ProductosPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [enrichingAll, setEnrichingAll] = useState(false);
+  const [showEnrichModal, setShowEnrichModal] = useState(false);
+  const [enrichPreview, setEnrichPreview] = useState<{
+    total: number;
+    withChanges: number;
+    fieldHits: number;
+    extendedLikely: boolean;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrandFilter, setSelectedBrandFilter] = useState("all");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
@@ -1683,6 +1693,137 @@ export default function ProductosPage() {
     }
   }
 
+  function openEnrichPreview() {
+    const results = enrichProductList(products);
+    const withChanges = results.filter((item) => item.changed);
+    const fieldHits = withChanges.reduce((sum, item) => sum + item.changedKeys.length, 0);
+    const extendedLikely = products.some(
+      (item) => item.family != null || (item.attributes && Object.keys(item.attributes).length > 0) || (item.commercial && Object.keys(item.commercial).length > 0)
+    );
+    setEnrichPreview({
+      total: products.length,
+      withChanges: withChanges.length,
+      fieldHits,
+      extendedLikely,
+    });
+    setShowEnrichModal(true);
+  }
+
+  async function confirmEnrichAllProducts() {
+    if (!products.length) {
+      toast.error("No hay productos para completar");
+      return;
+    }
+    setEnrichingAll(true);
+    const toastId = toast.loading("Completando fichas con datos orientativos...");
+    try {
+      const results = enrichProductList(products).filter((item) => item.changed);
+      if (!results.length) {
+        toast.success("Nada que completar", {
+          id: toastId,
+          description: "Todos los productos ya tenían esos campos llenos.",
+        });
+        setShowEnrichModal(false);
+        return;
+      }
+
+      const byId = new Map(products.map((item) => [item.id, item]));
+      const payloadList = results.map((item) => {
+        const current = byId.get(item.id)!;
+        const enriched = item.next;
+        return {
+          id: current.id,
+          name: current.name,
+          slug: current.slug,
+          brand: current.brand?.trim() || "Apolo",
+          short_description: enriched.short_description ?? current.short_description ?? null,
+          presentation: enriched.presentation ?? current.presentation ?? null,
+          viscosity: enriched.viscosity ?? current.viscosity ?? null,
+          type: enriched.type ?? current.type ?? null,
+          subcategory_id: enriched.subcategory_id ?? current.subcategory_id ?? null,
+          subcategory: enriched.subcategory ?? current.subcategory ?? null,
+          description: enriched.description ?? current.description ?? null,
+          stock: current.stock,
+          stock_min: current.stock_min ?? 0,
+          price: current.price ?? null,
+          is_featured: Boolean(current.is_featured),
+          is_active: current.is_active !== undefined ? current.is_active : true,
+          category_id: enriched.category_id || current.category_id || "automovil",
+          image_url: current.image_url?.trim() || null,
+          line_group_id: enriched.line_group_id ?? current.line_group_id ?? null,
+          family: enriched.family ?? current.family ?? null,
+          attributes: enriched.attributes || current.attributes || {},
+          commercial: enriched.commercial || current.commercial || {},
+          updated_at: new Date().toISOString(),
+        };
+      });
+
+      const validatedList = [];
+      for (const raw of payloadList) {
+        const validated = parseProductUpsert(raw);
+        if (!validated.success) {
+          throw new Error(validated.error.issues[0]?.message || `Datos inválidos en ${raw.name}`);
+        }
+        validatedList.push(validated.data);
+      }
+
+      const chunkSize = 20;
+      let usedLegacy = false;
+      let savedRows: ProductItem[] = [];
+      for (let i = 0; i < validatedList.length; i += chunkSize) {
+        const chunk = validatedList.slice(i, i + chunkSize);
+        let { data, error } = await supabase.from("products").upsert(chunk, { onConflict: "id" }).select();
+        if (error && isMissingSchemaError(error.message)) {
+          usedLegacy = true;
+          const legacyChunk = chunk.map((row) => withoutExtendedProductFields(row));
+          const retry = await supabase.from("products").upsert(legacyChunk, { onConflict: "id" }).select();
+          data = retry.data;
+          error = retry.error;
+        }
+        if (error) throw error;
+        if (data?.length) savedRows = savedRows.concat(data as ProductItem[]);
+      }
+
+      const enrichedById = new Map(results.map((item) => [item.id, item.next]));
+      persistProductsState((prev) =>
+        prev.map((item) => {
+          const enriched = enrichedById.get(item.id);
+          if (!enriched) return item;
+          const saved = savedRows.find((row) => row.id === item.id);
+          return {
+            ...item,
+            ...(saved || {}),
+            ...enriched,
+            stock: item.stock,
+            stock_min: item.stock_min,
+            price: item.price,
+            image_url: item.image_url,
+            brand: item.brand,
+            attributes: parseAttributeValues(enriched.attributes),
+            commercial: parseCommercial(enriched.commercial),
+          };
+        })
+      );
+      if (realtimeBus) realtimeBus.emit("products_updated", { enriched: results.length });
+
+      toast.success(`Fichas completadas: ${results.length}`, {
+        id: toastId,
+        description: usedLegacy
+          ? "Se guardaron campos clásicos. Para family/attributes/commercial aplica supabase_product_presentations.sql a mano."
+          : "Textos y specs orientativos. Puedes editar producto a producto.",
+        duration: 5000,
+      });
+      setShowEnrichModal(false);
+    } catch (err: unknown) {
+      toast.error("No se pudieron completar todas las fichas", {
+        id: toastId,
+        description: err instanceof Error ? err.message : explainProductSaveError(),
+      });
+    } finally {
+      setEnrichingAll(false);
+    }
+  }
+
   // 1-Click Sync all initial products to Supabase
   async function syncAllCatalogToSupabase() {
     setSyncingAll(true);
@@ -1839,6 +1980,17 @@ export default function ProductosPage() {
           >
             <FolderSync className={`w-4 h-4 text-[#C7940A] ${syncingAll ? "animate-spin" : ""}`} />
             <span>Guardar catálogo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openEnrichPreview}
+            disabled={enrichingAll || loading || !products.length}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-amber-200 hover:bg-amber-500/10 disabled:opacity-50"
+            title="Rellena familia, técnicos y textos comerciales vacíos con datos orientativos"
+          >
+            <Sparkles className={`w-4 h-4 text-amber-300 ${enrichingAll ? "animate-spin" : ""}`} />
+            <span>Completar fichas</span>
           </button>
             </div>
           </details>
@@ -2375,6 +2527,69 @@ export default function ProductosPage() {
         onClose={closeProductModal}
         onSubmit={handleSaveProduct}
       />
+
+      <AlertDialog
+        open={showEnrichModal}
+        onOpenChange={(open) => {
+          if (!open && !enrichingAll) {
+            setShowEnrichModal(false);
+            setEnrichPreview(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="overflow-hidden border-white/10 bg-[#141414] p-0 text-[#F4F4F5] sm:max-w-md">
+          <div className="border-b border-white/10 bg-[linear-gradient(135deg,#1a1610,#141414_55%)] px-6 py-5">
+            <AlertDialogHeader>
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-amber-500/15 ring-1 ring-amber-500/35">
+                <Sparkles className="h-5 w-5 text-amber-300" />
+              </div>
+              <AlertDialogTitle className="text-lg text-white">Completar fichas</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2 text-[13px] leading-relaxed text-zinc-400">
+                <span className="block">
+                  Se rellenarán{" "}
+                  <span className="font-medium text-zinc-200">
+                    {enrichPreview?.withChanges ?? 0} de {enrichPreview?.total ?? 0}
+                  </span>{" "}
+                  productos con datos aproximados ({enrichPreview?.fieldHits ?? 0} campos vacíos). No cambia precios ni stock.
+                </span>
+                <span className="block">
+                  Los textos y specs son orientativos, no certificado oficial. Luego puedes editar producto a producto.
+                </span>
+                {!enrichPreview?.extendedLikely ? (
+                  <span className="block text-amber-200/90">
+                    Si aún no corriste supabase_product_presentations.sql, se guardarán al menos los campos clásicos (viscosidad, tipo, descripción…).
+                  </span>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
+            <AlertDialogCancel
+              disabled={enrichingAll}
+              className="rounded-xl border-white/10 bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={enrichingAll || !enrichPreview?.withChanges}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmEnrichAllProducts();
+              }}
+              className="rounded-xl bg-[#C7940A] text-black hover:bg-[#d9a311]"
+            >
+              {enrichingAll ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Completando…
+                </span>
+              ) : (
+                "Completar ahora"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!pendingDelete}

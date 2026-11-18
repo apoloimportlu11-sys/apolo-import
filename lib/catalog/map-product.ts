@@ -46,6 +46,16 @@ export function mapRowToProduct(item: Record<string, unknown>): Product {
     stock: presentations
       .filter((entry) => entry.isActive)
       .reduce((sum, entry) => sum + entry.stock, 0),
+    stockMin: Math.max(
+      0,
+      Math.floor(
+        Number(
+          item.stock_min ??
+            presentations.find((entry) => entry.isActive)?.stockMin ??
+            0
+        ) || 0
+      )
+    ),
     family: item.family != null ? String(item.family) : null,
     attributes: parseAttributeValues(item.attributes),
     commercial: parseCommercial(item.commercial),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Copy, Loader2, Plus, Trash2, X } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronUp, Copy, Loader2, Plus, Trash2, X } from "lucide-react";
 import MediaSelector from "@/components/MediaSelector";
 import type { ProductItem } from "@/lib/admin/product-types";
 import type { ProductLineGroupItem } from "@/lib/product-line-groups";
@@ -18,7 +18,10 @@ import { fieldsForProduct, type AttributeField } from "@/lib/catalog/attribute-s
 import {
   blankPresentation,
   draftFromLegacy,
+  draftFromSizeLabel,
   duplicatePresentation,
+  isEmptyPresentationDraft,
+  labelAlreadyUsed,
   presentationLabel,
   type PresentationDraft,
 } from "@/lib/catalog/presentations";
@@ -105,6 +108,7 @@ function AttributeCombo({
 }
 
 const COMMON_PRESENTATIONS = ["1 L", "4 L", "5 L", "20 L", "1 gal", "1/4 gal", "Pote", "Balde", "Tambor", "Caja"];
+const EXTRA_PRESENTATIONS = PRESENTATION_PRESETS.filter((preset) => !COMMON_PRESENTATIONS.includes(preset));
 const UNITS = ["ml", "L", "oz", "gal", "g", "kg", "und"];
 const PACKAGES = ["Pote", "Balde", "Tambor", "Caja", "Cartucho", "Galón"];
 const SECTIONS: { id: Section; label: string }[] = [
@@ -184,6 +188,9 @@ export function ProductForm({
   const [pendingRemove, setPendingRemove] = useState<{ id: string; note: string } | null>(null);
   const [formError, setFormError] = useState("");
   const [sessionKey, setSessionKey] = useState(resetKey);
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [pickedSizes, setPickedSizes] = useState<string[]>([]);
+  const [showMoreSizes, setShowMoreSizes] = useState(false);
   const detected = useRef({ viscosity: "", presentation: "", line: "", type: "" });
 
   if (open && sessionKey !== resetKey) {
@@ -206,6 +213,9 @@ export function ProductForm({
     setExpandedId(null);
     setPendingRemove(null);
     setFormError("");
+    setMultiSelect(false);
+    setPickedSizes([]);
+    setShowMoreSizes(false);
     detected.current = { viscosity: "", presentation: "", line: "", type: "" };
   }
 
@@ -224,6 +234,7 @@ export function ProductForm({
   const title =
     mode === "edit" ? "Editar producto" : mode === "presentation" ? "Otra presentación" : "Nuevo producto";
   const presentationChoices = PRESENTATION_PRESETS.filter((preset) => COMMON_PRESENTATIONS.includes(preset));
+  const sizeChipOptions = showMoreSizes ? [...COMMON_PRESENTATIONS, ...EXTRA_PRESENTATIONS] : COMMON_PRESENTATIONS;
 
   function patch(partial: Partial<ProductItem>) {
     onChange(partial);
@@ -233,6 +244,40 @@ export function ProductForm({
     patch({
       presentations: next.map((draft, index) => ({ ...draft, sortOrder: index })),
     });
+  }
+
+  function addSizeLabels(labels: string[]) {
+    let next = [...drafts];
+    let added = 0;
+    for (const label of labels) {
+      const trimmed = label.trim();
+      if (!trimmed || labelAlreadyUsed(next, trimmed)) continue;
+      const created = draftFromSizeLabel(trimmed, next.length);
+      if (next.length === 1 && isEmptyPresentationDraft(next[0])) {
+        const previous = next[0];
+        next = [
+          {
+            ...created,
+            id: previous.id,
+            stock: previous.stock || created.stock,
+            stockMin: previous.stockMin || created.stockMin,
+            sortOrder: 0,
+          },
+        ];
+      } else {
+        next = [...next, created];
+      }
+      added += 1;
+    }
+    if (!added) return;
+    setDrafts(next);
+    setExpandedId(null);
+  }
+
+  function togglePickedSize(label: string) {
+    setPickedSizes((current) =>
+      current.includes(label) ? current.filter((item) => item !== label) : [...current, label]
+    );
   }
 
   function onName(name: string) {
@@ -740,10 +785,24 @@ export function ProductForm({
 
           {section === "presentaciones" ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-[var(--admin-muted)]">
-                  La primera presentación sigue en el producto. La segunda y las siguientes se guardan aparte, con su precio y su stock.
-                </p>
+              <p className="text-xs text-[var(--admin-muted)]">
+                Un producto, varios tamaños. Toca un chip o elige varios; luego completa precio y stock en cada fila.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMultiSelect((value) => !value);
+                    setPickedSizes([]);
+                  }}
+                  className={choiceClass(multiSelect)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    Elegir varios
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -751,57 +810,158 @@ export function ProductForm({
                     setDrafts([...drafts, created]);
                     setExpandedId(created.id);
                   }}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#C7940A] px-3 py-1.5 text-xs font-semibold text-black"
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#C7940A] px-3 py-1.5 text-xs font-semibold text-black"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Añadir
+                  Personalizado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMoreSizes((value) => !value)}
+                  className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--admin-muted)] underline-offset-2 hover:underline"
+                >
+                  {showMoreSizes ? "Menos tamaños" : "Más tamaños"}
                 </button>
               </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {sizeChipOptions.map((preset) => {
+                  const used = labelAlreadyUsed(drafts, preset);
+                  const picked = pickedSizes.includes(preset);
+                  if (multiSelect) {
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => togglePickedSize(preset)}
+                        disabled={used}
+                        className={choiceClass(picked || used)}
+                        aria-pressed={picked}
+                      >
+                        {used ? `${preset} ✓` : preset}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => addSizeLabels([preset])}
+                      disabled={used}
+                      className={choiceClass(used)}
+                      aria-pressed={used}
+                    >
+                      {used ? `${preset} ✓` : preset}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {multiSelect ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!pickedSizes.length}
+                    onClick={() => {
+                      addSizeLabels(pickedSizes);
+                      setPickedSizes([]);
+                      setMultiSelect(false);
+                    }}
+                    className="rounded-lg bg-[#C7940A] px-3 py-1.5 text-xs font-semibold text-black disabled:opacity-40"
+                  >
+                    Agregar seleccionados ({pickedSizes.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPickedSizes([]);
+                      setMultiSelect(false);
+                    }}
+                    className="rounded-lg px-2 py-1 text-xs text-[var(--admin-muted)]"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : null}
+
               {drafts.map((draft, index) => {
                 const openDraft = expandedId === draft.id;
-                const label = presentationLabel(draft) || "Sin etiqueta";
                 return (
                   <div key={draft.id} className="rounded-xl border border-[var(--admin-line)] p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedId(openDraft ? null : draft.id)}
-                        className="min-w-0 flex-1 text-left text-sm font-medium"
-                      >
-                        {label}
-                        <span className="ml-2 text-xs text-[var(--admin-muted)]">
-                          {draft.price.trim() ? `$${draft.price}` : "Sin precio"} · stock {draft.stock || "0"}
-                          {draft.isActive ? "" : " · pausada"}
-                        </span>
-                      </button>
-                      <button type="button" onClick={() => moveDraft(draft.id, -1)} className="rounded-lg p-1 text-[var(--admin-muted)]" aria-label="Subir presentación" disabled={index === 0}>
-                        <ChevronUp className="h-4 w-4" />
-                      </button>
-                      <button type="button" onClick={() => moveDraft(draft.id, 1)} className="rounded-lg p-1 text-[var(--admin-muted)]" aria-label="Bajar presentación" disabled={index === drafts.length - 1}>
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const copy = duplicatePresentation(draft, drafts.length);
-                          setDrafts([...drafts, copy]);
-                          setExpandedId(copy.id);
-                        }}
-                        className="rounded-lg p-1 text-[var(--admin-muted)]"
-                        aria-label="Duplicar presentación"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => askRemove(draft)}
-                        className="rounded-lg p-1 text-red-400"
-                        aria-label="Eliminar presentación"
-                        disabled={drafts.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="min-w-[7rem] flex-1">
+                        <label className="mb-1 block text-[11px] text-[var(--admin-muted)]">Tamaño</label>
+                        <input
+                          value={draft.label}
+                          onChange={(event) => updateDraft(draft.id, { label: event.target.value })}
+                          className={fieldClass}
+                          placeholder="1 L, galón…"
+                          autoFocus={mode === "presentation" && index === drafts.length - 1 && !draft.label}
+                        />
+                      </div>
+                      <div className="w-[6.5rem]">
+                        <label className="mb-1 block text-[11px] text-[var(--admin-muted)]">Precio</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={draft.price}
+                          onChange={(event) => updateDraft(draft.id, { price: event.target.value })}
+                          className={fieldClass}
+                          placeholder="—"
+                        />
+                      </div>
+                      <div className="w-[5.5rem]">
+                        <label className="mb-1 block text-[11px] text-[var(--admin-muted)]">Stock</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={draft.stock}
+                          onChange={(event) => updateDraft(draft.id, { stock: event.target.value })}
+                          className={fieldClass}
+                        />
+                      </div>
+                      <div className="flex items-center gap-0.5 pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(openDraft ? null : draft.id)}
+                          className="rounded-lg px-2 py-1.5 text-[11px] font-medium text-[var(--admin-muted)] hover:bg-[var(--admin-input)]"
+                          aria-expanded={openDraft}
+                        >
+                          {openDraft ? "Menos" : "Más"}
+                        </button>
+                        <button type="button" onClick={() => moveDraft(draft.id, -1)} className="rounded-lg p-1 text-[var(--admin-muted)]" aria-label="Subir presentación" disabled={index === 0}>
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button type="button" onClick={() => moveDraft(draft.id, 1)} className="rounded-lg p-1 text-[var(--admin-muted)]" aria-label="Bajar presentación" disabled={index === drafts.length - 1}>
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const copy = duplicatePresentation(draft, drafts.length);
+                            setDrafts([...drafts, copy]);
+                            setExpandedId(null);
+                          }}
+                          className="rounded-lg p-1 text-[var(--admin-muted)]"
+                          aria-label="Duplicar presentación"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => askRemove(draft)}
+                          className="rounded-lg p-1 text-red-400"
+                          aria-label="Eliminar presentación"
+                          disabled={drafts.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
+                    {!draft.isActive ? (
+                      <p className="mt-1 text-[11px] text-amber-500">Pausada · no se ofrece en el catálogo</p>
+                    ) : null}
                     {pendingRemove?.id === draft.id ? (
                       <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
                         <p>{pendingRemove.note}</p>
@@ -824,28 +984,6 @@ export function ProductForm({
                     ) : null}
                     {openDraft ? (
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2">
-                          <label className="mb-1 block text-sm text-[var(--admin-muted)]">Etiqueta</label>
-                          <input
-                            value={draft.label}
-                            onChange={(event) => updateDraft(draft.id, { label: event.target.value })}
-                            className={fieldClass}
-                            placeholder="1 gal, 4 L, balde"
-                            autoFocus={mode === "presentation"}
-                          />
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {presentationChoices.map((preset) => (
-                              <button
-                                key={preset}
-                                type="button"
-                                onClick={() => updateDraft(draft.id, { label: preset })}
-                                className={choiceClass(draft.label.toLowerCase() === preset.toLowerCase())}
-                              >
-                                {preset}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
                         <div>
                           <label className="mb-1 block text-sm text-[var(--admin-muted)]">Cantidad</label>
                           <input
@@ -899,28 +1037,6 @@ export function ProductForm({
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-sm text-[var(--admin-muted)]">Precio</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={draft.price}
-                            onChange={(event) => updateDraft(draft.id, { price: event.target.value })}
-                            className={fieldClass}
-                            placeholder="Opcional"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm text-[var(--admin-muted)]">Stock</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={draft.stock}
-                            onChange={(event) => updateDraft(draft.id, { stock: event.target.value })}
-                            className={fieldClass}
-                          />
-                        </div>
-                        <div>
                           <label className="mb-1 block text-sm text-[var(--admin-muted)]">Mínimo</label>
                           <input
                             type="number"
@@ -939,6 +1055,29 @@ export function ProductForm({
                           />
                           Disponible
                         </label>
+                        <div className="sm:col-span-2">
+                          <p className="mb-1.5 text-sm text-[var(--admin-muted)]">Atajos de etiqueta</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {presentationChoices.map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => {
+                                  const sized = draftFromSizeLabel(preset, draft.sortOrder);
+                                  updateDraft(draft.id, {
+                                    label: sized.label,
+                                    quantity: sized.quantity,
+                                    unit: sized.unit,
+                                    packageType: sized.packageType,
+                                  });
+                                }}
+                                className={choiceClass(draft.label.toLowerCase() === preset.toLowerCase())}
+                              >
+                                {preset}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <div className="sm:col-span-2">
                           <MediaSelector
                             compact

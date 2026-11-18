@@ -51,12 +51,9 @@ import {
 } from "@/lib/catalog/display";
 import {
   matchesPresentation,
-  matchesPrice,
   presentationLabelsOf,
   presentationRangeLabel,
   presentationsOfProduct,
-  priceBounds,
-  priceRangeLabel,
   activePresentations,
 } from "@/lib/catalog/presentations";
 import {
@@ -66,6 +63,9 @@ import {
 } from "@/lib/catalog/deleted-keys";
 import { usePublicCatalog } from "@/hooks/use-public-catalog";
 import { usePublicBrands } from "@/hooks/use-public-brands";
+import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
+import { stockLevel } from "@/lib/catalog/stock-status";
+import { cn } from "@/lib/utils";
 
 export function Products() {
   const searchParams = useSearchParams();
@@ -739,21 +739,6 @@ export function Products() {
       );
     }
 
-    const minPrice = priceMin.trim() === "" ? null : Number(priceMin);
-    const maxPrice = priceMax.trim() === "" ? null : Number(priceMax);
-    if (
-      (minPrice !== null && !Number.isNaN(minPrice)) ||
-      (maxPrice !== null && !Number.isNaN(maxPrice))
-    ) {
-      filtered = filtered.filter((p) =>
-        matchesPrice(
-          presentationsOfProduct(p),
-          minPrice !== null && !Number.isNaN(minPrice) ? minPrice : null,
-          maxPrice !== null && !Number.isNaN(maxPrice) ? maxPrice : null
-        )
-      );
-    }
-
     if (selectedApplications.length > 0) {
       filtered = filtered.filter((p) => {
         const application = (p.attributes?.application || "").trim().toLowerCase();
@@ -957,10 +942,8 @@ export function Products() {
     return Array.from(values).sort((a, b) => a.localeCompare(b));
   }, [allMergedProducts]);
 
-  const catalogHasPrices = useMemo(
-    () => allMergedProducts.some((product) => priceBounds(presentationsOfProduct(product)).min !== null),
-    [allMergedProducts]
-  );
+  // Los precios son confidenciales: no se muestran ni se filtran en la tienda pública.
+  const catalogHasPrices = false;
 
   const handleBrandToggle = (brand: string) => {
     setSelectedBrands((prev) =>
@@ -1618,10 +1601,14 @@ export function Products() {
     const packOptions = presentationsOfProduct(product);
     const primaryPack = activePresentations(packOptions)[0];
     const packRange = presentationRangeLabel(packOptions, product.presentation);
-    const packPrice = priceRangeLabel(packOptions);
     const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
     const imageScale = cardImageScale(product.presentation);
     const tone = getBrandChipVisual(product.brand);
+    const level = stockLevel({
+      stock: product.stock,
+      stockMin: product.stockMin,
+    });
+    const outOfStock = level === "out";
 
     const hasValidImage =
       Boolean(
@@ -1659,7 +1646,13 @@ export function Products() {
           className="group"
           style={{ contentVisibility: "auto", containIntrinsicSize: "0 220px" }}
         >
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm transition-colors duration-200 hover:border-primary/50 sm:p-5">
+          <div
+            className={cn(
+              "rounded-2xl border bg-card p-3 shadow-sm transition-colors duration-200 hover:border-primary/50 sm:p-5",
+              outOfStock ? "border-red-500/35 opacity-95" : "border-border",
+              level === "low" ? "border-amber-500/35" : null
+            )}
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-5">
               <button
                 type="button"
@@ -1673,20 +1666,24 @@ export function Products() {
                   fill
                   unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                   sizes="(max-width: 640px) 100vw, 176px"
-                  className="object-contain object-center p-3 drop-shadow-[0_8px_14px_rgba(0,0,0,0.16)]"
+                  className={cn(
+                    "object-contain object-center p-3 drop-shadow-[0_8px_14px_rgba(0,0,0,0.16)]",
+                    outOfStock ? "grayscale contrast-75" : null
+                  )}
                   style={{ transform: `scale(${imageScale})` }}
                 />
               ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center text-zinc-400">
-                    <Package className="mb-1 h-8 w-8 opacity-70" />
-                    <span className="text-[11px] font-medium">Sin imagen</span>
-                  </div>
-                )}
+                <div className="flex h-full w-full flex-col items-center justify-center text-zinc-400">
+                  <Package className="mb-1 h-8 w-8 opacity-70" />
+                  <span className="text-[11px] font-medium">Sin imagen</span>
+                </div>
+              )}
                 {product.presentation ? (
-                  <span className="absolute left-2 top-2 rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute left-2 top-2 z-[1] rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {packVisual.label}
                   </span>
                 ) : null}
+                <StockStatusBadge level={level} variant="overlay" />
               </button>
 
               <div className="flex min-w-0 flex-1 flex-col justify-between">
@@ -1706,6 +1703,7 @@ export function Products() {
                     >
                       {product.brand || "Apolo"}
                     </span>
+                    <StockStatusBadge level={level} variant="inline" />
                     {topBadgeText ? (
                       <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
                         {topBadgeText}
@@ -1722,10 +1720,7 @@ export function Products() {
                   <h3 className="mt-1 line-clamp-2 text-base font-bold text-foreground">
                     {product.name}
                   </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {packRange}
-                    {packPrice ? ` · ${packPrice}` : ""}
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{packRange}</p>
                   <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                     {product.type || product.description}
                   </p>
@@ -1741,11 +1736,14 @@ export function Products() {
                   <button
                     type="button"
                     onClick={handleQuoteClick}
-                    className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white"
-                    title="Añadir a la lista de cotización"
+                    className={cn(
+                      "ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-white",
+                      outOfStock ? "bg-zinc-700 hover:bg-zinc-600" : "bg-emerald-600"
+                    )}
+                    title={outOfStock ? "Cotizar reposición o alternativa" : "Añadir a la lista de cotización"}
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    <span>{isInQuote ? "Cotizado (+1)" : "Cotizar"}</span>
+                    <span>{isInQuote ? "Cotizado (+1)" : outOfStock ? "Consultar" : "Cotizar"}</span>
                   </button>
                 </div>
               </div>
@@ -1761,8 +1759,17 @@ export function Products() {
         className="group h-full"
         style={{ contentVisibility: "auto", containIntrinsicSize: "0 420px" }}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-colors duration-200 hover:border-primary/50">
-          <div className="h-[3px] w-full" style={{ backgroundColor: tone.accent }} />
+        <div
+          className={cn(
+            "flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-colors duration-200 hover:border-primary/50",
+            outOfStock ? "border-red-500/40" : "border-border",
+            level === "low" ? "border-amber-500/40" : null
+          )}
+        >
+          <div
+            className="h-[3px] w-full"
+            style={{ backgroundColor: outOfStock ? "#C90012" : level === "low" ? "#D97706" : tone.accent }}
+          />
 
           <div className="flex h-full flex-col p-2.5 sm:p-4">
             <div className="mb-2 flex items-center justify-between gap-1.5">
@@ -1776,7 +1783,9 @@ export function Products() {
               >
                 {product.brand || "Apolo"}
               </span>
-              {topBadgeText ? (
+              {level !== "ok" ? (
+                <StockStatusBadge level={level} variant="inline" />
+              ) : topBadgeText ? (
                 <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
                   {topBadgeText}
                 </span>
@@ -1799,7 +1808,10 @@ export function Products() {
                   fill
                   unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                   sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                  className="object-contain object-center p-2 drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)]"
+                  className={cn(
+                    "object-contain object-center p-2 drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)]",
+                    outOfStock ? "grayscale contrast-75" : null
+                  )}
                   style={{ transform: `scale(${imageScale})` }}
                 />
               ) : (
@@ -1809,10 +1821,11 @@ export function Products() {
                 </div>
               )}
               {product.presentation ? (
-                <span className="absolute left-2 top-2 max-w-[70%] truncate rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                <span className="absolute left-2 top-2 z-[1] max-w-[70%] truncate rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                   {packVisual.label}
                 </span>
               ) : null}
+              <StockStatusBadge level={level} variant="overlay" />
             </button>
 
             <button
@@ -1826,10 +1839,7 @@ export function Products() {
               <h3 className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-foreground sm:text-base">
                 {product.name}
               </h3>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                {packRange}
-                {packPrice ? ` · ${packPrice}` : ""}
-              </p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{packRange}</p>
               <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground max-sm:hidden">
                 {product.type || product.description}
               </p>
@@ -1846,11 +1856,14 @@ export function Products() {
               <button
                 type="button"
                 onClick={handleQuoteClick}
-                className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white"
-                title="Añadir este producto a la cotización"
+                className={cn(
+                  "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-white",
+                  outOfStock ? "bg-zinc-700" : "bg-emerald-600"
+                )}
+                title={outOfStock ? "Cotizar reposición o alternativa" : "Añadir este producto a la cotización"}
               >
                 <FileText className="h-3.5 w-3.5" />
-                <span>{isInQuote ? "+1" : "Cotizar"}</span>
+                <span>{isInQuote ? "+1" : outOfStock ? "Consultar" : "Cotizar"}</span>
               </button>
             </div>
           </div>

@@ -3,6 +3,8 @@ import { fieldsForProduct } from "@/lib/catalog/attribute-schema";
 import {
   commercialBlocks,
   draftFromLegacy,
+  draftFromSizeLabel,
+  isEmptyPresentationDraft,
   matchesPrice,
   matchesPresentation,
   presentationRangeLabel,
@@ -54,6 +56,21 @@ describe("presentaciones", () => {
     expect(product.presentations?.[0].label).toBe("4 L");
     expect(product.price).toBe(15);
     expect(virtualPresentation({ id: "x", presentation: "" }).virtual).toBe(true);
+  });
+
+  it("arma un borrador desde el tamaño con cantidad o envase", () => {
+    expect(draftFromSizeLabel("280 ml", 0)).toMatchObject({
+      label: "280 ml",
+      quantity: "280",
+      unit: "ml",
+      stock: "0",
+      price: "",
+    });
+    expect(draftFromSizeLabel("1 L", 1)).toMatchObject({ label: "1 L", quantity: "1", unit: "L", sortOrder: 1 });
+    expect(draftFromSizeLabel("1/4 gal", 2)).toMatchObject({ label: "1/4 gal", quantity: "", unit: "gal" });
+    expect(draftFromSizeLabel("Pote", 3)).toMatchObject({ label: "Pote", packageType: "Pote", quantity: "" });
+    expect(isEmptyPresentationDraft(draftFromLegacy({ id: "x", presentation: "", stock: 0 }))).toBe(true);
+    expect(isEmptyPresentationDraft(draftFromSizeLabel("1 gal"))).toBe(false);
   });
 });
 

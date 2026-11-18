@@ -25,6 +25,7 @@ export type Product = {
   is_featured?: boolean;
   is_active?: boolean;
   stock?: number;
+  stockMin?: number;
   price?: number | null;
   family?: string | null;
   attributes?: Record<string, string>;

@@ -14,7 +14,7 @@ import {
 export type CatalogStatus = "loading" | "ready" | "error";
 
 const PRODUCT_SELECT =
-  "id, name, slug, brand, short_description, description, presentation, stock, is_featured, is_active, category_id, image_url, viscosity, type, subcategory_id, subcategory, sort_order, line_group_id";
+  "id, name, slug, brand, short_description, description, presentation, stock, stock_min, is_featured, is_active, category_id, image_url, viscosity, type, subcategory_id, subcategory, sort_order, line_group_id";
 
 const PRODUCT_SELECT_EXTENDED = `${PRODUCT_SELECT}, price, family, attributes, commercial, product_presentations(id, label, quantity, unit, package_type, sku, price, stock, stock_min, image_url, is_active, sort_order)`;
 
