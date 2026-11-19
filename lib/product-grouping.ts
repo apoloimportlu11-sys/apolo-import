@@ -24,6 +24,7 @@ export interface ManagedLineGroup {
 
 // Jerarquía y prioridad canónica por defecto de Líneas de Producto
 export const LINE_PRIORITY: Record<string, number> = {
+  "Motos 4T": 1,
   "Motos 4T / 2T": 1,
   "Aceites para Motores Gasolineros": 2,
   "Aceites Diésel / Petroleros": 3,
@@ -42,6 +43,7 @@ export const LINE_PRIORITY: Record<string, number> = {
 
 // Mapa de compatibilidad con nombres antiguos o slugs canónicos
 export const LEGACY_NAME_TO_LINE_ID: Record<string, string> = {
+  "Motos 4T": "motos-4t-2t",
   "Motos 4T / 2T": "motos-4t-2t",
   "Aceites para Motores Gasolineros": "aceites-para-motores-gasolineros",
   "Aceites Diésel / Petroleros": "aceites-diesel-petroleros",
@@ -59,7 +61,7 @@ export const LEGACY_NAME_TO_LINE_ID: Record<string, string> = {
 };
 
 export const CANONICAL_DEFAULT_NAMES: Record<string, string> = {
-  "motos-4t-2t": "Motos 4T / 2T",
+  "motos-4t-2t": "Motos 4T",
   "aceites-para-motores-gasolineros": "Aceites para Motores Gasolineros",
   "aceites-diesel-petroleros": "Aceites Diésel / Petroleros",
   "transmision-y-diferencial": "Transmisión y Diferencial",

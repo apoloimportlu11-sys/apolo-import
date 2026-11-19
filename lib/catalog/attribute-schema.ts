@@ -90,7 +90,7 @@ const API_SPECS = [
 
 const JASO_SPECS = ["MA", "MA1", "MA2", "MB", "FA", "FB", "FC", "FD", "DH-1", "DH-2", "DL-1"] as const;
 
-const FUEL_TYPES = ["Gasolina", "Diésel", "Gasolina y diésel", "2 tiempos", "4 tiempos"] as const;
+const FUEL_TYPES = ["Gasolina", "Diésel", "Gasolina y diésel", "4 tiempos"] as const;
 
 /** Secuencias ACEA de motor liviano y pesado, incluidas las que aún salen en fichas viejas. */
 const ACEA_SPECS = [

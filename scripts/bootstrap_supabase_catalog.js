@@ -288,7 +288,7 @@ async function patchProducts(products, brandIdByName) {
 
 async function seedLineGroupsPage() {
   const DEFAULT_LINE_GROUPS = [
-    { id: "motos-4t-2t", name: "Motos 4T / 2T", sort_order: 1, is_active: true },
+    { id: "motos-4t-2t", name: "Motos 4T", sort_order: 1, is_active: true },
     { id: "aceites-para-motores-gasolineros", name: "Aceites para Motores Gasolineros", sort_order: 2, is_active: true },
     { id: "aceites-diesel-petroleros", name: "Aceites Diésel / Petroleros", sort_order: 3, is_active: true },
     { id: "transmision-y-diferencial", name: "Transmisión y Diferencial", sort_order: 4, is_active: true },

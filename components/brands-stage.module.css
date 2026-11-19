@@ -89,6 +89,7 @@
   color: #a1a1aa;
 }
 
+/* —— Grid estático (reduced motion / fallback) —— */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -115,6 +116,95 @@
   }
 }
 
+/* —— Marquee continuo —— */
+.marqueeStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+}
+
+.marqueeViewport {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 4%,
+    #000 96%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 4%,
+    #000 96%,
+    transparent 100%
+  );
+}
+
+.marqueeTrack {
+  display: flex;
+  width: max-content;
+  gap: 0.85rem;
+  will-change: transform;
+}
+
+.marqueeTrackLeft {
+  animation-name: brands-marquee-left;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.marqueeTrackRight {
+  animation-name: brands-marquee-right;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.marqueeItem {
+  flex: 0 0 auto;
+  width: min(42vw, 168px);
+}
+
+@media (min-width: 640px) {
+  .marqueeItem {
+    width: 176px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .marqueeItem {
+    width: 188px;
+  }
+
+  .marqueeStack {
+    gap: 1rem;
+  }
+
+  .marqueeTrack {
+    gap: 1rem;
+  }
+}
+
+@keyframes brands-marquee-left {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes brands-marquee-right {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .card {
   position: relative;
   display: flex;
@@ -125,18 +215,17 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background:
-    linear-gradient(180deg, #2a2e37 0%, #171a20 100%);
+  background: linear-gradient(180deg, #2a2e37 0%, #171a20 100%);
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   cursor: pointer;
   isolation: isolate;
-  animation: rise 0.45s ease both;
+  animation: rise 0.45s ease both, card-breathe 4.8s ease-in-out infinite;
   transition:
-    transform 220ms ease,
-    border-color 220ms ease,
-    box-shadow 220ms ease;
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms ease,
+    box-shadow 280ms ease;
 }
 
 .card::before {
@@ -144,7 +233,12 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(125deg, transparent 35%, rgba(255, 255, 255, 0.08) 50%, transparent 65%);
+  background: linear-gradient(
+    125deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 65%
+  );
   transform: translateX(-120%);
   transition: transform 0.55s ease;
   z-index: 2;
@@ -176,6 +270,9 @@
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.06),
     0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    box-shadow 280ms ease,
+    transform 280ms ease;
 }
 
 .logoFrame img {
@@ -183,19 +280,21 @@
   height: 100%;
   object-fit: contain;
   object-position: center;
-  transition: transform 220ms ease;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .card:hover,
 .card:focus-visible {
-  transform: translateY(-4px);
-  border-color: rgba(201, 0, 18, 0.65);
+  transform: translateY(-6px) scale(1.03);
+  border-color: rgba(201, 0, 18, 0.7);
   box-shadow:
-    0 16px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(201, 0, 18, 0.22),
-    0 0 28px rgba(201, 0, 18, 0.18),
+    0 18px 36px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(201, 0, 18, 0.28),
+    0 0 32px rgba(201, 0, 18, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   outline: none;
+  animation-play-state: paused;
+  z-index: 3;
 }
 
 .card:hover::before,
@@ -206,13 +305,17 @@
 .card:hover .logoFrame,
 .card:focus-visible .logoFrame {
   box-shadow:
-    inset 0 0 0 1px rgba(201, 0, 18, 0.2),
-    0 0 18px rgba(201, 0, 18, 0.12);
+    inset 0 0 0 1px rgba(201, 0, 18, 0.22),
+    0 0 18px rgba(201, 0, 18, 0.14);
 }
 
 .card:hover .logoFrame img,
 .card:focus-visible .logoFrame img {
-  transform: scale(1.04);
+  transform: scale(1.06);
+}
+
+.card:active {
+  transform: translateY(-2px) scale(0.99);
 }
 
 @media (min-width: 1024px) {
@@ -236,6 +339,34 @@
   }
 }
 
+@keyframes card-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 10px 22px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 12px 26px rgba(0, 0, 0, 0.34),
+      0 0 18px rgba(201, 0, 18, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+}
+
+.modalBackdrop {
+  animation: fade-backdrop 0.25s ease both;
+}
+
+@keyframes fade-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card {
     animation: none;
@@ -253,5 +384,15 @@
   .card:hover .logoFrame img,
   .card:focus-visible .logoFrame img {
     transform: none;
+  }
+
+  .marqueeTrackLeft,
+  .marqueeTrackRight {
+    animation: none;
+    transform: none;
+  }
+
+  .modalBackdrop {
+    animation: none;
   }
 }

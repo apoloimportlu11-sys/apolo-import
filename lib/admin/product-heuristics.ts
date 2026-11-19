@@ -86,7 +86,6 @@ export const VISCOSITY_PRESETS = [
   "NLGI 1",
   "NLGI 2",
   "NLGI 3",
-  "2T",
   "4T",
 ] as const;
 
@@ -127,7 +126,6 @@ export function detectViscosity(text: string): string {
   if (/\batf\b/i.test(text)) return "ATF";
   if (/\bdot\s*-?\s*4\b/i.test(text)) return "DOT 4";
   if (/\bdot\s*-?\s*3\b/i.test(text)) return "DOT 3";
-  if (/\b2\s*-?\s*t\b/i.test(text)) return "2T";
   if (/\b4\s*-?\s*t\b/i.test(text)) return "4T";
   return "";
 }
@@ -208,7 +206,6 @@ const SAE_PRESETS = [
   "ISO VG 46",
   "ISO VG 68",
   "NLGI 2",
-  "2T",
   "4T",
 ] as const;
 

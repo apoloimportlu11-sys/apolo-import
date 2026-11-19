@@ -76,7 +76,6 @@ function thickenerFromName(name: string) {
 
 function fuelFromName(name: string, viscosity: string) {
   if (isMoto(name)) {
-    if (/\b2t\b|2\s*tiempos/.test(name.toLowerCase())) return "2 tiempos";
     return "4 tiempos";
   }
   if (isDiesel(name)) return "Diésel";
@@ -105,7 +104,6 @@ function aceaFromContext(name: string, viscosity: string) {
 
 function jasoFromContext(name: string) {
   if (!isMoto(name)) return "";
-  if (/\b2t\b/.test(name.toLowerCase())) return "FD";
   return "MA2";
 }
 
@@ -164,7 +162,7 @@ function commercialFor(product: EnrichableProduct, family: ProductFamily, viscos
         ? `Aceite ${brand} para motores de moto que necesitan protección a altas revoluciones y cambio estable.`
         : `Aceite ${brand} para motores que requieren lubricación, limpieza interna y protección ante desgaste.`,
       applications: moto
-        ? "Motocicletas 4T/2T según formulación, embragues bañados en aceite y uso urbano o carretera."
+        ? "Motocicletas 4T según formulación, embragues bañados en aceite y uso urbano o carretera."
         : "Motores a gasolina o diésel de automóvil, camión o flota según viscosidad y especificación.",
       benefits: "Película lubricante estable, control de depósitos y arranque más protegido.",
       features: `Viscosidad orientativa ${viscosity || "según envase"}. Specs típicas de catálogo (API/ACEA/JASO) cargadas como referencia.`,

@@ -18,7 +18,7 @@ export const LINE_GROUPS_STORAGE_KEY = "apolo_catalog_line_groups";
 // lib/product-grouping.ts (LINE_PRIORITY), en el mismo orden, para que nada
 // cambie visualmente el día que se empiece a usar esta lista gestionada.
 export const DEFAULT_LINE_GROUPS: ProductLineGroupItem[] = [
-  { id: "motos-4t-2t", name: "Motos 4T / 2T", sort_order: 1, is_active: true },
+  { id: "motos-4t-2t", name: "Motos 4T", sort_order: 1, is_active: true },
   { id: "aceites-para-motores-gasolineros", name: "Aceites para Motores Gasolineros", sort_order: 2, is_active: true },
   { id: "aceites-diesel-petroleros", name: "Aceites Diésel / Petroleros", sort_order: 3, is_active: true },
   { id: "transmision-y-diferencial", name: "Transmisión y Diferencial", sort_order: 4, is_active: true },

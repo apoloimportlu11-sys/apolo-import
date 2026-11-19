@@ -54,7 +54,7 @@ export const DEFAULT_HOME_CONTENT: HomeContent = {
     {
       id: "motocicleta",
       title: "MOTOCICLETA",
-      subtitle: "Aceites 4T y 2T, grasas y líquidos de freno para el máximo rendimiento de tu moto",
+      subtitle: "Aceites 4T, grasas y líquidos de freno para el máximo rendimiento de tu moto",
     },
   ],
   vendidosSection: {

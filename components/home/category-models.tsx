@@ -30,10 +30,10 @@ const MODELS = [
   {
     id: "motocicleta",
     title: "Motocicleta",
-    subtitle: "Aceites 4T y 2T con máxima adherencia",
+    subtitle: "Aceites 4T con máxima adherencia",
     image: "/images/categories/motorcycles_banner.jpg",
     href: "/productos?category=motocicleta",
-    specs: ["4T", "2T", "Freno"],
+    specs: ["4T", "Freno", "Grasas"],
   },
 ] as const;
 

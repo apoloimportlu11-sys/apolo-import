@@ -106,7 +106,6 @@ export const categories: Category[] = [
     name: "Motocicletas",
     subcategories: subs("motocicleta", [
       ["aceites-motor-moto", "Aceites 4T"],
-      ["aceites-2t-moto", "Aceites 2T"],
       ["transmision-moto", "Transmisión / cadena"],
       ["transmision-automatica-moto", "CVT"],
       ["horquilla", "Aceite de horquilla"],
@@ -145,7 +144,6 @@ export const categories: Category[] = [
     id: "marina",
     name: "Marina / fuera de borda",
     subcategories: subs("marina", [
-      ["aceites-2t-mar", "Aceites 2T marina"],
       ["aceites-4t-mar", "Aceites 4T marina"],
       ["engranajes-mar", "Caja / cola"],
       ["grasas-mar", "Grasas marinas"],
@@ -1301,7 +1299,6 @@ export const viscosities = [
   "NLGI 1",
   "NLGI 2",
   "NLGI 3",
-  "2T",
   "4T",
   "Monogrado",
   "Multigrado",
