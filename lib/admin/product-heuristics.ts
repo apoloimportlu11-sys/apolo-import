@@ -1,3 +1,5 @@
+import { CANONICAL_BRAND_NAMES } from "@/lib/catalog/canonical-brands";
+
 export const CATEGORY_OPTIONS = [
   { id: "automovil", name: "Automóvil" },
   { id: "camiones", name: "Camiones y Autobuses" },
@@ -89,26 +91,8 @@ export const VISCOSITY_PRESETS = [
   "4T",
 ] as const;
 
-export const KNOWN_BRANDS: string[] = [
-  "Apolo",
-  "Overts",
-  "Amalie",
-  "Boil",
-  "Bosch",
-  "Chevron",
-  "Frenosa",
-  "Honda",
-  "Lys Filtros",
-  "Mann Filter",
-  "Motul",
-  "Peak",
-  "Sakura",
-  "Sonax",
-  "Versachem",
-  "Vextrom",
-  "Wagner",
-  "Yamalube",
-];
+/** Alias del catálogo oficial de marcas (Apolo Import). */
+export const KNOWN_BRANDS: string[] = [...CANONICAL_BRAND_NAMES];
 
 export const PAGE_SIZE_OPTIONS = [20, 40, 80] as const;
 

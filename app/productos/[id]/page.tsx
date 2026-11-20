@@ -4,6 +4,7 @@ import { products, type Product } from "@/lib/products-data";
 import { ProductDetailClient } from "@/components/ProductDetailClient";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
+import { defaultCatalogLine } from "@/lib/product-grouping";
 
 interface ProductPageProps {
   params: Promise<{
@@ -158,11 +159,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
     const initialProduct: Product = {
       id: String(dbProduct.id),
       name: String(dbProduct.name || "Producto"),
-      line: String(dbProduct.short_description || (dbProduct.brand === "Overts" ? "Overts Premium" : "Apolo Premium")),
-      code: String(dbProduct.slug || dbProduct.id),
       brand: String(dbProduct.brand || "Apolo"),
       viscosity: dbProduct.viscosity != null ? String(dbProduct.viscosity) : "",
       type: dbProduct.type != null ? String(dbProduct.type) : "",
+      line: String(
+        dbProduct.short_description
+        || defaultCatalogLine(
+          dbProduct.brand != null ? String(dbProduct.brand) : "Apolo",
+          dbProduct.type != null ? String(dbProduct.type) : ""
+        )
+      ),
+      code: String(dbProduct.slug || dbProduct.id),
       presentation: String(dbProduct.presentation || ""),
       description: String(dbProduct.description || dbProduct.short_description || ""),
       image: String(dbProduct.image_url || "/placeholder.svg"),

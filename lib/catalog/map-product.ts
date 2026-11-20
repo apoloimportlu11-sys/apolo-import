@@ -5,6 +5,7 @@ import {
   presentationRangeLabel,
   resolvePresentations,
 } from "@/lib/catalog/presentations";
+import { defaultCatalogLine } from "@/lib/product-grouping";
 
 /** Normaliza una fila de Supabase/`products` al shape del catálogo público. */
 export function mapRowToProduct(item: Record<string, unknown>): Product {
@@ -23,14 +24,18 @@ export function mapRowToProduct(item: Record<string, unknown>): Product {
     String(item.presentation || "")
   );
 
+  const brand = String(item.brand || "Apolo");
+  const type = item.type != null ? String(item.type) : "";
+  const short = item.short_description != null ? String(item.short_description).trim() : "";
+
   return {
     id: String(item.id || ""),
     name: String(item.name || "Producto"),
-    line: String(item.short_description || "Apolo Premium"),
+    line: short || defaultCatalogLine(brand, type),
     code: String(item.slug || item.id || "APL-001"),
-    brand: String(item.brand || "Apolo"),
+    brand,
     viscosity: item.viscosity != null ? String(item.viscosity) : "",
-    type: item.type != null ? String(item.type) : "",
+    type,
     presentation: activeLabel || String(item.presentation || "Galón / Cuarto / Balde"),
     description: String(
       item.description || item.short_description || "Lubricante de alta calidad"

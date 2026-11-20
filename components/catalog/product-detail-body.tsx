@@ -9,11 +9,15 @@ import { ProductGallery } from "@/components/ProductGallery";
 import { useQuote } from "@/lib/quote-context";
 import type { Product } from "@/lib/products-data";
 import {
-  getRelatedProducts,
+  getRelatedProductsResult,
   normalizeProductKey,
 } from "@/lib/product-related";
 import { cn } from "@/lib/utils";
-import { getPresentationVisual } from "@/lib/catalog/display";
+import {
+  getBrandChipVisual,
+  getOfficialBrandLogo,
+  getPresentationVisual,
+} from "@/lib/catalog/display";
 import { presentationsOfProduct } from "@/lib/catalog/presentations";
 import { ProductKnowledge } from "@/components/catalog/product-detail-info";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
@@ -58,10 +62,12 @@ export function ProductDetailBody({
   const selectedImage = selected?.imageUrl || product.image;
   const galleryImages = selected?.imageUrl ? [selected.imageUrl] : product.images;
 
-  const related = useMemo(
-    () => getRelatedProducts(product, catalog, compact ? 6 : 8),
+  const relatedResult = useMemo(
+    () => getRelatedProductsResult(product, catalog, compact ? 6 : 8),
     [product, catalog, compact]
   );
+  const related = relatedResult.items;
+  const relatedMode = relatedResult.mode;
 
   const addToQuote = (thenWhatsApp: boolean) => {
     addItem(
@@ -127,9 +133,104 @@ export function ProductDetailBody({
   );
 
   if (compact) {
+    const relatedRail =
+      related.length > 0 ? (
+        <aside
+          className="flex min-h-0 min-w-0 flex-col border-b border-border/70 bg-card lg:border-b-0 lg:border-r lg:border-border/60"
+          data-catalog-related="true"
+          data-related-mode={relatedMode}
+        >
+          <p className="shrink-0 px-2.5 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {relatedMode === "cross-brand"
+              ? "Otras marcas"
+              : `También de ${product.brand}`}
+          </p>
+          <div className="custom-scrollbar flex min-h-0 flex-1 flex-row gap-2 overflow-x-auto px-2.5 pb-3 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-3">
+            {related.map((item) => {
+              const tone = getBrandChipVisual(item.brand);
+              const logo =
+                relatedMode === "cross-brand"
+                  ? getOfficialBrandLogo(item.brand)
+                  : null;
+              const imageOk = hasValidImage(item.image);
+              const isSibling =
+                normalizeProductKey(item.name) ===
+                normalizeProductKey(product.name);
+              const primaryLabel =
+                relatedMode === "cross-brand"
+                  ? item.brand || item.name
+                  : item.name;
+              const secondaryLabel =
+                item.presentation || item.viscosity || null;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectProduct?.(item)}
+                  className={cn(
+                    "w-[7.25rem] shrink-0 rounded-lg border bg-background p-2 text-left transition-colors duration-200 hover:border-primary/40 lg:w-full",
+                    relatedMode === "same-brand" && isSibling
+                      ? "border-[color:color-mix(in_oklab,var(--gold)_50%,transparent)]"
+                      : "border-border"
+                  )}
+                  title={[primaryLabel, secondaryLabel].filter(Boolean).join(" · ")}
+                >
+                  <div className="relative mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md bg-muted/40 px-1">
+                    {relatedMode === "cross-brand" && logo ? (
+                      <Image
+                        src={logo}
+                        alt=""
+                        width={88}
+                        height={32}
+                        className="h-7 w-auto object-contain"
+                      />
+                    ) : relatedMode === "cross-brand" ? (
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tone.accent }}
+                      />
+                    ) : imageOk ? (
+                      <div className="relative h-full w-full">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="116px"
+                          className="object-contain object-bottom"
+                          unoptimized={item.image.startsWith("data:")}
+                        />
+                      </div>
+                    ) : (
+                      <Package className="h-5 w-5 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-foreground">
+                    {primaryLabel}
+                  </p>
+                  {secondaryLabel ? (
+                    <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+                      {secondaryLabel}
+                    </p>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      ) : null;
+
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[minmax(240px,38%)_1fr] lg:grid-rows-[minmax(0,1fr)]">
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]",
+            related.length > 0
+              ? "lg:grid-cols-[7.75rem_minmax(220px,34%)_1fr]"
+              : "lg:grid-cols-[minmax(240px,38%)_1fr]"
+          )}
+        >
+          {relatedRail}
+
           <div className="relative min-h-0 border-b border-border/70 lg:border-b-0 lg:border-r lg:border-r-[color:color-mix(in_oklab,var(--gold)_22%,transparent)]">
             <ProductGallery
               name={product.name}
@@ -170,59 +271,6 @@ export function ProductDetailBody({
                 <p className="mt-2 text-xs font-medium text-foreground">{offerLabel}</p>
                 <StockStatusBadge level={selectedLevel} variant="banner" className="mt-2.5" />
               </div>
-
-              {related.length > 0 ? (
-                <div className="mt-4 border-t border-border/60 pt-3">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    También de {product.brand}
-                  </p>
-                  <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 custom-scrollbar">
-                    {related.map((item) => {
-                      const imageOk = hasValidImage(item.image);
-                      const pack = getPresentationVisual(item.presentation);
-                      const isSibling =
-                        normalizeProductKey(item.name) ===
-                        normalizeProductKey(product.name);
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => onSelectProduct?.(item)}
-                          className={cn(
-                            "w-[4.5rem] shrink-0 rounded-lg border bg-card p-1.5 text-left transition-colors duration-200 hover:border-primary/40",
-                            isSibling
-                              ? "border-[color:color-mix(in_oklab,var(--gold)_50%,transparent)]"
-                              : "border-border"
-                          )}
-                        >
-                          <div className="relative mb-1 flex aspect-square items-end justify-center overflow-hidden rounded-md bg-white p-1">
-                            {imageOk ? (
-                              <div
-                                className="relative w-full origin-bottom"
-                                style={{ height: `${Math.round(pack.scale * 100)}%` }}
-                              >
-                                <Image
-                                  src={item.image}
-                                  alt={item.name}
-                                  fill
-                                  sizes="72px"
-                                  className="object-contain object-bottom"
-                                  unoptimized={item.image.startsWith("data:")}
-                                />
-                              </div>
-                            ) : (
-                              <Package className="h-5 w-5 text-muted-foreground/50" />
-                            )}
-                          </div>
-                          <p className="line-clamp-2 text-[10px] leading-tight font-medium">
-                            {item.presentation || item.viscosity || item.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
@@ -390,22 +438,31 @@ export function ProductDetailBody({
       <ProductKnowledge product={product} />
 
       {related.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-4" data-catalog-related="true" data-related-mode={relatedMode}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--gold)]">
-              Misma marca
+              {relatedMode === "cross-brand" ? "Equivalentes" : "Misma marca"}
             </p>
             <h3 className="mt-1 font-display text-xl font-semibold">
-              También de {product.brand}
+              {relatedMode === "cross-brand"
+                ? "Otras marcas"
+                : `También de ${product.brand}`}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Otras medidas, viscosidades y productos de la misma línea.
+              {relatedMode === "cross-brand"
+                ? "El mismo producto disponible en otras marcas del catálogo."
+                : "Otras presentaciones y productos de la misma marca."}
             </p>
           </div>
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 custom-scrollbar">
             {related.map((item) => {
               const imageOk = hasValidImage(item.image);
               const pack = getPresentationVisual(item.presentation);
+              const tone = getBrandChipVisual(item.brand);
+              const logo =
+                relatedMode === "cross-brand"
+                  ? getOfficialBrandLogo(item.brand)
+                  : null;
               const isSibling =
                 normalizeProductKey(item.name) === normalizeProductKey(product.name);
               return (
@@ -415,7 +472,9 @@ export function ProductDetailBody({
                   onClick={() => onSelectProduct?.(item)}
                   className={cn(
                     "w-40 shrink-0 rounded-xl border bg-card p-3 text-left transition-colors duration-200 hover:border-primary/50",
-                    isSibling ? "border-primary/40" : "border-border"
+                    relatedMode === "same-brand" && isSibling
+                      ? "border-primary/40"
+                      : "border-border"
                   )}
                 >
                   <div className="relative mb-2 flex aspect-square items-end justify-center overflow-hidden rounded-lg bg-white p-2">
@@ -437,11 +496,39 @@ export function ProductDetailBody({
                       <Package className="h-8 w-8 text-muted-foreground/50" />
                     )}
                   </div>
-                  <p className="line-clamp-2 text-xs font-semibold">{item.name}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {[item.presentation, item.viscosity].filter(Boolean).join(" · ") ||
-                      item.line}
-                  </p>
+                  {relatedMode === "cross-brand" ? (
+                    <>
+                      <div className="mb-1 flex items-center gap-1.5">
+                        {logo ? (
+                          <Image
+                            src={logo}
+                            alt=""
+                            width={64}
+                            height={20}
+                            className="h-4 w-auto object-contain"
+                          />
+                        ) : (
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: tone.accent }}
+                          />
+                        )}
+                        <p className="truncate text-xs font-semibold">{item.brand}</p>
+                      </div>
+                      <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                        {[item.presentation, item.viscosity].filter(Boolean).join(" · ") ||
+                          item.name}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="line-clamp-2 text-xs font-semibold">{item.name}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {[item.presentation, item.viscosity].filter(Boolean).join(" · ") ||
+                          item.line}
+                      </p>
+                    </>
+                  )}
                 </button>
               );
             })}

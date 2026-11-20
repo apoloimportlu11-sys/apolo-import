@@ -6,12 +6,45 @@
 export interface LineCategorizable {
   name?: string | null;
   line?: string | null;
+  brand?: string | null;
+  type?: string | null;
   short_description?: string | null;
   subcategory?: string | null;
   viscosity?: string | null;
   presentation?: string | null;
   sort_order?: number | null;
   line_group_id?: string | null;
+}
+
+/** Placeholder de línea por marca oficial; no es sección real del Excel. */
+export function isGenericBrandPremiumLine(text?: string | null): boolean {
+  return /^(apolo|overts|valtrom)\s+premium$/i.test(String(text || "").trim());
+}
+
+/**
+ * Línea por defecto al mapear filas sin short_description.
+ * Nunca asigna "Apolo Premium" a marcas ajenas (Bosch, Frenosa, etc.).
+ */
+export function defaultCatalogLine(brand?: string | null, type?: string | null): string {
+  const key = String(brand || "").trim().toLowerCase();
+  if (key === "apolo") return "Apolo Premium";
+  if (key === "overts") return "Overts Premium";
+  if (key === "valtrom") return "Valtrom Premium";
+  const typed = String(type || "").trim();
+  if (typed) return typed;
+  if (brand && String(brand).trim()) return String(brand).trim();
+  return "";
+}
+
+/** ¿La línea genérica pertenece a la marca del producto? */
+function genericPremiumMatchesBrand(line: string, brand?: string | null): boolean {
+  const b = String(brand || "").trim().toLowerCase();
+  const l = line.trim().toLowerCase();
+  if (!b || !isGenericBrandPremiumLine(l)) return false;
+  if (l.startsWith("apolo")) return b === "apolo";
+  if (l.startsWith("overts")) return b === "overts";
+  if (l.startsWith("valtrom")) return b === "valtrom";
+  return false;
 }
 
 // Forma mínima que necesitamos de una línea gestionada por el admin
@@ -23,15 +56,17 @@ export interface ManagedLineGroup {
 }
 
 // Jerarquía y prioridad canónica por defecto de Líneas de Producto
+// (menor = primero). Grasas Apolo van al inicio del catálogo.
 export const LINE_PRIORITY: Record<string, number> = {
-  "Motos 4T": 1,
-  "Motos 4T / 2T": 1,
-  "Aceites para Motores Gasolineros": 2,
-  "Aceites Diésel / Petroleros": 3,
-  "Transmisión y Diferencial": 4,
-  "Fluidos Hidráulicos": 5,
-  "Grasas - Pote": 6,
-  "Grasas y Lubricantes de Chasis": 7,
+  "GRASAS APOLO": 0,
+  "Grasas - Pote": 1,
+  "Grasas y Lubricantes de Chasis": 2,
+  "Motos 4T": 3,
+  "Motos 4T / 2T": 3,
+  "Aceites para Motores Gasolineros": 4,
+  "Aceites Diésel / Petroleros": 5,
+  "Transmisión y Diferencial": 6,
+  "Fluidos Hidráulicos": 7,
   "Líquidos de Freno y Dirección": 8,
   "Refrigerantes y Coolant": 9,
   "Siliconas y Formadores de Juntas": 10,
@@ -40,6 +75,36 @@ export const LINE_PRIORITY: Record<string, number> = {
   "Lubricantes Especializados": 13,
   "General / Otros": 99,
 };
+
+/** Prioridad de una línea para ordenar secciones/productos (menor = primero). */
+export function getLineSortPriority(
+  lineName: string,
+  lineGroupsById?: Map<string, ManagedLineGroup>
+): number {
+  if (lineGroupsById) {
+    const byName = lineGroupsById.get(lineName);
+    if (byName) return byName.sort_order;
+    const mappedId = LEGACY_NAME_TO_LINE_ID[lineName];
+    if (mappedId && lineGroupsById.has(mappedId)) {
+      return lineGroupsById.get(mappedId)!.sort_order;
+    }
+    for (const g of lineGroupsById.values()) {
+      if (g.name === lineName || g.id === lineName) return g.sort_order;
+    }
+  }
+
+  if (LINE_PRIORITY[lineName] != null) return LINE_PRIORITY[lineName];
+
+  // Secciones Excel de grasas (p. ej. "GRASAS APOLO") siempre al frente
+  if (/^GRASAS\b/i.test(lineName.trim())) return 0;
+
+  const mappedId = LEGACY_NAME_TO_LINE_ID[lineName];
+  if (mappedId && LINE_PRIORITY[CANONICAL_DEFAULT_NAMES[mappedId]] != null) {
+    return LINE_PRIORITY[CANONICAL_DEFAULT_NAMES[mappedId]];
+  }
+
+  return 50;
+}
 
 // Mapa de compatibilidad con nombres antiguos o slugs canónicos
 export const LEGACY_NAME_TO_LINE_ID: Record<string, string> = {
@@ -127,6 +192,13 @@ export function resolveLineFilterToken(
   );
 }
 
+/** Un banner de sección es corto. Un párrafo de uso no lo es. */
+function isShortCatalogLine(text: string): boolean {
+  const raw = text.trim();
+  if (!raw || raw.length > 80) return false;
+  return raw.split(/\s+/).filter(Boolean).length <= 12;
+}
+
 /** Pack / presentation strings must not become catalog section titles. */
 function looksLikePackLabel(text: string): boolean {
   const t = text.trim().toLowerCase();
@@ -141,7 +213,9 @@ function looksLikePackLabel(text: string): boolean {
  */
 export function isExcelSectionTitle(text: string): boolean {
   const raw = text.trim();
-  if (!raw || looksLikePackLabel(raw)) return false;
+  if (!raw || !isShortCatalogLine(raw) || looksLikePackLabel(raw)) return false;
+  // "Apolo Premium" / "Overts Premium" son placeholders, no banners del Excel
+  if (isGenericBrandPremiumLine(raw)) return false;
   const upper = raw.toUpperCase();
   if (
     /\bAPOLO\b/.test(upper)
@@ -154,7 +228,7 @@ export function isExcelSectionTitle(text: string): boolean {
     || /^SILICONA PARA\b/.test(upper)
     || /^SHAMPOO?\b/.test(upper)
     || /^ABRILLANTADOR\b/.test(upper)
-    || /^DOT\s*[345](?:\s*\/\s*\w+)?$/.test(upper)
+    || /^DOT\s*(?:3|4|5(?:\.1)?)(?:\s*\/\s*\w+)?$/.test(upper)
     || /TODO TIPO DE ESTABLECIMIENTOS/.test(upper)
     || /LAVADEROS|CAR WASH/.test(upper)
   ) {
@@ -167,6 +241,43 @@ export function isExcelSectionTitle(text: string): boolean {
   return false;
 }
 
+/** Categorías impresas del catálogo. No se colapsan en líneas genéricas. */
+const CATALOG_CATEGORY_LINES = new Set([
+  "filtros",
+  "refrigerantes",
+  "grasas automotrices",
+  "limpieza y mantenimiento",
+  "líquido de frenos",
+  "líquido de frenos para motos",
+  "lubricantes de transmisión",
+  "aceites para motocicletas",
+  "aceites para motor",
+  "limpieza y desengrase",
+  "limpieza y cuidado automotriz",
+  "aceites para motor gasolina",
+  "aceites para motor diésel",
+  "aceites monogrado",
+  "urea / def",
+  "aceites monogrado diésel",
+  "grasas y productos dieléctricos",
+  "aditivos y refrigerantes",
+  "lubricantes industriales",
+  "aceites hidráulicos",
+  "fluidos y mantenimiento",
+  "fluidos hidráulicos y transmisión",
+  "selladores y siliconas",
+  "dot 3",
+  "dot 4",
+  "dot 5.1",
+]);
+
+export function isCatalogCategoryLine(text: string): boolean {
+  const key = text.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!key || !isShortCatalogLine(text) || looksLikePackLabel(text)) return false;
+  if (CATALOG_CATEGORY_LINES.has(key)) return true;
+  return /^dot\s*(3|4|5(?:\.1)?)$/.test(key);
+}
+
 export function getProductLineCategory(
   p: LineCategorizable,
   lineGroupsById?: Map<string, ManagedLineGroup>
@@ -177,60 +288,70 @@ export function getProductLineCategory(
     if (resolved) return resolved;
   }
 
-  // 2. Título literal de sección del Excel (short_description / line)
+  // 2. Título literal de sección del Excel (nunca "Apolo Premium" genérico)
   const sectionCandidate = (p.short_description || p.line || "").trim();
-  if (sectionCandidate && isExcelSectionTitle(sectionCandidate)) {
+  if (
+    sectionCandidate
+    && !isGenericBrandPremiumLine(sectionCandidate)
+    && (isExcelSectionTitle(sectionCandidate) || isCatalogCategoryLine(sectionCandidate))
+  ) {
     return sectionCandidate;
   }
 
-  // 3. Detección automática (heurística) por texto del producto
-  const raw = (p.line || p.short_description || p.subcategory || "").trim();
-  const upper = raw.toUpperCase();
+  // 3. Texto usable para heurística (ignora premium genérico de otra marca)
+  const lineText = (p.line || p.short_description || "").trim();
+  const usableLine =
+    lineText
+    && (!isGenericBrandPremiumLine(lineText) || genericPremiumMatchesBrand(lineText, p.brand))
+      ? lineText
+      : "";
+  const raw = (usableLine || p.subcategory || "").trim();
+  const blob = `${raw} ${p.name || ""} ${p.type || ""}`.toUpperCase();
 
-  if (upper.includes("GRASA")) {
-    if (upper.includes("POTE")) {
+  if (blob.includes("GRASA")) {
+    if (blob.includes("POTE")) {
       return resolveManagedLineName("grasas-pote", lineGroupsById);
     }
     return resolveManagedLineName("grasas-y-lubricantes-de-chasis", lineGroupsById);
   }
-  if (upper.includes("MOTO") || upper.includes("4T") || upper.includes("2T")) {
+  if (/\bMOTO\b|\b4T\b|\b2T\b/.test(blob)) {
     return resolveManagedLineName("motos-4t-2t", lineGroupsById);
   }
-  if (upper.includes("TRANSMIS")) {
+  if (blob.includes("TRANSMIS")) {
     return resolveManagedLineName("transmision-y-diferencial", lineGroupsById);
   }
-  if (upper.includes("GASOLIN")) {
+  if (blob.includes("GASOLIN")) {
     return resolveManagedLineName("aceites-para-motores-gasolineros", lineGroupsById);
   }
-  if (upper.includes("DIESEL") || upper.includes("DIÉSEL") || upper.includes("PETROL")) {
+  if (blob.includes("DIESEL") || blob.includes("DIÉSEL") || blob.includes("PETROL")) {
     return resolveManagedLineName("aceites-diesel-petroleros", lineGroupsById);
   }
-  if (upper.includes("HIDRAUL") || upper.includes("HIDRÁUL")) {
+  if (blob.includes("HIDRAUL") || blob.includes("HIDRÁUL")) {
     return resolveManagedLineName("fluidos-hidraulicos", lineGroupsById);
   }
-  if (upper.includes("FRENO") || upper.includes("DOT")) {
+  if (blob.includes("FRENO") || blob.includes("PASTILLA") || blob.includes("DISCO") || /\bDOT\b/.test(blob)) {
     return resolveManagedLineName("liquidos-de-freno-y-direccion", lineGroupsById);
   }
-  if (upper.includes("REFRIG") || upper.includes("COOLANT") || upper.includes("ANTICONG")) {
+  if (blob.includes("REFRIG") || blob.includes("COOLANT") || blob.includes("ANTICONG")) {
     return resolveManagedLineName("refrigerantes-y-coolant", lineGroupsById);
   }
-  if (upper.includes("SILICON")) {
+  if (blob.includes("SILICON")) {
     return resolveManagedLineName("siliconas-y-formadores-de-juntas", lineGroupsById);
   }
   if (
-    upper.includes("DESENGRAS") ||
-    upper.includes("LIMPIE") ||
-    upper.includes("SHAMP") ||
-    upper.includes("AEROSOL") ||
-    upper.includes("ABRILLANT") ||
-    upper.includes("PEGAMENTO")
+    blob.includes("DESENGRAS") ||
+    blob.includes("LIMPIE") ||
+    blob.includes("SHAMP") ||
+    blob.includes("AEROSOL") ||
+    blob.includes("ABRILLANT") ||
+    blob.includes("PEGAMENTO")
   ) {
     return resolveManagedLineName("limpieza-y-cuidado-automotriz", lineGroupsById);
   }
-  if (upper.includes("FILTRO")) {
+  if (blob.includes("FILTRO")) {
     return resolveManagedLineName("filtros-automotrices", lineGroupsById);
   }
-  if (upper === "LUBRICANTE" || upper === "LUBRICANTES") {
+  if (/\bLUBRICANTE/.test(blob)) {
     if (/75W|80W|85W|90|140|250|ATF|CVT/i.test((p.name || "") + " " + (p.viscosity || ""))) {
       return resolveManagedLineName("transmision-y-diferencial", lineGroupsById);
     }
@@ -240,13 +361,23 @@ export function getProductLineCategory(
     return resolveManagedLineName("lubricantes-especializados", lineGroupsById);
   }
 
-  // Si raw coincide con alguna línea gestionada existente
-  if (raw) {
-    const resolvedRaw = resolveManagedLineName(raw, lineGroupsById, raw);
-    if (resolvedRaw && resolvedRaw !== raw) return resolvedRaw;
+  // Premium genérico solo si coincide con la marca del producto
+  if (usableLine && isGenericBrandPremiumLine(usableLine) && genericPremiumMatchesBrand(usableLine, p.brand)) {
+    return usableLine;
   }
 
-  return resolveManagedLineName("general-otros", lineGroupsById, raw || "General / Otros");
+  // Si raw coincide con alguna línea gestionada existente (nunca un párrafo de uso)
+  if (raw && isShortCatalogLine(raw)) {
+    const resolvedRaw = resolveManagedLineName(raw, lineGroupsById, raw);
+    if (resolvedRaw && resolvedRaw !== raw) return resolvedRaw;
+    if (!isGenericBrandPremiumLine(raw)) return raw;
+  }
+
+  // Tipo del producto (Filtro, Pastilla…) antes que "General / Otros"
+  const typed = String(p.type || "").trim();
+  if (typed && isShortCatalogLine(typed) && !isGenericBrandPremiumLine(typed)) return typed;
+
+  return resolveManagedLineName("general-otros", lineGroupsById, "General / Otros");
 }
 
 export interface ProductLineGroup<T> {
@@ -286,15 +417,6 @@ export function groupProductsByLine<T extends LineCategorizable>(
     linesMap.get(lineName)!.push(p);
   });
 
-  // Prioridad por nombre y por ID de línea gestionada
-  const managedPriorityByName = new Map<string, number>();
-  if (lineGroupsById) {
-    lineGroupsById.forEach((g) => {
-      managedPriorityByName.set(g.name, g.sort_order);
-      managedPriorityByName.set(g.id, g.sort_order);
-    });
-  }
-
   const entries: ProductLineGroup<T>[] = Array.from(linesMap.entries()).map(
     ([lineName, pList]) => {
       const sortedProds = [...pList].sort((a, b) => {
@@ -316,16 +438,8 @@ export function groupProductsByLine<T extends LineCategorizable>(
   );
 
   entries.sort((a, b) => {
-    const prioA =
-      managedPriorityByName.get(a.lineName) ??
-      LINE_PRIORITY[a.lineName] ??
-      (LEGACY_NAME_TO_LINE_ID[a.lineName] && managedPriorityByName.get(LEGACY_NAME_TO_LINE_ID[a.lineName])) ??
-      50;
-    const prioB =
-      managedPriorityByName.get(b.lineName) ??
-      LINE_PRIORITY[b.lineName] ??
-      (LEGACY_NAME_TO_LINE_ID[b.lineName] && managedPriorityByName.get(LEGACY_NAME_TO_LINE_ID[b.lineName])) ??
-      50;
+    const prioA = getLineSortPriority(a.lineName, lineGroupsById);
+    const prioB = getLineSortPriority(b.lineName, lineGroupsById);
     if (prioA !== prioB) return prioA - prioB;
     return a.lineName.localeCompare(b.lineName);
   });

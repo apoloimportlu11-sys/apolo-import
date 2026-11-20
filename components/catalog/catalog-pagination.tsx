@@ -8,6 +8,8 @@ type CatalogPaginationProps = {
   totalPages: number;
   total: number;
   pageSize: number;
+  rangeStart?: number;
+  rangeEnd?: number;
   onPageChange: (page: number) => void;
 };
 
@@ -30,12 +32,14 @@ export function CatalogPagination({
   totalPages,
   total,
   pageSize,
+  rangeStart,
+  rangeEnd,
   onPageChange,
 }: CatalogPaginationProps) {
   if (total <= 0 || totalPages <= 1) return null;
 
-  const start = (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
+  const start = rangeStart ?? (page - 1) * pageSize + 1;
+  const end = rangeEnd ?? Math.min(page * pageSize, total);
 
   return (
     <nav

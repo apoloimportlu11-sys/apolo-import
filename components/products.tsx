@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import {
   Search,
@@ -17,10 +16,8 @@ import {
   Tag,
   Layers,
   Package,
-  FileText,
   Droplets,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   categories,
@@ -32,31 +29,29 @@ import {
   type Category,
   type Subcategory,
 } from "@/lib/products-data";
-import { useQuote } from "@/lib/quote-context";
-import { VehicleVectorDecor } from "@/components/VehicleVectorDecor";
-import { groupProductsByLine as groupProductsByLineShared, getProductLineCategory, resolveLineFilterToken, type ProductLineGroup } from "@/lib/product-grouping";
+import Image from "next/image";
+import { groupProductsByLine as groupProductsByLineShared, getProductLineCategory, resolveLineFilterToken, defaultCatalogLine, isGenericBrandPremiumLine, type ProductLineGroup } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
 import { CatalogPagination } from "@/components/catalog/catalog-pagination";
-import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
+import { CatalogResults } from "@/components/catalog/catalog-results";
+import { CatalogToolbar } from "@/components/catalog/catalog-toolbar";
+import { CatalogFiltersSidebar } from "@/components/catalog/catalog-filters-sidebar";
 import { ProductQuickView } from "@/components/catalog/product-quick-view";
 import { scrollCatalogIntoView } from "@/lib/lenis-lock";
+import { filterAndSortCatalogProducts, sliceCatalogPage } from "@/lib/catalog/filter-products";
 
 import {
   brandEquals,
-  cardImageScale,
-  formatViscosityBadge,
   getBrandChipVisual,
   getOfficialBrandLogo,
-  getPresentationVisual,
+  isOfficialBrand,
   OFFICIAL_BRANDS,
   CATALOG_PAGE_SIZE as PAGE_SIZE,
 } from "@/lib/catalog/display";
 import {
   matchesPresentation,
   presentationLabelsOf,
-  presentationRangeLabel,
   presentationsOfProduct,
-  activePresentations,
 } from "@/lib/catalog/presentations";
 import {
   ADMIN_DELETED_PRODUCTS_KEY as DELETED_KEY,
@@ -64,12 +59,15 @@ import {
   KNOWN_DELETED_PRODUCT_KEYS as KNOWN_DELETED,
 } from "@/lib/catalog/deleted-keys";
 import { usePublicCatalog } from "@/hooks/use-public-catalog";
-import { usePublicBrands } from "@/hooks/use-public-brands";
-import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
-import { stockLevel } from "@/lib/catalog/stock-status";
-import { cn } from "@/lib/utils";
+import { usePublicBrands, type PublicBrand } from "@/hooks/use-public-brands";
 
-export function Products() {
+export function Products({
+  initialProducts = [],
+  initialBrands = [],
+}: {
+  initialProducts?: Product[];
+  initialBrands?: PublicBrand[];
+}) {
   const searchParams = useSearchParams();
   const { lineGroupsById } = useProductLineGroups();
   const {
@@ -77,10 +75,10 @@ export function Products() {
     dbInactiveKeys,
     catalogStatus,
     adminCacheVersion,
-  } = usePublicCatalog();
-  const { brands: catalogBrands } = usePublicBrands();
+  } = usePublicCatalog(initialProducts);
+  const { brands: catalogBrands, status: brandsStatus } = usePublicBrands(initialBrands);
 
-  const [mounted] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedLines, setSelectedLines] = useState<string[]>([]);
@@ -102,27 +100,30 @@ export function Products() {
   const [sortBy, setSortBy] = useState<"featured" | "name-asc" | "name-desc">("featured");
 
   const [brandOpen, setBrandOpen] = useState(true);
-  const [lineOpen, setLineOpen] = useState(true);
-  const [categoryOpen, setCategoryOpen] = useState(true);
-  const [viscosityOpen, setViscosityOpen] = useState(true);
-  const [presentationOpen, setPresentationOpen] = useState(true);
+  const [lineOpen, setLineOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [viscosityOpen, setViscosityOpen] = useState(false);
+  const [presentationOpen, setPresentationOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [, setShowAllProducts] = useState(true);
   const [brandFilterSearch, setBrandFilterSearch] = useState("");
   const [page, setPage] = useState(1);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
-  const sidebarAnchorRef = useRef<HTMLDivElement | null>(null);
+  const sidebarSlotRef = useRef<HTMLDivElement | null>(null);
   const [sidebarDock, setSidebarDock] = useState<{
-    left: number;
+    active: boolean;
     top: number;
+    left: number;
     width: number;
     maxHeight: number;
-    active: boolean;
-  }>({ left: 0, top: 0, width: 288, maxHeight: 600, active: false });
+  }>({ active: false, top: 108, left: 0, width: 288, maxHeight: 640 });
 
   const normalizeKey = (str?: string | number | null) =>
     String(str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -285,12 +286,22 @@ export function Products() {
         preferred && "short_description" in preferred
           ? (preferred as LocalAdminProduct).short_description
           : undefined;
-      const finalLine =
+      const finalType =
+        preferred?.type != null ? String(preferred.type) : baseP.type || "";
+      const preferredLineRaw =
         preferredShort != null && String(preferredShort).trim() !== ""
-          ? String(preferredShort)
-          : preferred?.line && preferred.line !== "Apolo Premium" && String(preferred.line).trim() !== ""
-          ? String(preferred.line)
-          : baseP.line || "Apolo Premium";
+          ? String(preferredShort).trim()
+          : preferred?.line && String(preferred.line).trim() !== ""
+          ? String(preferred.line).trim()
+          : "";
+      const finalLine =
+        preferredLineRaw
+        && !(
+          isGenericBrandPremiumLine(preferredLineRaw)
+          && !preferredLineRaw.toLowerCase().startsWith(finalBrand.trim().toLowerCase())
+        )
+          ? preferredLineRaw
+          : defaultCatalogLine(finalBrand, finalType) || baseP.line || "";
 
       const finalDesc =
         preferred?.description != null && String(preferred.description).trim() !== ""
@@ -299,9 +310,6 @@ export function Products() {
 
       const finalViscosity =
         preferred?.viscosity != null ? String(preferred.viscosity) : baseP.viscosity || "";
-
-      const finalType =
-        preferred?.type != null ? String(preferred.type) : baseP.type || "";
 
       const finalSubcategoryId =
         preferred?.subcategory_id != null
@@ -369,11 +377,15 @@ export function Products() {
         merged.push({
           id: String(locP.id || `custom-${normLocCode || normLocName || "item"}-${normLocPres || "x"}`),
           name: String(locP.name),
-          line: String(locP.short_description || locP.line || "Apolo Premium"),
-          code: String(locP.slug || locP.code || "APL-NEW"),
           brand: String(locP.brand || "Apolo"),
           viscosity: locP.viscosity != null ? String(locP.viscosity) : "",
           type: locP.type != null ? String(locP.type) : (locP.description ? String(locP.description) : ""),
+          line: String(
+            locP.short_description
+            || locP.line
+            || defaultCatalogLine(locP.brand || "Apolo", locP.type != null ? String(locP.type) : "")
+          ),
+          code: String(locP.slug || locP.code || "APL-NEW"),
           presentation: String(locP.presentation || "Galón / Cuarto / Balde"),
           description: String(locP.description || locP.short_description || ""),
           image: String(locP.image_url || locP.image || "/placeholder.svg"),
@@ -409,14 +421,25 @@ export function Products() {
       });
 
       if (!alreadyMerged && dbP.name && dbP.name !== "Sin nombre") {
+        const dbBrand = String(dbP.brand || "Apolo");
+        const dbType = String(dbP.type || "");
+        const dbLineRaw = String(dbP.line || "").trim();
+        const dbLine =
+          dbLineRaw
+          && !(
+            isGenericBrandPremiumLine(dbLineRaw)
+            && !dbLineRaw.toLowerCase().startsWith(dbBrand.trim().toLowerCase())
+          )
+            ? dbLineRaw
+            : defaultCatalogLine(dbBrand, dbType);
         merged.push({
           ...dbP,
           name: String(dbP.name || "Producto"),
-          line: String(dbP.line || "Apolo Premium"),
+          line: dbLine,
           code: String(dbP.code || "APL-001"),
-          brand: String(dbP.brand || "Apolo"),
+          brand: dbBrand,
           viscosity: String(dbP.viscosity || ""),
-          type: String(dbP.type || ""),
+          type: dbType,
           presentation: String(dbP.presentation || "Galón / Cuarto / Balde"),
           description: String(dbP.description || ""),
           image: String(dbP.image || dbP.image_url || "/placeholder.svg"),
@@ -427,7 +450,7 @@ export function Products() {
     return merged;
   }, [dbProducts, mounted, catalogStatus, dbInactiveKeys, adminCacheVersion]);
 
-  // Marcas del admin + productos (+ oficiales siempre, aunque no tengan stock)
+  // Solo marcas de la tabla `brands` (admin). No inventar marcas desde product.brand.
   const availableBrands = useMemo(() => {
     const byKey = new Map<string, string>();
     const remember = (raw?: string | null) => {
@@ -437,8 +460,13 @@ export function Products() {
       if (!byKey.has(key)) byKey.set(key, name);
     };
 
-    catalogBrands.forEach((b) => remember(b.name));
-    allMergedProducts.forEach((p) => remember(p.brand));
+    const useDbBrands = brandsStatus === "ready" || catalogBrands.length > 0;
+    if (useDbBrands) {
+      catalogBrands.forEach((b) => remember(b.name));
+    } else {
+      // Respaldo breve mientras carga / si falla Supabase
+      allMergedProducts.forEach((p) => remember(p.brand));
+    }
     selectedBrands.forEach((b) => remember(b));
     OFFICIAL_BRANDS.forEach((key) => {
       if (!byKey.has(key)) {
@@ -457,17 +485,41 @@ export function Products() {
       if (idxB !== -1) return 1;
       return String(a || "").localeCompare(String(b || ""), "es");
     });
-  }, [allMergedProducts, catalogBrands, selectedBrands]);
+  }, [allMergedProducts, brandsStatus, catalogBrands, selectedBrands]);
+
+  const brandCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    allMergedProducts.forEach((p) => {
+      const key = String(p.brand || "").trim().toLowerCase();
+      if (!key) return;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return map;
+  }, [allMergedProducts]);
+
+  const countForBrand = useCallback(
+    (brand: string) => brandCounts.get(brand.trim().toLowerCase()) || 0,
+    [brandCounts]
+  );
+
+  /** Marcas con stock (o ya seleccionadas) para toolbar y sidebar. */
+  const brandsWithStock = useMemo(() => {
+    return availableBrands.filter((brand) => {
+      const count = countForBrand(brand);
+      if (count > 0) return true;
+      return selectedBrands.some((item) => brandEquals(item, brand));
+    });
+  }, [availableBrands, countForBrand, selectedBrands]);
 
   const displayedBrands = useMemo(() => {
-    if (!brandFilterSearch.trim()) return availableBrands;
+    const base = brandsWithStock;
+    if (!brandFilterSearch.trim()) return base;
     const q = brandFilterSearch.toLowerCase();
-    return availableBrands.filter((b) => b.toLowerCase().includes(q));
-  }, [availableBrands, brandFilterSearch]);
+    return base.filter((b) => b.toLowerCase().includes(q));
+  }, [brandsWithStock, brandFilterSearch]);
 
   useEffect(() => {
     const toolbar = toolbarRef.current;
-    const section = sectionRef.current;
     let raf = 0;
 
     const syncToolbarHeight = () => {
@@ -478,96 +530,87 @@ export function Products() {
       );
     };
 
-    const syncSidebarDock = () => {
-      const anchor = sidebarAnchorRef.current;
-      const catalogSection = sectionRef.current;
-      const isLg = window.matchMedia("(min-width: 1024px)").matches;
-      if (!anchor || !catalogSection || !isLg) {
-        setSidebarDock((prev) => (prev.active ? { ...prev, active: false } : prev));
-        return;
-      }
-
-      const root = document.documentElement;
-      const header =
-        parseFloat(getComputedStyle(root).getPropertyValue("--site-header-height")) || 96;
-      const sectionRect = catalogSection.getBoundingClientRect();
-      const anchorRect = anchor.getBoundingClientRect();
-      const footerEl = document.querySelector("footer");
-      const footerRect = footerEl?.getBoundingClientRect();
-
-      // Clavado bajo el header, pero nunca por encima del inicio de la sección
-      const top = Math.max(header + 12, sectionRect.top + 8);
-      // No invadir el footer CTA: clamp explícito a footerTop
-      const footerLimit = footerRect ? footerRect.top - 20 : Number.POSITIVE_INFINITY;
-      const bottomLimit = Math.min(
-        window.innerHeight - 16,
-        sectionRect.bottom - 8,
-        footerLimit
-      );
-      const maxHeight = Math.max(0, bottomLimit - top);
-      const stillInView = sectionRect.bottom > header + 80 && sectionRect.top < window.innerHeight - 40;
-      const footerTooClose = Boolean(footerRect && footerRect.top < top + 160);
-      const activeCandidate = stillInView && maxHeight >= 140 && !footerTooClose;
-
-      if (!activeCandidate) {
-        setSidebarDock((prev) => (prev.active ? { ...prev, active: false } : prev));
-        return;
-      }
-
-      const nextLeft = anchorRect.left;
-      const nextWidth = anchor.offsetWidth;
-      setSidebarDock((prev) => {
-        if (
-          prev.active &&
-          Math.abs(prev.left - nextLeft) < 1 &&
-          Math.abs(prev.top - top) < 1 &&
-          Math.abs(prev.width - nextWidth) < 1 &&
-          Math.abs(prev.maxHeight - maxHeight) < 2
-        ) {
-          return prev;
-        }
-        return {
-          left: nextLeft,
-          top,
-          width: nextWidth,
-          maxHeight,
-          active: true,
-        };
-      });
-    };
-
-    const syncAll = () => {
-      syncToolbarHeight();
-      syncSidebarDock();
-    };
-
     const onScrollOrResize = () => {
       if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(syncAll);
+      raf = requestAnimationFrame(syncToolbarHeight);
     };
 
-    syncAll();
+    syncToolbarHeight();
     const ro = new ResizeObserver(onScrollOrResize);
     if (toolbar) ro.observe(toolbar);
-    if (sidebarAnchorRef.current) ro.observe(sidebarAnchorRef.current);
-    if (section) ro.observe(section);
 
     window.addEventListener("resize", onScrollOrResize);
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-
-    type LenisLike = { on?: (event: string, cb: () => void) => void; off?: (event: string, cb: () => void) => void };
-    const lenis = (window as Window & { __apoloLenis?: LenisLike }).__apoloLenis;
-    lenis?.on?.("scroll", onScrollOrResize);
-
-    const t = window.setTimeout(syncAll, 120);
+    const t = window.setTimeout(syncToolbarHeight, 120);
     return () => {
       if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
       window.clearTimeout(t);
       window.removeEventListener("resize", onScrollOrResize);
-      window.removeEventListener("scroll", onScrollOrResize);
-      lenis?.off?.("scroll", onScrollOrResize);
       document.documentElement.style.removeProperty("--catalog-toolbar-height");
+    };
+  }, []);
+
+  useEffect(() => {
+    let raf = 0;
+
+    const syncSidebarDock = () => {
+      const slot = sidebarSlotRef.current;
+      const isLg = window.matchMedia("(min-width: 1024px)").matches;
+      if (!slot || !isLg) {
+        setSidebarDock((prev) => (prev.active ? { ...prev, active: false } : prev));
+        return;
+      }
+
+      const header =
+        parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--site-header-height")) || 96;
+      const top = header + 12;
+      const slotRect = slot.getBoundingClientRect();
+      const footerRect = document.querySelector("footer")?.getBoundingClientRect();
+      const sectionRect = sectionRef.current?.getBoundingClientRect();
+      const bottom = Math.min(window.innerHeight - 16, footerRect ? footerRect.top - 28 : window.innerHeight);
+      const maxHeight = Math.max(0, bottom - top);
+      const inCatalog = Boolean(sectionRect && sectionRect.bottom > top + 180 && sectionRect.top < window.innerHeight - 40);
+      const active = inCatalog && slotRect.top <= top + 1 && maxHeight >= 180;
+
+      setSidebarDock((prev) => {
+        if (
+          prev.active === active &&
+          Math.abs(prev.top - top) < 1 &&
+          Math.abs(prev.left - slotRect.left) < 1 &&
+          Math.abs(prev.width - slot.offsetWidth) < 1 &&
+          Math.abs(prev.maxHeight - maxHeight) < 2
+        ) {
+          return prev;
+        }
+        return {
+          active,
+          top,
+          left: slotRect.left,
+          width: slot.offsetWidth,
+          maxHeight,
+        };
+      });
+    };
+
+    const onScrollOrResize = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(syncSidebarDock);
+    };
+
+    syncSidebarDock();
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+    type LenisLike = { on?: (event: string, cb: () => void) => void; off?: (event: string, cb: () => void) => void };
+    const lenis = (window as Window & { __apoloLenis?: LenisLike }).__apoloLenis;
+    lenis?.on?.("scroll", onScrollOrResize);
+    const t = window.setTimeout(syncSidebarDock, 150);
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.clearTimeout(t);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+      lenis?.off?.("scroll", onScrollOrResize);
     };
   }, []);
 
@@ -579,13 +622,11 @@ export function Products() {
 
     if (brandParam) {
       setSelectedBrands([brandParam]);
-      setShowAllProducts(false);
     }
 
     if (lineParam) {
       const resolved = resolveLineFilterToken(lineParam, lineGroupsById);
       setSelectedLines([resolved.toUpperCase()]);
-      setShowAllProducts(false);
     }
 
     const presentationParam = searchParams.get("presentation");
@@ -601,7 +642,6 @@ export function Products() {
       const category = getCategoryById(categoryId);
       if (category) {
         setSelectedCategory(category);
-        setShowAllProducts(false);
 
         if (subcategoryId) {
           const subcategory = getSubcategoryById(subcategoryId);
@@ -628,152 +668,38 @@ export function Products() {
     if (next !== current) window.history.replaceState(null, "", next);
   }, [selectedPresentations, selectedApplications, priceMin, priceMax]);
 
-  // Filtrado de productos con soporte para tildes y búsqueda robusta 100% libre de errores
-  const filteredProducts = useMemo(() => {
-    let filtered = allMergedProducts;
-
-    if (searchQuery && searchQuery.trim()) {
-      const cleanText = (val?: string | number | null) =>
-        String(val || "")
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "");
-
-      // Distancia de Levenshtein: permite tolerar una letra de m\u00e1s, de menos o cambiada
-      const levenshtein = (a: string, b: string) => {
-        if (a === b) return 0;
-        if (!a.length) return b.length;
-        if (!b.length) return a.length;
-        let prev = new Array(b.length + 1);
-        let curr = new Array(b.length + 1);
-        for (let j = 0; j <= b.length; j++) prev[j] = j;
-        for (let i = 1; i <= a.length; i++) {
-          curr[0] = i;
-          for (let j = 1; j <= b.length; j++) {
-            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-          }
-          [prev, curr] = [curr, prev];
-        }
-        return prev[b.length];
-      };
-
-      // Margen de error tolerado seg\u00fan el largo de la palabra buscada
-      const maxDistanceFor = (len: number) => (len <= 4 ? 1 : len <= 8 ? 2 : 3);
-
-      const queryWords = cleanText(searchQuery.trim())
-        .split(/\s+/)
-        .filter(Boolean);
-
-      filtered = filtered.filter((p) => {
-        const haystack = cleanText(
-          [
-            p.name,
-            p.id,
-            p.code,
-            p.slug,
-            p.viscosity,
-            p.type,
-            p.line,
-            p.brand,
-            p.description,
-            p.presentation,
-            presentationLabelsOf(presentationsOfProduct(p)).join(" "),
-            p.subcategory,
-            p.subcategoryId,
-          ]
-            .filter(Boolean)
-            .join(" ")
-        );
-        if (!haystack) return false;
-
-        const haystackWords = haystack.split(/[^a-z0-9]+/).filter(Boolean);
-
-        return queryWords.every((qWord) => {
-          // Coincidencia exacta primero (r\u00e1pida y cubre la mayor\u00eda de las b\u00fasquedas)
-          if (haystack.includes(qWord)) return true;
-          // Si no hay coincidencia exacta, tolera una letra de m\u00e1s/menos/cambiada
-          const maxDist = maxDistanceFor(qWord.length);
-          return haystackWords.some(
-            (hWord) =>
-              Math.abs(hWord.length - qWord.length) <= maxDist &&
-              levenshtein(qWord, hWord) <= maxDist
-          );
-        });
-      });
-    }
-
-    if (selectedBrands.length > 0) {
-      filtered = filtered.filter(
-        (p) => p.brand && selectedBrands.some((b) => b && p.brand && b.toLowerCase() === p.brand.toLowerCase())
-      );
-    }
-
-    if (selectedLines.length > 0) {
-      filtered = filtered.filter((p) => {
-        const cat = getProductLineCategory(p, lineGroupsById);
-        return selectedLines.some(
-          (l) =>
-            (l && p.line && l.toLowerCase() === p.line.toLowerCase()) ||
-            (l && cat && l.toLowerCase() === cat.toLowerCase())
-        );
-      });
-    }
-
-    if (selectedSubcategory) {
-      filtered = filtered.filter(
-        (p) => p.subcategoryId === selectedSubcategory.id
-      );
-    } else if (selectedCategory) {
-      filtered = filtered.filter((p) => p.categoryId === selectedCategory.id);
-    }
-
-    if (selectedViscosities.length > 0) {
-      filtered = filtered.filter((p) => {
-        const visc = (p.viscosity || "").trim();
-        return visc && selectedViscosities.some((v) => v.trim() === visc);
-      });
-    }
-
-    if (selectedPresentations.length > 0) {
-      filtered = filtered.filter((p) =>
-        matchesPresentation(presentationsOfProduct(p), selectedPresentations)
-      );
-    }
-
-    if (selectedApplications.length > 0) {
-      filtered = filtered.filter((p) => {
-        const application = (p.attributes?.application || "").trim().toLowerCase();
-        return (
-          application &&
-          selectedApplications.some((item) => item.trim().toLowerCase() === application)
-        );
-      });
-    }
-
-    // Ordenamiento seguro
-    if (sortBy === "name-asc") {
-      filtered = [...filtered].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    } else if (sortBy === "name-desc") {
-      filtered = [...filtered].sort((a, b) => (b.name || "").localeCompare(a.name || ""));
-    }
-
-    return filtered;
-  }, [
-    allMergedProducts,
-    searchQuery,
-    selectedBrands,
-    selectedLines,
-    selectedCategory,
-    selectedSubcategory,
-    selectedViscosities,
-    selectedPresentations,
-    selectedApplications,
-    priceMin,
-    priceMax,
-    sortBy,
-    lineGroupsById,
-  ]);
+  const filteredProducts = useMemo(
+    () =>
+      filterAndSortCatalogProducts(allMergedProducts, {
+        searchQuery,
+        selectedBrands,
+        selectedLines,
+        categoryId: selectedCategory?.id ?? null,
+        subcategoryId: selectedSubcategory?.id ?? null,
+        selectedViscosities,
+        selectedPresentations,
+        selectedApplications,
+        priceMin,
+        priceMax,
+        sortBy,
+        lineGroupsById,
+      }),
+    [
+      allMergedProducts,
+      searchQuery,
+      selectedBrands,
+      selectedLines,
+      selectedCategory,
+      selectedSubcategory,
+      selectedViscosities,
+      selectedPresentations,
+      selectedApplications,
+      priceMin,
+      priceMax,
+      sortBy,
+      lineGroupsById,
+    ]
+  );
 
   useEffect(() => {
     setPage(1);
@@ -791,16 +717,27 @@ export function Products() {
     sortBy,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pagedProducts = useMemo(
-    () =>
-      filteredProducts.slice(
-        (currentPage - 1) * PAGE_SIZE,
-        currentPage * PAGE_SIZE
-      ),
-    [filteredProducts, currentPage]
+  const pinHouseBrands =
+    sortBy === "featured" &&
+    !searchQuery.trim() &&
+    selectedLines.length === 0 &&
+    !selectedCategory &&
+    !selectedSubcategory &&
+    selectedViscosities.length === 0 &&
+    selectedPresentations.length === 0 &&
+    selectedApplications.length === 0 &&
+    !priceMin.trim() &&
+    !priceMax.trim() &&
+    (selectedBrands.length === 0 ||
+      selectedBrands.every((brand) => isOfficialBrand(brand)));
+
+  const catalogPage = useMemo(
+    () => sliceCatalogPage(filteredProducts, page, PAGE_SIZE, pinHouseBrands),
+    [filteredProducts, page, pinHouseBrands]
   );
+  const totalPages = catalogPage.totalPages;
+  const currentPage = catalogPage.page;
+  const pagedProducts = catalogPage.items;
 
   const goToPage = (next: number) => {
     const clamped = Math.min(Math.max(1, next), totalPages);
@@ -951,7 +888,6 @@ export function Products() {
     setSelectedBrands((prev) =>
       prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
     );
-    setShowAllProducts(false);
   };
 
   const handleLineToggle = (line: string) => {
@@ -959,7 +895,6 @@ export function Products() {
     setSelectedLines((prev) =>
       prev.includes(upper) ? prev.filter((l) => l !== upper) : [...prev, upper]
     );
-    setShowAllProducts(false);
   };
 
   const handleBrandQuickSelect = (brand: string | "all") => {
@@ -967,7 +902,7 @@ export function Products() {
       setSelectedBrands([]);
     } else {
       setSelectedBrands((prev) =>
-        prev.length === 1 && prev[0] === brand ? [] : [brand]
+        prev.length === 1 && brandEquals(prev[0], brand) ? [] : [brand]
       );
     }
   };
@@ -997,7 +932,6 @@ export function Products() {
     setSelectedSubcategory(null);
     setSelectedViscosities([]);
     setSearchQuery("");
-    setShowAllProducts(false);
     setMobileSidebarOpen(false);
   };
 
@@ -1008,7 +942,6 @@ export function Products() {
     setSelectedSubcategory(subcategory);
     setSelectedViscosities([]);
     setSearchQuery("");
-    setShowAllProducts(false);
     setMobileSidebarOpen(false);
   };
 
@@ -1023,7 +956,6 @@ export function Products() {
     setPriceMin("");
     setPriceMax("");
     setSearchQuery("");
-    setShowAllProducts(true);
     setMobileSidebarOpen(false);
   };
 
@@ -1038,9 +970,12 @@ export function Products() {
     setPriceMin("");
     setPriceMax("");
     setSearchQuery("");
-    setShowAllProducts(true);
     setMobileSidebarOpen(false);
   };
+
+  const openQuickView = useCallback((product: Product) => {
+    setQuickViewProduct(product);
+  }, []);
 
   const hasActiveFilters =
     selectedBrands.length > 0 ||
@@ -1125,23 +1060,11 @@ export function Products() {
   );
 
   const renderSidebar = (mobile = false) => (
-    <div className={mobile ? "p-4" : ""}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-primary" />
-          FILTROS
-        </h3>
-
-        {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-xs text-primary hover:underline font-semibold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 transition-colors"
-          >
-            Limpiar todo
-          </button>
-        )}
-      </div>
-
+    <CatalogFiltersSidebar
+      mobile={mobile}
+      hasActiveFilters={hasActiveFilters}
+      onClear={clearFilters}
+    >
       <div className="space-y-6">
         {/* FILTRO POR MARCAS */}
         <div className="border-b border-border pb-5">
@@ -1151,7 +1074,7 @@ export function Products() {
           >
             <span className="flex items-center gap-2">
               <Tag className="h-4 w-4 text-primary" />
-              MARCAS
+              Marcas
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform text-muted-foreground group-hover:text-foreground ${
@@ -1162,7 +1085,7 @@ export function Products() {
 
           {brandOpen && (
             <div className="mt-3 space-y-2">
-              {availableBrands.length > 5 && (
+              {brandsWithStock.length > 5 && (
                 <div className="relative mb-2">
                   <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
@@ -1184,73 +1107,58 @@ export function Products() {
                 </div>
               )}
 
-              <div className="space-y-1.5 pr-0.5">
+              <div className="custom-scrollbar max-h-52 space-y-1 overflow-y-auto overscroll-contain pr-0.5">
                 {displayedBrands.map((brand) => {
-                  const count = allMergedProducts.filter((p) =>
-                    brandEquals(p.brand, brand)
-                  ).length;
+                  const count = countForBrand(brand);
                   const isChecked = selectedBrands.some((item) =>
                     brandEquals(item, brand)
                   );
                   const tone = getBrandChipVisual(brand);
+                  const isOfficial = tone.isOfficial;
 
                   return (
                     <label
                       key={brand}
-                      className="flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all duration-200 border"
-                      style={
+                      className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2 py-1.5 transition-colors ${
                         isChecked
-                          ? {
-                              backgroundColor: tone.soft,
-                              borderColor: `${tone.accent}66`,
-                            }
-                          : undefined
-                      }
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-transparent hover:bg-muted/70"
+                      }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => handleBrandToggle(brand)}
                           className="border-muted-foreground/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex min-w-0 items-center gap-1.5">
                           <span
-                            className="h-1.5 w-1.5 rounded-full shrink-0"
-                            style={{ backgroundColor: tone.accent }}
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor: isOfficial ? tone.accent : isChecked ? "var(--primary)" : "#94a3b8",
+                            }}
                           />
                           <span
-                            className={`text-sm font-medium transition-colors ${
-                              isChecked ? "font-bold" : "text-foreground/90"
+                            title={brand}
+                            className={`line-clamp-2 text-sm font-medium leading-snug ${
+                              isChecked ? "font-bold text-primary" : "text-foreground/90"
                             }`}
-                            style={isChecked ? { color: tone.text } : undefined}
                           >
                             {brand}
                           </span>
-                          {tone.isOfficial && (
-                            <span
-                              className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded border"
-                              style={{
-                                backgroundColor: tone.soft,
-                                color: tone.text,
-                                borderColor: `${tone.accent}55`,
-                              }}
-                            >
+                          {isOfficial ? (
+                            <span className="shrink-0 rounded border border-border/70 bg-background/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                               Oficial
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                          isChecked ? "text-white" : "bg-card text-muted-foreground border border-border/60"
-                        }`}
-                        style={
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
                           isChecked
-                            ? { backgroundColor: tone.active }
-                            : count === 0
-                              ? { opacity: 0.7 }
-                              : undefined
-                        }
+                            ? "bg-primary text-white"
+                            : "text-muted-foreground"
+                        }`}
                       >
                         {count}
                       </span>
@@ -1258,11 +1166,11 @@ export function Products() {
                   );
                 })}
 
-                {displayedBrands.length === 0 && (
+                {displayedBrands.length === 0 && brandFilterSearch.trim() ? (
                   <p className="text-xs text-muted-foreground text-center py-3">
                     No se encontró &quot;{brandFilterSearch}&quot;
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           )}
@@ -1277,7 +1185,7 @@ export function Products() {
             >
               <span className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-primary" />
-                LÍNEA DE PRODUCTOS
+                Línea de productos
               </span>
               <ChevronDown
                 className={`h-4 w-4 transition-transform text-muted-foreground group-hover:text-foreground ${
@@ -1287,7 +1195,7 @@ export function Products() {
             </button>
 
             {lineOpen && (
-              <div className="mt-3 space-y-1.5 pr-0.5">
+              <div className="custom-scrollbar mt-3 max-h-52 space-y-1 overflow-y-auto overscroll-contain pr-0.5">
                 {availableLines.map((line) => {
                   const count = allMergedProducts.filter((p) => {
                     const cat = getProductLineCategory(p, lineGroupsById);
@@ -1301,22 +1209,23 @@ export function Products() {
                   return (
                     <label
                       key={line}
-                      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all duration-200 border ${
+                      title={line}
+                      className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${
                         isChecked
-                          ? "bg-primary/10 border-primary/40 shadow-xs"
-                          : "bg-muted/40 border-transparent hover:bg-muted hover:border-border"
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-transparent hover:bg-muted/70"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => handleLineToggle(line)}
                           className="border-muted-foreground/60 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
                         <span
-                          className={`text-sm font-medium transition-colors ${
+                          className={`line-clamp-2 text-sm font-medium leading-snug ${
                             isChecked
-                              ? "text-primary font-bold"
+                              ? "font-bold text-primary"
                               : "text-foreground/90"
                           }`}
                         >
@@ -1324,10 +1233,10 @@ export function Products() {
                         </span>
                       </div>
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
                           isChecked
                             ? "bg-primary text-white"
-                            : "bg-card text-muted-foreground border border-border/60"
+                            : "text-muted-foreground"
                         }`}
                       >
                         {count}
@@ -1350,7 +1259,7 @@ export function Products() {
             >
               <span className="flex items-center gap-2">
                 <Droplets className="h-4 w-4 text-primary" />
-                VISCOSIDAD
+                Viscosidad
               </span>
               <ChevronDown
                 className={`h-4 w-4 text-muted-foreground transition-transform group-hover:text-foreground ${
@@ -1359,7 +1268,7 @@ export function Products() {
               />
             </button>
             {viscosityOpen && (
-              <div className="mt-3 space-y-1.5 pr-0.5">
+              <div className="custom-scrollbar mt-3 max-h-52 space-y-1 overflow-y-auto overscroll-contain pr-0.5">
                 {availableViscosities.map((viscosity) => {
                   const count = allMergedProducts.filter(
                     (p) => (p.viscosity || "").trim() === viscosity
@@ -1368,20 +1277,21 @@ export function Products() {
                   return (
                     <label
                       key={viscosity}
-                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-2 transition-all duration-200 ${
+                      title={viscosity}
+                      className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${
                         isChecked
-                          ? "border-primary/40 bg-primary/10 shadow-xs"
-                          : "border-transparent bg-muted/40 hover:border-border hover:bg-muted"
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-transparent hover:bg-muted/70"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => handleViscosityToggle(viscosity)}
                           className="border-muted-foreground/60 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                         />
                         <span
-                          className={`text-sm font-medium ${
+                          className={`line-clamp-2 text-sm font-medium leading-snug ${
                             isChecked ? "font-bold text-primary" : "text-foreground/90"
                           }`}
                         >
@@ -1389,10 +1299,8 @@ export function Products() {
                         </span>
                       </div>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          isChecked
-                            ? "bg-primary text-white"
-                            : "border border-border/60 bg-card text-muted-foreground"
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isChecked ? "bg-primary text-white" : "text-muted-foreground"
                         }`}
                       >
                         {count}
@@ -1414,12 +1322,12 @@ export function Products() {
             >
               <span className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" />
-                PRESENTACIÓN
+                Presentación
               </span>
               <ChevronDown className={`h-4 w-4 text-muted-foreground ${presentationOpen ? "rotate-180" : ""}`} />
             </button>
             {presentationOpen && (
-              <div className="mt-3 max-h-52 space-y-1.5 overflow-y-auto pr-0.5">
+              <div className="custom-scrollbar mt-3 max-h-52 space-y-1 overflow-y-auto overscroll-contain pr-0.5">
                 {availablePresentations.map((label) => {
                   const count = allMergedProducts.filter((product) =>
                     matchesPresentation(presentationsOfProduct(product), [label])
@@ -1428,18 +1336,19 @@ export function Products() {
                   return (
                     <label
                       key={label}
-                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-2 ${
-                        isChecked ? "border-primary/40 bg-primary/10" : "border-transparent bg-muted/40"
+                      title={label}
+                      className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${
+                        isChecked ? "border-primary/40 bg-primary/10" : "border-transparent hover:bg-muted/70"
                       }`}
                     >
-                      <span className="flex items-center gap-2.5">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => handlePresentationToggle(label)}
                         />
-                        <span className={`text-sm ${isChecked ? "font-bold text-primary" : ""}`}>{label}</span>
+                        <span className={`line-clamp-2 text-sm leading-snug ${isChecked ? "font-bold text-primary" : ""}`}>{label}</span>
                       </span>
-                      <span className="text-xs text-muted-foreground">{count}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{count}</span>
                     </label>
                   );
                 })}
@@ -1455,7 +1364,7 @@ export function Products() {
               onClick={() => setPriceOpen(!priceOpen)}
               className="flex w-full items-center justify-between py-2 font-semibold text-foreground"
             >
-              <span>PRECIO</span>
+              <span>Precio</span>
               <ChevronDown className={`h-4 w-4 text-muted-foreground ${priceOpen ? "rotate-180" : ""}`} />
             </button>
             {priceOpen && (
@@ -1487,7 +1396,7 @@ export function Products() {
 
         {availableApplications.length >= 2 && (
           <div className="border-b border-border pb-5">
-            <p className="py-2 text-sm font-semibold text-foreground">APLICACIÓN</p>
+            <p className="py-2 text-sm font-semibold text-foreground">Aplicación</p>
             <div className="space-y-1.5">
               {availableApplications.map((value) => {
                 const isChecked = selectedApplications.includes(value);
@@ -1510,7 +1419,7 @@ export function Products() {
           >
             <span className="flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" />
-              CATEGORÍAS
+              Categorías
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform text-muted-foreground group-hover:text-foreground ${
@@ -1592,289 +1501,8 @@ export function Products() {
           )}
         </div>
       </div>
-    </div>
+    </CatalogFiltersSidebar>
   );
-
-  const ProductCard = ({ product }: { product: Product }) => {
-    const { addItem, items, openDrawer } = useQuote();
-    const subcategory = product.subcategoryId ? getSubcategoryById(product.subcategoryId) : null;
-    const subcategoryText = product.subcategory || subcategory?.name || null;
-    const topBadgeText = formatViscosityBadge(product.viscosity);
-    const packOptions = presentationsOfProduct(product);
-    const primaryPack = activePresentations(packOptions)[0];
-    const packRange = presentationRangeLabel(packOptions, product.presentation);
-    const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
-    const imageScale = cardImageScale(product.presentation);
-    const tone = getBrandChipVisual(product.brand);
-    const level = stockLevel({
-      stock: product.stock,
-      stockMin: product.stockMin,
-    });
-    const outOfStock = level === "out";
-
-    const hasValidImage =
-      Boolean(
-        product.image &&
-        typeof product.image === "string" &&
-        product.image.trim() !== "" &&
-        product.image !== "/placeholder.svg" &&
-        (product.image.startsWith("/") || product.image.startsWith("http://") || product.image.startsWith("https://") || product.image.startsWith("data:image/"))
-      );
-
-    const isInQuote = items.some((it) => it.id === product.id);
-
-    const handleQuoteClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      addItem(
-        {
-          id: product.id,
-          name: product.name,
-          brand: product.brand || "Apolo",
-          line: product.line,
-          presentation: primaryPack?.label || product.presentation || "Estándar",
-          presentationId: primaryPack && !primaryPack.virtual ? primaryPack.id : undefined,
-          image: product.image,
-          viscosity: product.viscosity,
-        },
-        1
-      );
-      openDrawer();
-    };
-
-    if (viewMode === "list") {
-      return (
-        <div
-          className="group"
-          style={{ contentVisibility: "auto", containIntrinsicSize: "0 220px" }}
-        >
-          <div
-            className={cn(
-              "rounded-2xl border bg-card p-3 shadow-sm transition-colors duration-200 hover:border-primary/50 sm:p-5",
-              outOfStock ? "border-red-500/35 opacity-95" : "border-border",
-              level === "low" ? "border-amber-500/35" : null
-            )}
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:gap-5">
-              <button
-                type="button"
-                onClick={() => setQuickViewProduct(product)}
-                className="relative h-36 w-full shrink-0 overflow-hidden rounded-xl bg-white sm:h-44 sm:w-44"
-              >
-                <OfficialBrandWatermark brand={product.brand} />
-              {hasValidImage ? (
-                <Image
-                  src={product.image}
-                  alt={`${product.name || "Producto"} · ${packVisual.label}`}
-                  fill
-                  unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
-                  sizes="(max-width: 640px) 100vw, 176px"
-                  className={cn(
-                    "z-[1] object-contain object-center p-3 drop-shadow-[0_8px_14px_rgba(0,0,0,0.16)]",
-                    outOfStock ? "grayscale contrast-75" : null
-                  )}
-                  style={{ transform: `scale(${imageScale})` }}
-                />
-              ) : (
-                <div className="relative z-[1] flex h-full w-full flex-col items-center justify-center text-zinc-400">
-                  <Package className="mb-1 h-8 w-8 opacity-70" />
-                  <span className="text-[11px] font-medium">Sin imagen</span>
-                </div>
-              )}
-                {product.presentation ? (
-                  <span className="absolute left-2 top-2 z-[2] rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    {packVisual.label}
-                  </span>
-                ) : null}
-                <StockStatusBadge level={level} variant="overlay" />
-              </button>
-
-              <div className="flex min-w-0 flex-1 flex-col justify-between">
-                <button
-                  type="button"
-                  onClick={() => setQuickViewProduct(product)}
-                  className="block w-full text-left"
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span
-                      className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide"
-                      style={{
-                        backgroundColor: tone.active,
-                        borderColor: tone.active,
-                        color: "#fff",
-                      }}
-                    >
-                      {product.brand || "Apolo"}
-                    </span>
-                    <StockStatusBadge level={level} variant="inline" />
-                    {topBadgeText ? (
-                      <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                        {topBadgeText}
-                      </span>
-                    ) : subcategoryText ? (
-                      <span className="rounded-md border border-border bg-muted/80 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                        {subcategoryText}
-                      </span>
-                    ) : null}
-                  </div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-wide text-primary sm:text-xs">
-                    {product.line}
-                  </h4>
-                  <h3 className="mt-1 line-clamp-2 text-base font-bold text-foreground">
-                    {product.name}
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{packRange}</p>
-                  <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                    {product.type || product.description}
-                  </p>
-                </button>
-                <div className="mt-3 flex items-center gap-2 border-t border-border/40 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setQuickViewProduct(product)}
-                    className="inline-flex min-h-9 items-center text-sm font-bold text-primary"
-                  >
-                    Ver ficha
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleQuoteClick}
-                    className={cn(
-                      "ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-white",
-                      outOfStock ? "bg-zinc-700 hover:bg-zinc-600" : "bg-emerald-600"
-                    )}
-                    title={outOfStock ? "Cotizar reposición o alternativa" : "Añadir a la lista de cotización"}
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>{isInQuote ? "Cotizado (+1)" : outOfStock ? "Consultar" : "Cotizar"}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        data-catalog-card
-        className="group h-full"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "0 420px" }}
-      >
-        <div
-          className={cn(
-            "flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-colors duration-200 hover:border-primary/50",
-            outOfStock ? "border-red-500/40" : "border-border",
-            level === "low" ? "border-amber-500/40" : null
-          )}
-        >
-          <div
-            className="h-[3px] w-full"
-            style={{ backgroundColor: outOfStock ? "#C90012" : level === "low" ? "#D97706" : tone.accent }}
-          />
-
-          <div className="flex h-full flex-col p-2.5 sm:p-4">
-            <div className="mb-2 flex items-center justify-between gap-1.5">
-              <span
-                className="max-w-[58%] truncate rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                style={{
-                  backgroundColor: tone.soft,
-                  borderColor: `${tone.accent}55`,
-                  color: tone.text,
-                }}
-              >
-                {product.brand || "Apolo"}
-              </span>
-              {level !== "ok" ? (
-                <StockStatusBadge level={level} variant="inline" />
-              ) : topBadgeText ? (
-                <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
-                  {topBadgeText}
-                </span>
-              ) : subcategoryText ? (
-                <span className="max-w-[42%] truncate text-[10px] font-medium text-muted-foreground">
-                  {subcategoryText}
-                </span>
-              ) : null}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setQuickViewProduct(product)}
-              className="relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl bg-white sm:mb-3 sm:aspect-[5/6]"
-            >
-              <OfficialBrandWatermark brand={product.brand} />
-              {hasValidImage ? (
-                <Image
-                  src={product.image}
-                  alt={`${product.name || "Producto"} · ${packVisual.label}`}
-                  fill
-                  unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
-                  sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                  className={cn(
-                    "z-[1] object-contain object-center p-2 drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)]",
-                    outOfStock ? "grayscale contrast-75" : null
-                  )}
-                  style={{ transform: `scale(${imageScale})` }}
-                />
-              ) : (
-                <div className="relative z-[1] flex h-full w-full flex-col items-center justify-center text-zinc-400">
-                  <Package className="mb-1 h-8 w-8 opacity-70" />
-                  <span className="text-[11px] font-medium">Sin imagen</span>
-                </div>
-              )}
-              {product.presentation ? (
-                <span className="absolute left-2 top-2 z-[2] max-w-[70%] truncate rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                  {packVisual.label}
-                </span>
-              ) : null}
-              <StockStatusBadge level={level} variant="overlay" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setQuickViewProduct(product)}
-              className="block min-w-0 flex-1 text-left"
-            >
-              <span className="block truncate text-[10px] font-bold uppercase tracking-wide text-primary sm:text-xs">
-                {product.line}
-              </span>
-              <h3 className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-foreground sm:text-base">
-                {product.name}
-              </h3>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{packRange}</p>
-              <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-muted-foreground max-sm:hidden">
-                {product.type || product.description}
-              </p>
-            </button>
-
-            <div className="mt-2 flex items-center justify-between gap-1.5 border-t border-border/40 pt-2">
-              <button
-                type="button"
-                onClick={() => setQuickViewProduct(product)}
-                className="inline-flex min-h-9 items-center text-xs font-bold text-primary sm:text-sm"
-              >
-                Detalles
-              </button>
-              <button
-                type="button"
-                onClick={handleQuoteClick}
-                className={cn(
-                  "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-white",
-                  outOfStock ? "bg-zinc-700" : "bg-emerald-600"
-                )}
-                title={outOfStock ? "Cotizar reposición o alternativa" : "Añadir este producto a la cotización"}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                <span>{isInQuote ? "+1" : outOfStock ? "Consultar" : "Cotizar"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // Determinar si debemos mostrar separadores de marca
   // Mostramos separadores si no hay una sola marca seleccionada y hay más de 1 grupo con productos
@@ -1890,90 +1518,112 @@ export function Products() {
         ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
         : "grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 2xl:grid-cols-5";
 
+  const catalogHeading = (() => {
+    if (searchQuery.trim()) return `Resultados para "${searchQuery.trim()}"`;
+    if (selectedLines.length === 1) return `Línea ${selectedLines[0]}`;
+    if (selectedBrands.length === 1) return `Productos ${selectedBrands[0]}`;
+    if (selectedSubcategory) return selectedSubcategory.name;
+    if (selectedCategory) return selectedCategory.name;
+    return "Catálogo de productos";
+  })();
+  const officialHeadingLogo =
+    !searchQuery.trim() &&
+    selectedLines.length === 0 &&
+    selectedBrands.length === 1
+      ? getOfficialBrandLogo(selectedBrands[0])
+      : null;
+
   return (
     <section ref={sectionRef} className="relative min-h-screen bg-transparent py-4 md:py-6">
-      {/* Ilustración Vectorial de Vehículos en el centro del lado izquierdo */}
-      {/* Contenedor propio con overflow-hidden: evita que el resplandor decorativo genere scroll horizontal,
-          sin que ese overflow quede en un ancestro del sidebar de filtros (rompería su "sticky") */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        <VehicleVectorDecor size="lg" className="absolute left-4 2xl:left-8 3xl:left-14 top-[320px] xl:top-[380px]" />
-      </div>
-
       <div className="container relative z-10 mx-auto px-4 sm:px-5 lg:px-6">
         {renderBreadcrumb()}
 
-        <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-6">
-          {/* SIDEBAR DESKTOP: fixed acotado a la section + footer CTA */}
-          <aside className="relative hidden w-72 min-w-72 max-w-72 flex-shrink-0 lg:block">
+        <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            {officialHeadingLogo ? (
+              <h1 className="flex flex-wrap items-center gap-3">
+                <Image
+                  src={officialHeadingLogo}
+                  alt=""
+                  width={180}
+                  height={56}
+                  className="h-7 w-auto object-contain sm:h-8"
+                  priority
+                />
+                <span className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+                  {catalogHeading}
+                </span>
+              </h1>
+            ) : (
+              <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+                {catalogHeading}
+              </h1>
+            )}
+            <p className="text-sm text-muted-foreground">
+              {catalogStatus === "loading" && dbProducts.length === 0
+                ? "Sincronizando catálogo…"
+                : `${filteredProducts.length} producto${filteredProducts.length !== 1 ? "s" : ""} encontrado${filteredProducts.length !== 1 ? "s" : ""}.`}
+            </p>
+          </div>
+        </header>
+
+        <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-6 lg:items-stretch">
+          {/* SIDEBAR DESKTOP: sticky dentro de la columna (no invade el footer) */}
+          <aside className="relative hidden w-72 min-w-72 max-w-72 flex-shrink-0 self-start lg:block">
             <div
-              ref={sidebarAnchorRef}
+              ref={sidebarSlotRef}
               className="w-full"
               style={{ height: sidebarDock.active ? sidebarDock.maxHeight : undefined }}
-              aria-hidden
+              aria-hidden={sidebarDock.active}
             />
-            {sidebarDock.active ? (
-              <div
-                data-lenis-prevent
-                className="custom-scrollbar fixed z-20 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-sm"
-                style={{
-                  top: sidebarDock.top,
-                  left: sidebarDock.left,
-                  width: sidebarDock.width,
-                  maxHeight: sidebarDock.maxHeight,
-                }}
-              >
-                {renderSidebar()}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                {renderSidebar()}
-              </div>
-            )}
+            <div
+              data-lenis-prevent
+              data-catalog-filters="true"
+              className={
+                sidebarDock.active
+                  ? "custom-scrollbar fixed z-20 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-sm"
+                  : "custom-scrollbar max-h-[calc(100vh-var(--site-header-height,6rem)-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-sm"
+              }
+              style={
+                sidebarDock.active
+                  ? {
+                      top: sidebarDock.top,
+                      left: sidebarDock.left,
+                      width: sidebarDock.width,
+                      maxHeight: sidebarDock.maxHeight,
+                    }
+                  : undefined
+              }
+            >
+              {renderSidebar()}
+            </div>
           </aside>
 
           {/* MAIN CONTENT: búsqueda/marcas solo aquí para no tapar filtros */}
           <div className="flex-1 min-w-0 w-full">
-            <div
-              ref={toolbarRef}
-              className="sticky z-30 mb-4 space-y-2.5 bg-background/95 pb-2 pt-1 backdrop-blur-md"
-              style={{ top: "var(--site-header-height, 6rem)" }}
-              data-catalog-toolbar="true"
-            >
-              <div className="mx-auto max-w-3xl">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Buscar por marca, nombre, viscosidad o código..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="rounded-2xl border-border bg-card py-3 pl-12 pr-12 text-base text-foreground shadow-xs placeholder:text-muted-foreground focus-visible:ring-primary md:py-4"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      aria-label="Limpiar búsqueda"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex min-w-0 flex-col gap-2">
-                <div className="custom-scrollbar flex max-w-full snap-x snap-mandatory items-center gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]">
+            <CatalogToolbar
+              toolbarRef={toolbarRef}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onClearSearch={() => setSearchQuery("")}
+              brandChips={
+                <div
+                  className="custom-scrollbar flex max-w-full snap-x snap-mandatory items-center gap-1.5 overflow-x-auto rounded-2xl border border-border bg-card p-1.5"
+                  data-catalog-brand-chips="true"
+                  aria-label="Atajos de marca"
+                >
                   <button
+                    type="button"
                     onClick={() => handleBrandQuickSelect("all")}
-                    className={`flex min-h-9 shrink-0 snap-start items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 sm:px-4 sm:text-sm ${
+                    className={`flex min-h-9 shrink-0 snap-start items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors sm:px-4 sm:text-sm ${
                       selectedBrands.length === 0
                         ? "bg-primary text-white shadow-sm shadow-primary/20"
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     }`}
                   >
-                    <span>Todas las marcas</span>
+                    <span>Todas</span>
                     <span
-                      className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                      className={`rounded-full px-1.5 text-[10px] ${
                         selectedBrands.length === 0
                           ? "bg-white/20 text-white"
                           : "bg-muted text-muted-foreground"
@@ -1982,127 +1632,55 @@ export function Products() {
                       {allMergedProducts.length}
                     </span>
                   </button>
-
-                  <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
-
-                  {availableBrands
-                    .filter((brand) =>
-                      (OFFICIAL_BRANDS as readonly string[]).includes(brand.toLowerCase())
-                    )
-                    .map((brand) => {
-                      const count = allMergedProducts.filter((p) =>
-                        brandEquals(p.brand, brand)
-                      ).length;
-                      const isSelected =
-                        selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
-                      const tone = getBrandChipVisual(brand);
-
-                      return (
-                        <button
-                          key={brand}
-                          onClick={() => handleBrandQuickSelect(brand)}
-                          className="flex min-h-9 shrink-0 snap-start items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all duration-200 sm:px-4 sm:text-sm"
+                  <div className="mx-0.5 hidden h-6 w-px shrink-0 bg-border sm:block" aria-hidden />
+                  {brandsWithStock.map((brand) => {
+                    const count = countForBrand(brand);
+                    const isSelected =
+                      selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
+                    const tone = getBrandChipVisual(brand);
+                    return (
+                      <button
+                        key={brand}
+                        type="button"
+                        onClick={() => handleBrandQuickSelect(brand)}
+                        className="flex min-h-9 shrink-0 snap-start items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors sm:text-sm"
+                        style={
+                          isSelected
+                            ? {
+                                backgroundColor: tone.active,
+                                borderColor: tone.active,
+                                color: "#fff",
+                                boxShadow: `0 1px 8px ${tone.glow}`,
+                              }
+                            : {
+                                backgroundColor: tone.soft,
+                                borderColor: `${tone.accent}55`,
+                                color: tone.text,
+                              }
+                        }
+                      >
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: isSelected ? "#fff" : tone.accent }}
+                        />
+                        <span>{brand}</span>
+                        <span
+                          className="rounded-full px-1.5 text-[10px]"
                           style={
                             isSelected
-                              ? {
-                                  backgroundColor: tone.active,
-                                  borderColor: tone.active,
-                                  color: "#fff",
-                                  boxShadow: `0 1px 8px ${tone.glow}`,
-                                }
-                              : {
-                                  backgroundColor: tone.soft,
-                                  borderColor: `${tone.accent}55`,
-                                  color: tone.text,
-                                }
+                              ? { backgroundColor: "rgba(255,255,255,0.22)", color: "#fff" }
+                              : { backgroundColor: `${tone.accent}22`, color: tone.text }
                           }
                         >
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{
-                              backgroundColor: tone.accent,
-                              boxShadow: `0 0 8px ${tone.glow}`,
-                            }}
-                          />
-                          <span>{brand}</span>
-                          <span
-                            className="rounded-full px-1.5 py-0.2 text-[10px]"
-                            style={
-                              isSelected
-                                ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
-                                : { backgroundColor: "rgba(0,0,0,0.08)", color: tone.text }
-                            }
-                          >
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {(() => {
-                  const otherBrands = availableBrands.filter(
-                    (brand) =>
-                      !(OFFICIAL_BRANDS as readonly string[]).includes(brand.toLowerCase())
-                  );
-                  if (otherBrands.length === 0) return null;
-                  return (
-                    <div className="custom-scrollbar flex max-w-full snap-x snap-mandatory items-center gap-1.5 overflow-x-auto pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]">
-                      {otherBrands.map((brand) => {
-                        const count = allMergedProducts.filter((p) =>
-                          brandEquals(p.brand, brand)
-                        ).length;
-                        const isSelected =
-                          selectedBrands.length === 1 && brandEquals(selectedBrands[0], brand);
-                        const tone = getBrandChipVisual(brand);
-                        return (
-                          <button
-                            key={brand}
-                            onClick={() => handleBrandQuickSelect(brand)}
-                            className="flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors duration-200"
-                            style={
-                              isSelected
-                                ? {
-                                    backgroundColor: tone.active,
-                                    borderColor: tone.active,
-                                    color: "#fff",
-                                    boxShadow: `0 1px 6px ${tone.glow}`,
-                                  }
-                                : {
-                                    backgroundColor: tone.soft,
-                                    borderColor: `${tone.accent}40`,
-                                    color: tone.text,
-                                  }
-                            }
-                            title={count === 0 ? `${brand} (sin productos activos)` : brand}
-                          >
-                            <span
-                              className="h-1.5 w-1.5 rounded-full"
-                              style={{ backgroundColor: isSelected ? "#fff" : tone.accent }}
-                            />
-                            <span>{brand}</span>
-                            <span
-                              className="rounded-full px-1.5 text-[10px]"
-                              style={
-                                isSelected
-                                  ? { backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }
-                                  : {
-                                      backgroundColor: "rgba(0,0,0,0.06)",
-                                      color: count === 0 ? "#94a3b8" : tone.text,
-                                    }
-                              }
-                            >
-                              {count}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {hasActiveFilters && (
+              }
+              activeFilterChips={
+                hasActiveFilters ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-xs">
                   <span className="mr-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                     <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
@@ -2241,73 +1819,19 @@ export function Products() {
                     </span>
                   )}
                   <button
+                    type="button"
                     onClick={clearFilters}
                     className="ml-auto text-xs font-semibold text-primary hover:underline"
                   >
                     Limpiar todo
                   </button>
                 </div>
-              )}
-            </div>
-
-            {/* ENCABEZADO Y CONTROLES */}
-            <div className="mb-6 flex flex-col gap-4">
-              <div>
-                {(() => {
-                  const officialBrandLogo =
-                    !searchQuery &&
-                    selectedLines.length === 0 &&
-                    selectedBrands.length === 1
-                      ? getOfficialBrandLogo(selectedBrands[0])
-                      : null;
-
-                  if (officialBrandLogo) {
-                    return (
-                      <h1 className="flex flex-wrap items-center gap-3 sm:gap-4">
-                        <Image
-                          src={officialBrandLogo}
-                          alt=""
-                          width={220}
-                          height={72}
-                          className="h-9 w-auto object-contain sm:h-11 md:h-12"
-                          priority
-                        />
-                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
-                          Productos {selectedBrands[0]}
-                        </span>
-                      </h1>
-                    );
-                  }
-
-                  return (
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
-                      {searchQuery
-                        ? `Resultados para "${searchQuery}"`
-                        : selectedLines.length === 1
-                          ? `Línea ${selectedLines[0]}`
-                          : selectedBrands.length === 1
-                            ? `Productos ${selectedBrands[0]}`
-                            : selectedSubcategory
-                              ? selectedSubcategory.name
-                              : selectedCategory
-                                ? selectedCategory.name
-                                : "Todos los productos"}
-                    </h1>
-                  );
-                })()}
-
-                <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                  {catalogStatus === "loading"
-                    ? "Sincronizando catálogo…"
-                    : `${filteredProducts.length} producto${
-                        filteredProducts.length !== 1 ? "s" : ""
-                      } encontrado${filteredProducts.length !== 1 ? "s" : ""}`}
-                </p>
-              </div>
-
-              {/* BARRA DE HERRAMIENTAS (Filtros móvil, Ordenar, Vista) */}
-              <div className="sticky z-20 flex flex-nowrap items-center gap-2 overflow-x-auto rounded-xl border border-border border-l-4 border-l-primary bg-card/95 px-2.5 py-2 shadow-xs backdrop-blur-md sm:px-4" style={{ top: "calc(var(--site-header-height, 6rem) + var(--catalog-toolbar-height, 0px) + 0.5rem)" }}>
+              ) : null
+              }
+              controls={
+              <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-xl border border-border border-l-4 border-l-primary bg-card/95 px-2.5 py-2 shadow-xs sm:px-4">
                 <button
+                  type="button"
                   onClick={() => setMobileSidebarOpen(true)}
                   className="lg:hidden flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-muted/80 px-3 text-xs font-medium text-foreground sm:text-sm"
                 >
@@ -2402,189 +1926,31 @@ export function Products() {
                   </button>
                 </div>
               </div>
-            </div>
+              }
+            />
 
-            {/* LISTADO DE PRODUCTOS (CON SEPARADORES POR MARCA Y SUBTÍTULOS POR LÍNEA) */}
+            {/* LISTADO DE PRODUCTOS */}
             <div ref={gridRef}>
-            {catalogStatus === "loading" ? (
-              <div
-                className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5"
-                aria-busy="true"
-                aria-label="Cargando catálogo"
-              >
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="overflow-hidden rounded-2xl border border-border bg-card"
-                  >
-                    <div className="aspect-[4/5] animate-pulse bg-muted/70" />
-                    <div className="space-y-2 p-3">
-                      <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-                      <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
-                      <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredProducts.length > 0 ? (
-              shouldShowBrandDividers ? (
-                // VISTA AGRUPADA POR MARCA CON SUBTÍTULOS POR LÍNEA DE PRODUCTO
-                <div className="space-y-14">
-                  {productsGroupedByBrand.map((group) => {
-                    const isApolo = group.brand.toLowerCase() === "apolo";
-                    const isOverts = group.brand.toLowerCase() === "overts";
-                    const isValtrom = group.brand.toLowerCase() === "valtrom";
-
-                    return (
-                      <div key={group.brand} className="space-y-6">
-                        {/* SEPARADOR DE MARCA */}
-                        <div className="flex items-center gap-4 py-2 border-b border-border/80">
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`w-3.5 h-3.5 rounded-full ${
-                                isApolo
-                                  ? "bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
-                                  : isOverts
-                                  ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
-                                  : isValtrom
-                                  ? "bg-purple-600 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                                  : "bg-blue-600"
-                              }`}
-                            />
-                            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-                              Línea{" "}
-                              <span
-                                className={
-                                  isApolo
-                                    ? "text-red-500"
-                                    : isOverts
-                                    ? "text-amber-500"
-                                    : isValtrom
-                                    ? "text-purple-400"
-                                    : "text-blue-400"
-                                }
-                              >
-                                {group.brand}
-                              </span>
-                              {(isApolo || isOverts || isValtrom) && (
-                                <span
-                                  className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${
-                                    isApolo
-                                      ? "bg-red-600/20 text-red-500 border-red-600/30"
-                                      : isOverts
-                                      ? "bg-amber-500/20 text-amber-500 dark:text-amber-400 border-amber-500/30"
-                                      : "bg-purple-600/20 text-purple-400 border-purple-600/30"
-                                  }`}
-                                >
-                                  Oficial
-                                </span>
-                              )}
-                            </h2>
-                          </div>
-
-                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-muted/80 text-muted-foreground font-semibold border border-border/80 shadow-xs">
-                            {group.totalProducts} producto
-                            {group.totalProducts !== 1 ? "s" : ""}
-                          </span>
-
-                          <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent ml-2" />
-                        </div>
-
-                        {/* SUBSECCIONES POR LÍNEA DEL PRODUCTO */}
-                        <div className="space-y-8 pl-1 sm:pl-2">
-                          {group.lines.map((lineGroup) => (
-                            <div key={lineGroup.lineName} className="space-y-4">
-                              {/* SUBTÍTULO DE LÍNEA DE PRODUCTO */}
-                              <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-card/60 backdrop-blur-xs border border-border/60 shadow-2xs">
-                                <div className="flex items-center gap-2.5">
-                                  <span
-                                    className={`w-2 h-2 rounded-full ${
-                                      isApolo ? "bg-red-500" : isOverts ? "bg-amber-500" : "bg-primary"
-                                    }`}
-                                  />
-                                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
-                                    <Tag className="w-3.5 h-3.5 text-primary opacity-80" />
-                                    <span>{lineGroup.lineName}</span>
-                                  </h3>
-                                </div>
-
-                                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-background/80 text-muted-foreground border border-border/60 shadow-2xs">
-                                  {lineGroup.products.length} {lineGroup.products.length === 1 ? "producto" : "productos"}
-                                </span>
-                              </div>
-
-                              {/* PRODUCTOS DE ESTA LÍNEA */}
-                              <div data-catalog-grid className={catalogGridClass}>
-                                {lineGroup.products.map((product) => (
-                                  <ProductCard key={product.id} product={product} />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                // VISTA CUANDO SE FILTRA POR UNA SOLA MARCA O BÚSQUEDA (TAMBIÉN CON SUBTÍTULOS POR LÍNEA)
-                <div className="space-y-8">
-                  {groupProductsByLine(pagedProducts).map((lineGroup) => (
-                    <div key={lineGroup.lineName} className="space-y-4">
-                      {/* SUBTÍTULO DE LÍNEA DE PRODUCTO */}
-                      <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-card/60 backdrop-blur-xs border border-border/60 shadow-2xs">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-2 h-2 rounded-full bg-primary" />
-                          <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-foreground flex items-center gap-2">
-                            <Tag className="w-3.5 h-3.5 text-primary opacity-80" />
-                            <span>{lineGroup.lineName}</span>
-                          </h3>
-                        </div>
-
-                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-background/80 text-muted-foreground border border-border/60 shadow-2xs">
-                          {lineGroup.products.length} {lineGroup.products.length === 1 ? "producto" : "productos"}
-                        </span>
-                      </div>
-
-                      {/* PRODUCTOS DE ESTA LÍNEA */}
-                      <div data-catalog-grid className={catalogGridClass}>
-                        {lineGroup.products.map((product) => (
-                          <ProductCard key={product.id} product={product} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              // ESTADO VACÍO ELEGANTE
-              <div className="bg-card border border-border rounded-2xl py-16 px-6 text-center shadow-xs">
-                <div className="max-w-md mx-auto space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
-                    <Search className="h-8 w-8" />
-                  </div>
-                  <h3 className="text-lg font-bold text-foreground">
-                    No encontramos productos con estos filtros
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Intenta cambiar los términos de búsqueda o desactiva algunos
-                    filtros aplicados.
-                  </p>
-                  <button
-                    onClick={clearFilters}
-                    className="px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition shadow-xs text-sm cursor-pointer"
-                  >
-                    Restablecer todos los filtros
-                  </button>
-                </div>
-              </div>
-            )}
-            {filteredProducts.length > 0 ? (
+            <CatalogResults
+              loading={catalogStatus === "loading" && dbProducts.length === 0}
+              viewMode={viewMode}
+              catalogGridClass={catalogGridClass}
+              shouldShowBrandDividers={shouldShowBrandDividers}
+              productsGroupedByBrand={productsGroupedByBrand}
+              lineGroups={groupProductsByLine(pagedProducts)}
+              lineGroupsById={lineGroupsById}
+              onOpenQuickView={openQuickView}
+              onClearFilters={clearFilters}
+              selectedBrand={selectedBrands.length === 1 ? selectedBrands[0] : null}
+            />
+            {filteredProducts.length > 0 && !(catalogStatus === "loading" && dbProducts.length === 0) ? (
               <CatalogPagination
                 page={currentPage}
                 totalPages={totalPages}
                 total={filteredProducts.length}
                 pageSize={PAGE_SIZE}
+                rangeStart={catalogPage.rangeStart}
+                rangeEnd={catalogPage.rangeEnd}
                 onPageChange={goToPage}
               />
             ) : null}
@@ -2602,22 +1968,37 @@ export function Products() {
 
             <div
               data-lenis-prevent
-              className="absolute right-0 top-0 h-full w-[88vw] max-w-sm overflow-y-auto overscroll-contain border-l border-border bg-card shadow-2xl custom-scrollbar"
+              className="absolute right-0 top-0 flex h-full w-[88vw] max-w-sm flex-col overflow-hidden border-l border-border bg-card shadow-2xl"
             >
-              <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-border bg-card">
-                <span className="font-bold text-foreground text-base flex items-center gap-2">
+              <div className="flex shrink-0 items-center justify-between border-b border-border bg-card p-4">
+                <span className="flex items-center gap-2 text-base font-bold text-foreground">
                   <SlidersHorizontal className="h-4 w-4 text-primary" />
-                  Filtros de Catálogo
+                  Filtros
                 </span>
                 <button
+                  type="button"
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="min-h-10 min-w-10 cursor-pointer rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Cerrar filtros"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
-              {renderSidebar(true)}
+              <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-contain">
+                {renderSidebar(true)}
+              </div>
+
+              <div className="shrink-0 border-t border-border bg-card p-4">
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+                >
+                  Ver {filteredProducts.length}{" "}
+                  {filteredProducts.length === 1 ? "resultado" : "resultados"}
+                </button>
+              </div>
             </div>
           </div>
         )}

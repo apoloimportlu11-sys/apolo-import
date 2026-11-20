@@ -21,67 +21,47 @@ const PRODUCT_SELECT_EXTENDED = `${PRODUCT_SELECT}, price, family, attributes, c
 /**
  * Carga el catálogo público desde Supabase + suscripciones realtime/cache.
  */
-export function usePublicCatalog() {
+export function usePublicCatalog(initialProducts: Product[] = []) {
   const supabase = createBrowserSupabase();
-  const [dbProducts, setDbProducts] = useState<Product[]>([]);
-  const [dbInactiveKeys, setDbInactiveKeys] = useState<string[]>([]);
-  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("loading");
+  const [dbProducts, setDbProducts] = useState<Product[]>(initialProducts);
+  const [dbInactiveKeys] = useState<string[]>([]);
+  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>(
+    initialProducts.length > 0 ? "ready" : "loading"
+  );
   const [adminCacheVersion, setAdminCacheVersion] = useState(0);
   const hasWarnedFetchError = useRef(false);
-  const lastGoodSupabaseProducts = useRef<Product[]>([]);
+  const lastGoodSupabaseProducts = useRef<Product[]>(initialProducts);
 
   const fetchDbProducts = useCallback(async () => {
     const hadProducts = lastGoodSupabaseProducts.current.length > 0;
     try {
-      // Solo activos, en páginas de 200 (menos payload que un select completo).
-      const pageSize = 200;
-      const activeRows: Record<string, unknown>[] = [];
+      // Una sola lectura de activos. Los inactivos no se descargan: no se muestran.
       let extendedSelect = true;
-      const loadPage = async (columns: string, from: number, to: number) => {
+      const loadActive = async (columns: string) => {
         const result = await supabase
           .from("products")
           .select(columns)
           .eq("is_active", true)
           .order("sort_order", { ascending: true })
           .order("name", { ascending: true })
-          .range(from, to);
+          .limit(1000);
         return result as unknown as {
           data: Record<string, unknown>[] | null;
           error: { message: string } | null;
         };
       };
-      for (let from = 0; ; from += pageSize) {
-        const to = from + pageSize - 1;
-        let { data, error } = await loadPage(
-          extendedSelect ? PRODUCT_SELECT_EXTENDED : PRODUCT_SELECT,
-          from,
-          to
-        );
-        if (error && extendedSelect) {
-          extendedSelect = false;
-          const fallback = await loadPage(PRODUCT_SELECT, from, to);
-          data = fallback.data;
-          error = fallback.error;
-        }
-        if (error) throw error;
-        const chunk = data || [];
-        activeRows.push(...chunk);
-        if (chunk.length < pageSize) break;
+      let { data, error } = await loadActive(
+        extendedSelect ? PRODUCT_SELECT_EXTENDED : PRODUCT_SELECT
+      );
+      if (error && extendedSelect) {
+        extendedSelect = false;
+        const fallback = await loadActive(PRODUCT_SELECT);
+        data = fallback.data;
+        error = fallback.error;
       }
+      if (error) throw error;
 
-      // Claves inactivas ligeras (para ocultar ítems del catálogo estático).
-      const { data: inactiveData } = await supabase
-        .from("products")
-        .select("id, slug")
-        .eq("is_active", false);
-      const inactiveKeys: string[] = [];
-      (inactiveData || []).forEach((item) => {
-        if (item.id) inactiveKeys.push(String(item.id));
-        if (item.slug) inactiveKeys.push(String(item.slug));
-      });
-      setDbInactiveKeys(inactiveKeys);
-
-      lastGoodSupabaseProducts.current = activeRows.map((row) => mapRowToProduct(row));
+      lastGoodSupabaseProducts.current = (data || []).map((row) => mapRowToProduct(row));
       setCatalogStatus("ready");
     } catch (e) {
       console.error("Error fetching db products:", e);

@@ -24,6 +24,13 @@ export function isOfficialBrand(brand?: string | null): boolean {
   return (OFFICIAL_BRANDS as readonly string[]).includes(key);
 }
 
+/** Apolo, Overts y Valtrom primero; el resto comparte el mismo rango. */
+export function officialBrandRank(brand?: string | null): number {
+  const key = String(brand || "").trim().toLowerCase();
+  const index = (OFFICIAL_BRANDS as readonly string[]).indexOf(key);
+  return index === -1 ? OFFICIAL_BRANDS.length : index;
+}
+
 /** Ruta del logo si la marca es Apolo, Overts o Valtrom; si no, null. */
 export function getOfficialBrandLogo(brand?: string | null): string | null {
   const key = String(brand || "").trim().toLowerCase();

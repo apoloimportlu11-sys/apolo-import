@@ -288,13 +288,13 @@ async function patchProducts(products, brandIdByName) {
 
 async function seedLineGroupsPage() {
   const DEFAULT_LINE_GROUPS = [
-    { id: "motos-4t-2t", name: "Motos 4T", sort_order: 1, is_active: true },
-    { id: "aceites-para-motores-gasolineros", name: "Aceites para Motores Gasolineros", sort_order: 2, is_active: true },
-    { id: "aceites-diesel-petroleros", name: "Aceites Diésel / Petroleros", sort_order: 3, is_active: true },
-    { id: "transmision-y-diferencial", name: "Transmisión y Diferencial", sort_order: 4, is_active: true },
-    { id: "fluidos-hidraulicos", name: "Fluidos Hidráulicos", sort_order: 5, is_active: true },
-    { id: "grasas-pote", name: "Grasas - Pote", sort_order: 6, is_active: true },
-    { id: "grasas-y-lubricantes-de-chasis", name: "Grasas y Lubricantes de Chasis", sort_order: 7, is_active: true },
+    { id: "grasas-pote", name: "Grasas - Pote", sort_order: 1, is_active: true },
+    { id: "grasas-y-lubricantes-de-chasis", name: "Grasas y Lubricantes de Chasis", sort_order: 2, is_active: true },
+    { id: "motos-4t-2t", name: "Motos 4T", sort_order: 3, is_active: true },
+    { id: "aceites-para-motores-gasolineros", name: "Aceites para Motores Gasolineros", sort_order: 4, is_active: true },
+    { id: "aceites-diesel-petroleros", name: "Aceites Diésel / Petroleros", sort_order: 5, is_active: true },
+    { id: "transmision-y-diferencial", name: "Transmisión y Diferencial", sort_order: 6, is_active: true },
+    { id: "fluidos-hidraulicos", name: "Fluidos Hidráulicos", sort_order: 7, is_active: true },
     { id: "liquidos-de-freno-y-direccion", name: "Líquidos de Freno y Dirección", sort_order: 8, is_active: true },
     { id: "refrigerantes-y-coolant", name: "Refrigerantes y Coolant", sort_order: 9, is_active: true },
     { id: "siliconas-y-formadores-de-juntas", name: "Siliconas y Formadores de Juntas", sort_order: 10, is_active: true },

@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
 import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   Image as ImageIcon,
   Loader2,
@@ -25,6 +28,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import {
+  CANONICAL_BRANDS,
+  isCanonicalBrandName,
+} from "@/lib/catalog/canonical-brands";
 
 export interface BrandItem {
   id: string;
@@ -38,216 +45,21 @@ export interface BrandItem {
 }
 
 const STORAGE_KEY = "apolo_admin_brands_cache";
+const PAGE_SIZE_OPTIONS = [10, 20] as const;
 
-const DEFAULT_BRANDS: BrandItem[] = [
-  {
-    id: "brand-apolo",
-    name: "Apolo",
-    slug: "apolo",
-    logo_url: "/images/logoApolo.png",
-    description: "Línea propia oficial de lubricantes de alto rendimiento para motores a gasolina, diésel, transmisiones e industria.",
-    is_active: true,
-    created_at: "2024-01-01T00:00:00.000Z",
-  },
-  {
-    id: "brand-overts",
-    name: "Overts",
-    slug: "overts",
-    logo_url: "/images/logo overts.png",
-    description: "Línea especializada de lubricantes, grasas, refrigerantes y fluidos automotrices Overts.",
-    is_active: true,
-    created_at: "2024-01-02T00:00:00.000Z",
-  },
-  {
-    id: "brand-valtrom",
-    name: "Valtrom",
-    slug: "valtrom",
-    logo_url: "/images/logo valtrom ter.png",
-    description: "Línea oficial de repuestos automotrices, autopartes y componentes de alta durabilidad Valtrom.",
-    is_active: true,
-    created_at: "2024-01-03T00:00:00.000Z",
-  },
-  {
-    id: "brand-3bsi",
-    name: "3BSI",
-    slug: "3bsi",
-    logo_url: "/images/about/marcas/3bsi.png",
-    description: "Línea de lubricantes y fluidos automotrices de alta tecnología y rendimiento.",
-    is_active: true,
-    created_at: "2024-01-03T00:00:00.000Z",
-  },
-  {
-    id: "brand-amalie",
-    name: "Amalie",
-    slug: "amalie",
-    logo_url: "/images/about/marcas/amalie.png",
-    description: "Aceites sintéticos y semi-sintéticos de origen estadounidense para motores de alta exigencia.",
-    is_active: true,
-    created_at: "2024-01-04T00:00:00.000Z",
-  },
-  {
-    id: "brand-blp",
-    name: "BLP",
-    slug: "blp",
-    logo_url: "/images/about/marcas/blp.svg",
-    description: "Soluciones automotrices, aditivos y fluidos especializados para sistemas vehiculares.",
-    is_active: true,
-    created_at: "2024-01-05T00:00:00.000Z",
-  },
-  {
-    id: "brand-boil",
-    name: "Boil",
-    slug: "boil",
-    logo_url: "/images/about/marcas/boil.png",
-    description: "Aceites para motocicletas de dos tiempos y fluidos antioxidantes para radiador.",
-    is_active: true,
-    created_at: "2024-01-06T00:00:00.000Z",
-  },
-  {
-    id: "brand-bosch",
-    name: "Bosch",
-    slug: "bosch",
-    logo_url: "/images/about/marcas/bosch.png",
-    description: "Ingeniería y componentes automotrices, filtros y fluidos de máxima confiabilidad.",
-    is_active: true,
-    created_at: "2024-01-07T00:00:00.000Z",
-  },
-  {
-    id: "brand-chevron",
-    name: "Chevron",
-    slug: "chevron",
-    logo_url: "/images/about/marcas/chevron.png",
-    description: "Grasas premium y lubricantes de servicio pesado para transporte e industria.",
-    is_active: true,
-    created_at: "2024-01-08T00:00:00.000Z",
-  },
-  {
-    id: "brand-frenosa",
-    name: "Frenosa",
-    slug: "frenosa",
-    logo_url: "/images/about/marcas/frenosa.png",
-    description: "Líderes en líquidos de frenos DOT 3, DOT 4, DOT 5.1 y componentes de frenado seguro.",
-    is_active: true,
-    created_at: "2024-01-09T00:00:00.000Z",
-  },
-  {
-    id: "brand-honda",
-    name: "Honda",
-    slug: "honda",
-    logo_url: "/images/about/marcas/honda.png",
-    description: "Lubricantes genuinos especializados para motocicletas 4T y motores Honda.",
-    is_active: true,
-    created_at: "2024-01-10T00:00:00.000Z",
-  },
-  {
-    id: "brand-lys-filtros",
-    name: "Lys Filtros",
-    slug: "lys-filtros",
-    logo_url: "/images/about/marcas/lysfiltros.png",
-    description: "Filtros automotrices e industriales de aceite, aire, combustible y cabina.",
-    is_active: true,
-    created_at: "2024-01-11T00:00:00.000Z",
-  },
-  {
-    id: "brand-mann-filter",
-    name: "Mann Filter",
-    slug: "mann-filter",
-    logo_url: "/images/about/marcas/mannfilter.png",
-    description: "Filtración premium alemana de equipo original para máxima protección del motor.",
-    is_active: true,
-    created_at: "2024-01-12T00:00:00.000Z",
-  },
-  {
-    id: "brand-motul",
-    name: "Motul",
-    slug: "motul",
-    logo_url: "/images/about/marcas/motul.png",
-    description: "Lubricantes sintéticos de alto rendimiento y competición con tecnología Ester.",
-    is_active: true,
-    created_at: "2024-01-13T00:00:00.000Z",
-  },
-  {
-    id: "brand-peak",
-    name: "Peak",
-    slug: "peak",
-    logo_url: "/images/about/marcas/peak.png",
-    description: "Refrigerantes, anticongelantes y fluidos de enfriamiento de calidad internacional.",
-    is_active: true,
-    created_at: "2024-01-14T00:00:00.000Z",
-  },
-  {
-    id: "brand-prestone",
-    name: "PRESTONE",
-    slug: "prestone",
-    logo_url: "/images/about/marcas/prestone.svg",
-    description: "Refrigerantes de larga duración, anticongelantes universales y protectores de motor.",
-    is_active: true,
-    created_at: "2024-01-15T00:00:00.000Z",
-  },
-  {
-    id: "brand-sakura",
-    name: "Sakura",
-    slug: "sakura",
-    logo_url: "/images/about/marcas/sakura.webp",
-    description: "Línea completa de filtros de servicio pesado, automotrices y maquinaria pesada.",
-    is_active: true,
-    created_at: "2024-01-16T00:00:00.000Z",
-  },
-  {
-    id: "brand-sonax",
-    name: "Sonax",
-    slug: "sonax",
-    logo_url: "/images/about/marcas/sonax.png",
-    description: "Productos líderes para limpieza profesional, estética vehicular y detallado automotriz.",
-    is_active: true,
-    created_at: "2024-01-17T00:00:00.000Z",
-  },
-  {
-    id: "brand-toyota",
-    name: "TOYOTA",
-    slug: "toyota",
-    logo_url: "/images/about/marcas/toyota.svg",
-    description: "Fluidos y aceites genuinos formulados bajo los estrictos estándares de fábrica Toyota.",
-    is_active: true,
-    created_at: "2024-01-18T00:00:00.000Z",
-  },
-  {
-    id: "brand-versachem",
-    name: "Versachem",
-    slug: "versachem",
-    logo_url: "/images/about/marcas/versachem.webp",
-    description: "Siliconas formadoras de juntas RTV, adhesivos automotrices y selladores.",
-    is_active: true,
-    created_at: "2024-01-19T00:00:00.000Z",
-  },
-  {
-    id: "brand-vextrom",
-    name: "Vextrom",
-    slug: "vextrom",
-    logo_url: "/images/about/marcas/vextrom.png",
-    description: "Lubricantes de última generación formulados con aditivos de tecnología avanzada.",
-    is_active: true,
-    created_at: "2024-01-20T00:00:00.000Z",
-  },
-  {
-    id: "brand-wagner",
-    name: "Wagner",
-    slug: "wagner",
-    logo_url: "/images/about/marcas/wagner.webp",
-    description: "Líquidos de freno hidráulicos de alta temperatura y seguridad de frenado.",
-    is_active: true,
-    created_at: "2024-01-21T00:00:00.000Z",
-  },
-  {
-    id: "brand-yamalube",
-    name: "Yamalube",
-    slug: "yamalube",
-    logo_url: "/images/about/marcas/yamalube.png",
-    description: "Aceites y lubricantes genuinos diseñados específicamente para motocicletas Yamaha.",
-    is_active: true,
-    created_at: "2024-01-22T00:00:00.000Z",
-  },
-];
+const DEFAULT_BRANDS: BrandItem[] = CANONICAL_BRANDS.map((brand, index) => ({
+  id: `brand-${brand.slug}`,
+  name: brand.name,
+  slug: brand.slug,
+  logo_url: brand.logo_url,
+  description: brand.description,
+  is_active: true,
+  created_at: `2024-01-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+}));
+
+function brandKey(name: string) {
+  return name.trim().toLowerCase();
+}
 
 function getInitialBrands(): BrandItem[] {
   if (typeof window !== "undefined") {
@@ -256,17 +68,14 @@ function getInitialBrands(): BrandItem[] {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Asegurar que todas las marcas actuales del catálogo estén presentes
-          const existingNames = new Set(parsed.map((b: BrandItem) => b.name?.toLowerCase().trim()));
+          const kept = parsed as BrandItem[];
+          const existing = new Set(kept.map((b) => brandKey(b.name)));
           const missingDefaults = DEFAULT_BRANDS.filter(
-            (def) => !existingNames.has(def.name?.toLowerCase().trim())
+            (def) => !existing.has(brandKey(def.name))
           );
-          if (missingDefaults.length > 0) {
-            const merged = [...parsed, ...missingDefaults];
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-            return merged;
-          }
-          return parsed;
+          const merged = [...kept, ...missingDefaults];
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          return merged;
         }
       }
     } catch (e) {
@@ -287,10 +96,6 @@ function toSlug(value: string) {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
-
-function brandKey(name: string) {
-  return name.trim().toLowerCase();
 }
 
 function LogoField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
@@ -343,6 +148,10 @@ export default function MarcasPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<BrandItem | null>(null);
   const [confirmCatalog, setConfirmCatalog] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [otherPage, setOtherPage] = useState(1);
   const [currentBrand, setCurrentBrand] = useState<Partial<BrandItem>>({
     name: "",
     slug: "",
@@ -566,10 +375,13 @@ export default function MarcasPage() {
   const missingCatalog = DEFAULT_BRANDS.filter(
     (preset) => !brands.some((brand) => brand.slug === preset.slug || brandKey(brand.name) === brandKey(preset.name))
   );
+  const extraCatalog = brands.filter(
+    (brand) => !isCanonicalBrandName(brand.name) && brand.is_active
+  );
 
   function askMissingCatalog() {
-    if (missingCatalog.length === 0) {
-      toast.success("El catálogo ya estaba completo. No se cambió ningún logo.");
+    if (missingCatalog.length === 0 && extraCatalog.length === 0) {
+      toast.success("El catálogo oficial ya está alineado.");
       return;
     }
     setConfirmCatalog(true);
@@ -577,9 +389,10 @@ export default function MarcasPage() {
 
   async function addMissingCatalog() {
     setConfirmCatalog(false);
-    const toastId = toast.loading("Agregando las marcas que faltan…");
+    const toastId = toast.loading("Alineando catálogo de marcas…");
     try {
       let created = 0;
+      let paused = 0;
       for (const preset of DEFAULT_BRANDS) {
         const exists = brands.some((brand) => brand.slug === preset.slug || brandKey(brand.name) === brandKey(preset.name));
         if (exists) continue;
@@ -588,32 +401,173 @@ export default function MarcasPage() {
         if (error) throw error;
         created += 1;
       }
+      for (const brand of brands) {
+        if (isCanonicalBrandName(brand.name) || !brand.is_active) continue;
+        const { error } = await supabase
+          .from("brands")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq("id", brand.id);
+        if (error) throw error;
+        paused += 1;
+      }
       await loadBrands();
       if (realtimeBus) realtimeBus.emit("brands_updated", { synced: true });
-      toast.success(created ? `Se agregaron ${created} marcas.` : "El catálogo ya estaba completo. No se cambió ningún logo.", { id: toastId });
+      const parts = [
+        created ? `${created} agregadas` : null,
+        paused ? `${paused} pausadas (no oficiales)` : null,
+      ].filter(Boolean);
+      toast.success(parts.length ? `Catálogo alineado: ${parts.join(", ")}.` : "El catálogo oficial ya estaba alineado.", { id: toastId });
     } catch (err: unknown) {
-      toast.error("No se completó el catálogo", { id: toastId, description: err instanceof Error ? err.message : "Error desconocido" });
+      toast.error("No se alineó el catálogo", { id: toastId, description: err instanceof Error ? err.message : "Error desconocido" });
     }
   }
 
-  const missingLogo = brands.filter((brand) => !brand.logo_url).length;
-  const paused = brands.filter((brand) => !brand.is_active).length;
+  const missingLogo = brands.filter((brand) => !brand.logo_url && isCanonicalBrandName(brand.name)).length;
+  const paused = brands.filter((brand) => !brand.is_active && isCanonicalBrandName(brand.name)).length;
+  const principalCount = brands.filter((brand) => isCanonicalBrandName(brand.name)).length;
+  const otherCount = brands.filter((brand) => !isCanonicalBrandName(brand.name)).length;
 
-  const filteredBrands = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    return brands.filter((brand) => {
+  const matchesFilters = useCallback(
+    (brand: BrandItem) => {
       if (statusFilter === "active" && !brand.is_active) return false;
       if (statusFilter === "paused" && brand.is_active) return false;
       if (statusFilter === "missing-logo" && brand.logo_url) return false;
+      const query = searchQuery.toLowerCase().trim();
       if (!query) return true;
-      return brand.name.toLowerCase().includes(query) || brand.slug.toLowerCase().includes(query) || Boolean(brand.description?.toLowerCase().includes(query));
-    });
-  }, [brands, searchQuery, statusFilter]);
+      return (
+        brand.name.toLowerCase().includes(query) ||
+        brand.slug.toLowerCase().includes(query) ||
+        Boolean(brand.description?.toLowerCase().includes(query))
+      );
+    },
+    [searchQuery, statusFilter]
+  );
+
+  const principalBrands = useMemo(() => {
+    const order = new Map(CANONICAL_BRANDS.map((brand, index) => [brand.slug, index]));
+    return brands
+      .filter((brand) => isCanonicalBrandName(brand.name) && matchesFilters(brand))
+      .sort((a, b) => {
+        const ia = order.get(a.slug) ?? order.get(toSlug(a.name)) ?? 999;
+        const ib = order.get(b.slug) ?? order.get(toSlug(b.name)) ?? 999;
+        if (ia !== ib) return ia - ib;
+        return a.name.localeCompare(b.name, "es");
+      });
+  }, [brands, matchesFilters]);
+
+  const otherBrands = useMemo(
+    () =>
+      brands
+        .filter((brand) => !isCanonicalBrandName(brand.name) && matchesFilters(brand))
+        .sort((a, b) => a.name.localeCompare(b.name, "es")),
+    [brands, matchesFilters]
+  );
+
+  const principalPages = Math.max(1, Math.ceil(principalBrands.length / pageSize));
+  const safePage = Math.min(page, principalPages);
+  const principalPageRows = principalBrands.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
+  const principalFrom =
+    principalBrands.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const principalTo = Math.min(safePage * pageSize, principalBrands.length);
+
+  const otherPages = Math.max(1, Math.ceil(otherBrands.length / pageSize));
+  const safeOtherPage = Math.min(otherPage, otherPages);
+  const otherPageRows = otherBrands.slice(
+    (safeOtherPage - 1) * pageSize,
+    safeOtherPage * pageSize
+  );
+
+  useEffect(() => {
+    setPage(1);
+    setOtherPage(1);
+  }, [searchQuery, statusFilter, pageSize]);
 
   const catalogPreset = DEFAULT_BRANDS.find(
     (preset) => preset.slug === currentBrand.slug || brandKey(preset.name) === brandKey(currentBrand.name || "")
   );
   const deleteCount = pendingDelete ? productCounts[brandKey(pendingDelete.name)] || 0 : 0;
+
+  function renderBrandCard(brand: BrandItem, compact = false) {
+    const count = productCounts[brandKey(brand.name)] || 0;
+    return (
+      <li
+        key={brand.id}
+        className={`flex gap-3 rounded-2xl border border-white/10 bg-[#141414] p-3 ${compact ? "opacity-90" : ""}`}
+      >
+        <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-black">
+          {brand.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={encodeURI(brand.logo_url)} alt="" className="max-h-full max-w-full object-contain" />
+          ) : (
+            <ImageIcon className="size-5 text-zinc-400" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="truncate font-heading text-lg text-white">{brand.name}</h2>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+                brand.is_active
+                  ? "bg-emerald-500/15 text-emerald-300"
+                  : "bg-white/10 text-zinc-300"
+              }`}
+            >
+              {brand.is_active ? "En la lista" : "Pausada"}
+            </span>
+          </div>
+          <p className="mt-1 line-clamp-2 text-sm text-zinc-300">
+            {brand.description || "Sin descripción"}
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">
+            {count === 0
+              ? "Ningún producto usa este nombre."
+              : count === 1
+                ? "1 producto usa este nombre."
+                : `${count} productos usan este nombre.`}
+            {!brand.logo_url ? " Falta el logo." : ""}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => openEditModal(brand)}
+              className="h-8 rounded-full border border-white/15 px-3 text-sm text-zinc-100"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleStatus(brand)}
+              className="h-8 rounded-full border border-white/15 px-3 text-sm text-zinc-100"
+            >
+              {brand.is_active ? "Pausar" : "Incluir"}
+            </button>
+            {count > 0 && (
+              <a
+                href={`/productos?brand=${encodeURIComponent(brand.name)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 px-3 text-sm text-zinc-100"
+              >
+                Ver productos
+                <ExternalLink className="size-3.5" />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setPendingDelete(brand)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 px-3 text-sm text-zinc-100"
+            >
+              <Trash2 className="size-3.5" />
+              Quitar
+            </button>
+          </div>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
@@ -628,12 +582,19 @@ export default function MarcasPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">{brands.length} en total</span>
+        <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">
+          {principalCount} principales
+        </span>
+        {otherCount > 0 && (
+          <span className="rounded-full bg-amber-500/15 px-3 py-1.5 text-sm text-amber-200">
+            {otherCount} otras
+          </span>
+        )}
         <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">{paused} pausadas</span>
         <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-zinc-100">{missingLogo} sin logo</span>
         <div className="ml-auto flex flex-wrap gap-2">
           <button type="button" onClick={askMissingCatalog} className="h-10 rounded-full border border-white/15 px-4 text-sm text-zinc-100">
-            Completar catálogo
+            Alinear catálogo
           </button>
           <button type="button" onClick={openCreateModal} className="inline-flex h-10 items-center gap-2 rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black">
             <Plus className="size-4" />
@@ -680,7 +641,7 @@ export default function MarcasPage() {
           <Loader2 className="size-5 animate-spin text-[#C7940A]" />
           Cargando las marcas guardadas.
         </div>
-      ) : filteredBrands.length === 0 ? (
+      ) : principalBrands.length === 0 && otherBrands.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-[#141414] px-5 py-12 text-center">
           <p className="font-heading text-xl text-white">No hay marcas con ese criterio</p>
           <button type="button" onClick={openCreateModal} className="mt-4 h-10 rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black">
@@ -688,54 +649,105 @@ export default function MarcasPage() {
           </button>
         </div>
       ) : (
-        <ul className="grid gap-3 lg:grid-cols-2">
-          {filteredBrands.map((brand) => {
-            const count = productCounts[brandKey(brand.name)] || 0;
-            return (
-              <li key={brand.id} className="flex gap-3 rounded-2xl border border-white/10 bg-[#141414] p-3">
-                <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-black">
-                  {brand.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={encodeURI(brand.logo_url)} alt="" className="max-h-full max-w-full object-contain" />
-                  ) : (
-                    <ImageIcon className="size-5 text-zinc-400" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="truncate font-heading text-lg text-white">{brand.name}</h2>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${brand.is_active ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-zinc-300"}`}>
-                      {brand.is_active ? "En la lista" : "Pausada"}
-                    </span>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-zinc-300">{brand.description || "Sin descripción"}</p>
-                  <p className="mt-1 text-xs text-zinc-400">
-                    {count === 0 ? "Ningún producto usa este nombre." : count === 1 ? "1 producto usa este nombre." : `${count} productos usan este nombre.`}
-                    {!brand.logo_url ? " Falta el logo." : ""}
+        <div className="flex flex-col gap-6">
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="font-heading text-xl text-white">Marcas principales</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Catálogo oficial (~{CANONICAL_BRANDS.length}). Estas son las que salen en la tienda.
+                </p>
+              </div>
+              {principalBrands.length > 0 && (
+                <BrandPager
+                  page={safePage}
+                  pageCount={principalPages}
+                  from={principalFrom}
+                  to={principalTo}
+                  total={principalBrands.length}
+                  pageSize={pageSize}
+                  onPage={setPage}
+                  onPageSize={setPageSize}
+                />
+              )}
+            </div>
+
+            {principalBrands.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-[#141414]/60 px-5 py-8 text-center text-sm text-zinc-400">
+                Ninguna marca principal coincide con el filtro.
+              </div>
+            ) : (
+              <>
+                <ul className="grid gap-3 lg:grid-cols-2">
+                  {principalPageRows.map((brand) => renderBrandCard(brand))}
+                </ul>
+                {principalPages > 1 && (
+                  <BrandPager
+                    page={safePage}
+                    pageCount={principalPages}
+                    from={principalFrom}
+                    to={principalTo}
+                    total={principalBrands.length}
+                    pageSize={pageSize}
+                    onPage={setPage}
+                    onPageSize={setPageSize}
+                  />
+                )}
+              </>
+            )}
+          </section>
+
+          {(otherCount > 0 || otherBrands.length > 0) && (
+            <section className="rounded-2xl border border-white/10 bg-[#101010]">
+              <button
+                type="button"
+                onClick={() => setOtherOpen((open) => !open)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                aria-expanded={otherOpen}
+              >
+                <div>
+                  <p className="font-heading text-lg text-white">Otras marcas</p>
+                  <p className="mt-0.5 text-sm text-zinc-400">
+                    {otherBrands.length === 0
+                      ? "Ninguna coincide con el filtro."
+                      : `${otherBrands.length} fuera del catálogo oficial. No aparecen como chips en la tienda.`}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => openEditModal(brand)} className="h-8 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
-                      Editar
-                    </button>
-                    <button type="button" onClick={() => void toggleStatus(brand)} className="h-8 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
-                      {brand.is_active ? "Pausar" : "Incluir"}
-                    </button>
-                    {count > 0 && (
-                      <a href={`/productos?brand=${encodeURIComponent(brand.name)}`} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
-                        Ver productos
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
-                    <button type="button" onClick={() => setPendingDelete(brand)} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
-                      <Trash2 className="size-3.5" />
-                      Quitar
-                    </button>
-                  </div>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
+                <ChevronDown
+                  className={`size-5 shrink-0 text-zinc-400 transition-transform ${otherOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {otherOpen && otherBrands.length > 0 && (
+                <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-4">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <BrandPager
+                      page={safeOtherPage}
+                      pageCount={otherPages}
+                      from={
+                        otherBrands.length === 0
+                          ? 0
+                          : (safeOtherPage - 1) * pageSize + 1
+                      }
+                      to={Math.min(safeOtherPage * pageSize, otherBrands.length)}
+                      total={otherBrands.length}
+                      pageSize={pageSize}
+                      onPage={setOtherPage}
+                      onPageSize={setPageSize}
+                      compact
+                    />
+                  </div>
+                  <ul className="grid gap-3 lg:grid-cols-2">
+                    {otherPageRows.map((brand) => renderBrandCard(brand, true))}
+                  </ul>
+                  <p className="text-xs text-zinc-500">
+                    Usa «Alinear catálogo» para pausarlas o quítalas si ya no las necesitas.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
       )}
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -810,15 +822,21 @@ export default function MarcasPage() {
       <AlertDialog open={confirmCatalog} onOpenChange={setConfirmCatalog}>
         <AlertDialogContent className="border-white/10 bg-[#141414] text-zinc-100">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Agregar {missingCatalog.length === 1 ? "1 marca" : `${missingCatalog.length} marcas`}</AlertDialogTitle>
+            <AlertDialogTitle className="text-white">Alinear catálogo oficial</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-300">
-              Se agregan {missingCatalog.map((preset) => preset.name).join(", ")}. Las marcas que ya están no cambian de logo ni de nombre.
+              {missingCatalog.length > 0
+                ? `Se agregarán ${missingCatalog.length} marca${missingCatalog.length === 1 ? "" : "s"} oficial${missingCatalog.length === 1 ? "" : "es"}. `
+                : ""}
+              {extraCatalog.length > 0
+                ? `Se pausarán ${extraCatalog.length} marca${extraCatalog.length === 1 ? "" : "s"} que no están en la lista oficial (Motul, Sonax, etc.). `
+                : ""}
+              Los productos existentes no se borran.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-white/15 bg-transparent text-zinc-100">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => void addMissingCatalog()} className="bg-[#C7940A] text-black hover:bg-[#E4C36A]">
-              Agregar
+              Alinear
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -842,6 +860,78 @@ export default function MarcasPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function BrandPager({
+  page,
+  pageCount,
+  from,
+  to,
+  total,
+  pageSize,
+  onPage,
+  onPageSize,
+  compact = false,
+}: {
+  page: number;
+  pageCount: number;
+  from: number;
+  to: number;
+  total: number;
+  pageSize: number;
+  onPage: (page: number) => void;
+  onPageSize: (size: (typeof PAGE_SIZE_OPTIONS)[number]) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-2 ${compact ? "" : "sm:justify-end"}`}
+    >
+      <p className="text-sm text-zinc-400">
+        {from}–{to} de {total}
+      </p>
+      <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+        Por página
+        <select
+          value={pageSize}
+          onChange={(event) =>
+            onPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+          }
+          aria-label="Marcas por página"
+          className="h-8 rounded-full border border-white/15 bg-black/40 px-2 text-sm text-zinc-100"
+        >
+          {PAGE_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPage(page - 1)}
+          disabled={page <= 1}
+          aria-label="Página anterior"
+          className="grid size-8 place-items-center rounded-full border border-white/15 text-zinc-100 disabled:opacity-40"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <span className="min-w-12 text-center text-sm text-zinc-300">
+          {page}/{pageCount}
+        </span>
+        <button
+          type="button"
+          onClick={() => onPage(page + 1)}
+          disabled={page >= pageCount}
+          aria-label="Página siguiente"
+          className="grid size-8 place-items-center rounded-full border border-white/15 text-zinc-100 disabled:opacity-40"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }

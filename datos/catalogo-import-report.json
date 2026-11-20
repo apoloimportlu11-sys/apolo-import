@@ -1,0 +1,546 @@
+{
+  "generado_en": "2026-11-20T17:52:50.056Z",
+  "fuente": "datos/catalogo_apolo_import.json",
+  "excel_usado_como_fuente": false,
+  "productos_en_json": 173,
+  "productos_mapeados": 173,
+  "presentaciones_mapeadas": 252,
+  "sin_presentacion": 32,
+  "marca_no_especificada": 3,
+  "precios_importados": 0,
+  "imagenes_reales": 0,
+  "imagen_placeholder": "/imagen-no-encontrada.svg",
+  "marcas": [
+    {
+      "nombre": "Overts",
+      "cantidad": 51
+    },
+    {
+      "nombre": "3BSI",
+      "cantidad": 21
+    },
+    {
+      "nombre": "Prestone",
+      "cantidad": 16
+    },
+    {
+      "nombre": "Amalie",
+      "cantidad": 15
+    },
+    {
+      "nombre": "Mann Filter",
+      "cantidad": 11
+    },
+    {
+      "nombre": "Sakura",
+      "cantidad": 11
+    },
+    {
+      "nombre": "Lys Filtros",
+      "cantidad": 10
+    },
+    {
+      "nombre": "Apolo",
+      "cantidad": 8
+    },
+    {
+      "nombre": "Frenosa",
+      "cantidad": 4
+    },
+    {
+      "nombre": "Peak",
+      "cantidad": 4
+    },
+    {
+      "nombre": "Bosch",
+      "cantidad": 3
+    },
+    {
+      "nombre": "No especificada en catálogo",
+      "cantidad": 3
+    },
+    {
+      "nombre": "Wagner",
+      "cantidad": 3
+    },
+    {
+      "nombre": "Yamalube",
+      "cantidad": 3
+    },
+    {
+      "nombre": "Boil",
+      "cantidad": 2
+    },
+    {
+      "nombre": "Chevron",
+      "cantidad": 2
+    },
+    {
+      "nombre": "Honda",
+      "cantidad": 2
+    },
+    {
+      "nombre": "BLP",
+      "cantidad": 1
+    },
+    {
+      "nombre": "GREEN 32",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Toyota",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Versachem",
+      "cantidad": 1
+    }
+  ],
+  "categorias": [
+    {
+      "nombre": "Filtros",
+      "cantidad": 32
+    },
+    {
+      "nombre": "Refrigerantes",
+      "cantidad": 23
+    },
+    {
+      "nombre": "Grasas automotrices",
+      "cantidad": 15
+    },
+    {
+      "nombre": "Limpieza y mantenimiento",
+      "cantidad": 13
+    },
+    {
+      "nombre": "Líquido de frenos",
+      "cantidad": 13
+    },
+    {
+      "nombre": "Lubricantes de transmisión",
+      "cantidad": 12
+    },
+    {
+      "nombre": "Aceites para motocicletas",
+      "cantidad": 12
+    },
+    {
+      "nombre": "Aceites para motor",
+      "cantidad": 11
+    },
+    {
+      "nombre": "Limpieza y desengrase",
+      "cantidad": 9
+    },
+    {
+      "nombre": "Aceites para motor gasolina",
+      "cantidad": 7
+    },
+    {
+      "nombre": "Limpieza y cuidado automotriz",
+      "cantidad": 7
+    },
+    {
+      "nombre": "Aceites para motor diésel",
+      "cantidad": 5
+    },
+    {
+      "nombre": "Aceites monogrado",
+      "cantidad": 3
+    },
+    {
+      "nombre": "Urea / DEF",
+      "cantidad": 2
+    },
+    {
+      "nombre": "Aceites monogrado diésel",
+      "cantidad": 2
+    },
+    {
+      "nombre": "Grasas y productos dieléctricos",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Aditivos y refrigerantes",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Aceites hidráulicos",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Fluidos hidráulicos y transmisión",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Fluidos y mantenimiento",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Lubricantes industriales",
+      "cantidad": 1
+    },
+    {
+      "nombre": "Selladores y siliconas",
+      "cantidad": 1
+    }
+  ],
+  "motivos": {
+    "presentacion_sin_cantidad": 6,
+    "sin_presentacion": 32,
+    "marca_no_especificada": 3,
+    "nombre_repetido_conservado": 1
+  },
+  "productos_con_avisos": [
+    {
+      "id": "cat-amalie-blue-hi-temp-n-2",
+      "nombre": "Blue Hi-Temp Nº 2",
+      "marca": "AMALIE",
+      "motivos": [
+        "presentacion_sin_cantidad:1 Lb / 16 oz"
+      ]
+    },
+    {
+      "id": "cat-amalie-heavy-duty-wheel",
+      "nombre": "Heavy Duty Wheel",
+      "marca": "AMALIE",
+      "motivos": [
+        "presentacion_sin_cantidad:1 Lb / 16 oz"
+      ]
+    },
+    {
+      "id": "cat-amalie-pro-tac-plus",
+      "nombre": "Pro Tac Plus",
+      "marca": "AMALIE",
+      "motivos": [
+        "presentacion_sin_cantidad:1 Lb / 16 oz"
+      ]
+    },
+    {
+      "id": "cat-apolo-grasa-calcio-rojo-2",
+      "nombre": "Grasa calcio rojo 2",
+      "marca": "Apolo Lubricants",
+      "motivos": [
+        "presentacion_sin_cantidad:1 Lb / 16 oz"
+      ]
+    },
+    {
+      "id": "cat-apolo-grasa-litio-azul-2",
+      "nombre": "Grasa litio azul 2",
+      "marca": "Apolo Lubricants",
+      "motivos": [
+        "presentacion_sin_cantidad:1 Lb / 16 oz"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aceite-l-1006",
+      "nombre": "Filtro de aceite L-1006",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aceite-l-1200",
+      "nombre": "Filtro de aceite L-1200",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aceite-lf-1616",
+      "nombre": "Filtro de aceite LF-1616",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aceite-lf-3007",
+      "nombre": "Filtro de aceite LF-3007",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aceite-lf-3008",
+      "nombre": "Filtro de aceite LF-3008",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aceite-lf-833",
+      "nombre": "Filtro de aceite LF-833",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aire-afl-9151",
+      "nombre": "Filtro de aire AFL-9151",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-aire-afl-9151g",
+      "nombre": "Filtro de aire AFL-9151G",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-de-gasolina-lfg-120",
+      "nombre": "Filtro de gasolina LFG-120",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-lys-filtros-filtro-diesel-lp-714",
+      "nombre": "Filtro diésel LP-714",
+      "marca": "LYS Filtros",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-aceite-lf-604",
+      "nombre": "Filtro de aceite LF-604",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-aceite-w-1170-7",
+      "nombre": "Filtro de aceite W 1170/7",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-aceite-w-7030",
+      "nombre": "Filtro de aceite W 7030",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-aceite-w-719-27",
+      "nombre": "Filtro de aceite W 719/27",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-aceite-w-928-81",
+      "nombre": "Filtro de aceite W 928/81",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-aire-c15-124-1",
+      "nombre": "Filtro de aire C15 124/1",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-gasolina-9f0014p",
+      "nombre": "Filtro de gasolina 9F0014P",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-gasolina-wk-69",
+      "nombre": "Filtro de gasolina WK 69",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-de-gasolina-wk-853-3x",
+      "nombre": "Filtro de gasolina WK 853/3x",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-diesel-wk-1060",
+      "nombre": "Filtro diésel WK 1060",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-mann-filter-filtro-diesel-wk-853-3x",
+      "nombre": "Filtro diésel WK 853/3x",
+      "marca": "MANN-FILTER",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-no-especificada-en-catalogo-grasas-nacionales-n-2",
+      "nombre": "Grasas nacionales N° 2",
+      "marca": "No especificada en catálogo",
+      "motivos": [
+        "marca_no_especificada"
+      ]
+    },
+    {
+      "id": "cat-no-especificada-en-catalogo-grasas-nacionales-n-2-5",
+      "nombre": "Grasas nacionales N° 2.5",
+      "marca": "No especificada en catálogo",
+      "motivos": [
+        "marca_no_especificada"
+      ]
+    },
+    {
+      "id": "cat-no-especificada-en-catalogo-grasas-nacionales-n-3",
+      "nombre": "Grasas nacionales N° 3",
+      "marca": "No especificada en catálogo",
+      "motivos": [
+        "marca_no_especificada"
+      ]
+    },
+    {
+      "id": "cat-overts-aceite-motor-gasolina-20w50-synthetic-blend-segun-et",
+      "nombre": "Aceite motor gasolina 20W50",
+      "marca": "OVERTS",
+      "motivos": [
+        "nombre_repetido_conservado"
+      ]
+    },
+    {
+      "id": "cat-overts-brillo-total-multiuso",
+      "nombre": "Brillo total multiuso",
+      "marca": "OVERTS",
+      "motivos": [
+        "presentacion_sin_cantidad:1 GL"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-aceite-c-1125",
+      "nombre": "Filtro de aceite C-1125",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-aceite-c-1821",
+      "nombre": "Filtro de aceite C-1821",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-aire-a-2709s",
+      "nombre": "Filtro de aire A-2709S",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-aire-a-33450",
+      "nombre": "Filtro de aire A-33450",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-aire-a-5431",
+      "nombre": "Filtro de aire A-5431",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-cabina-cac-65220",
+      "nombre": "Filtro de cabina CAC-65220",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-linea-ford-super-duty-f-450",
+      "nombre": "Filtro de línea Ford Super Duty F-450",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-de-motor-4-cilindros-l4-2017",
+      "nombre": "Filtro de motor 4 cilindros L4 -2017",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-diesel-fc-1310",
+      "nombre": "Filtro diésel FC-1310",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-diesel-fc-1511",
+      "nombre": "Filtro diésel FC-1511",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    },
+    {
+      "id": "cat-sakura-filtro-diesel-fc-5704",
+      "nombre": "Filtro diésel FC-5704",
+      "marca": "SAKURA",
+      "motivos": [
+        "sin_presentacion"
+      ]
+    }
+  ],
+  "productos_upsert": 173,
+  "productos_fallidos": [],
+  "presentaciones_insertadas": 252,
+  "presentaciones_fallidas": [],
+  "productos_cat_en_db": 173,
+  "presentaciones_cat_en_db": 252,
+  "estado": "publicado",
+  "importados": 173,
+  "activados": 173,
+  "desactivados": 0,
+  "activos_fuera_del_json": 0,
+  "omitidos": 0,
+  "pendientes": 0
+}

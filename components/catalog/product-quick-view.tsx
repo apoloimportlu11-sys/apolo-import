@@ -36,7 +36,7 @@ export function ProductQuickView({
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
         data-lenis-prevent
-        className="flex max-h-[min(82vh,560px)] w-[calc(100%-1.25rem)] flex-col gap-0 overflow-hidden overscroll-contain rounded-2xl p-0 sm:max-w-[44rem] [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-background/90 [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:shadow-sm [&_[data-slot=dialog-close]]:opacity-100"
+        className="flex max-h-[min(86vh,620px)] w-[calc(100%-1.25rem)] flex-col gap-0 overflow-hidden overscroll-contain rounded-2xl p-0 sm:max-w-[54rem] [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-background/90 [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:shadow-sm [&_[data-slot=dialog-close]]:opacity-100"
       >
         {product ? (
           <>

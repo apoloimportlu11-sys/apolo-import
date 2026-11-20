@@ -14,10 +14,12 @@ export type PublicBrand = {
 /**
  * Marcas activas desde Supabase (fuente de verdad del admin).
  */
-export function usePublicBrands() {
+export function usePublicBrands(initialBrands: PublicBrand[] = []) {
   const supabase = createBrowserSupabase();
-  const [brands, setBrands] = useState<PublicBrand[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [brands, setBrands] = useState<PublicBrand[]>(initialBrands);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    initialBrands.length > 0 ? "ready" : "loading"
+  );
 
   const fetchBrands = useCallback(async () => {
     try {

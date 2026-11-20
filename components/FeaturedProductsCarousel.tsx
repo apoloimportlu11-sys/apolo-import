@@ -20,6 +20,7 @@ import { products as BASE_PRODUCTS } from "@/lib/products-data";
 import { useQuote } from "@/lib/quote-context";
 import { useHomeContent } from "@/lib/home-content";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
+import { defaultCatalogLine } from "@/lib/product-grouping";
 
 const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v4";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
@@ -130,7 +131,6 @@ export function FeaturedProductsCarousel() {
 
   const [mounted, setMounted] = useState(false);
   const [dbFeatured, setDbFeatured] = useState<FeaturedProductItem[]>([]);
-  const [dbInactiveKeys, setDbInactiveKeys] = useState<string[]>([]);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
   const [cacheVersion, setCacheVersion] = useState(0);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
@@ -184,7 +184,9 @@ export function FeaturedProductsCarousel() {
           slug: item.slug,
           code: item.slug,
           brand: item.brand || "Apolo",
-          line: item.short_description || "Apolo Premium",
+          line:
+            item.short_description
+            || defaultCatalogLine(item.brand || "Apolo", null),
           presentation: item.presentation || "",
           description: item.description || item.short_description || "",
           image: item.image_url || "",
@@ -195,21 +197,6 @@ export function FeaturedProductsCarousel() {
           category_id: item.category_id,
         }));
         setDbFeatured(formatted);
-      }
-
-      // 2. Fetch all inactive products to ensure carousel excludes them immediately
-      const { data: inactiveData } = await supabase
-        .from("products")
-        .select("id, slug")
-        .eq("is_active", false);
-
-      if (inactiveData) {
-        const keys: string[] = [];
-        inactiveData.forEach((it) => {
-          if (it.id) keys.push(String(it.id));
-          if (it.slug) keys.push(String(it.slug));
-        });
-        setDbInactiveKeys(keys);
       }
 
       setIsDbLoaded(true);
@@ -278,7 +265,6 @@ export function FeaturedProductsCarousel() {
     void cacheVersion; // invalida memo tras ediciones admin en localStorage
     const deletedSet = new Set<string>();
     KNOWN_DELETED.forEach((k) => deletedSet.add(normalize(k)));
-    dbInactiveKeys.forEach((k) => deletedSet.add(normalize(k)));
 
     if (mounted && typeof window !== "undefined") {
       try {
@@ -349,7 +335,7 @@ export function FeaturedProductsCarousel() {
         slug: p.code ? p.code.toLowerCase().replace(/[^a-z0-9]+/g, "-") : p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
         code: p.code,
         brand: p.brand || "Apolo",
-        line: p.line || "Apolo Premium",
+        line: p.line || defaultCatalogLine(p.brand || "Apolo", p.type || null),
         presentation: p.presentation || "",
         description: p.description || "",
         viscosity: p.viscosity || "",
@@ -362,7 +348,7 @@ export function FeaturedProductsCarousel() {
       }));
 
     return uniqueByKey(baseFeatured);
-  }, [mounted, cacheVersion, dbFeatured, dbInactiveKeys, isDbLoaded]);
+  }, [mounted, cacheVersion, dbFeatured, isDbLoaded]);
 
   const baseList = featuredProducts;
 

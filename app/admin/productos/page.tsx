@@ -158,18 +158,18 @@ export default function ProductosPage() {
   const [modalImageUrl, setModalImageUrl] = useState("");
   const [savingImage, setSavingImage] = useState(false);
 
-  // Dynamic Brands State (loads from Supabase, cache & KNOWN_BRANDS)
+  // Dynamic Brands State (Supabase + catálogo oficial)
   const [availableBrands, setAvailableBrands] = useState<string[]>(() => {
-    const brandSet = new Set<string>(["Apolo", "Overts", "3BSI", ...KNOWN_BRANDS]);
-    const list = Array.from(brandSet);
-    list.sort((a, b) => {
-      if (a.toLowerCase() === "apolo") return -1;
-      if (b.toLowerCase() === "apolo") return 1;
-      if (a.toLowerCase() === "overts") return -1;
-      if (b.toLowerCase() === "overts") return 1;
-      return a.localeCompare(b);
+    const brandSet = new Set<string>(KNOWN_BRANDS);
+    const order = ["apolo", "overts", "valtrom"];
+    return Array.from(brandSet).sort((a, b) => {
+      const ia = order.indexOf(a.toLowerCase());
+      const ib = order.indexOf(b.toLowerCase());
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, "es");
     });
-    return list;
   });
   const [isNewPresentation, setIsNewPresentation] = useState(false);
   const [formSection, setFormSection] = useState<"general" | "comercial" | "tecnicos" | "presentaciones">("general");
@@ -445,9 +445,10 @@ export default function ProductosPage() {
 
   // Dynamic Brands Loader
   const loadDynamicBrands = useCallback(async () => {
-    const brandSet = new Set<string>(["Apolo", "Overts", "3BSI"]);
+    const brandSet = new Set<string>(KNOWN_BRANDS);
+    const allowed = new Set(KNOWN_BRANDS.map((b) => b.toLowerCase()));
 
-    // 1. Read from localStorage cache
+    // 1. Read from localStorage cache (solo marcas oficiales)
     if (typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem("apolo_admin_brands_cache");
@@ -455,14 +456,17 @@ export default function ProductosPage() {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             parsed.forEach((b: { name?: string; is_active?: boolean }) => {
-              if (b.name && b.is_active !== false) brandSet.add(b.name.trim());
+              const name = b.name?.trim();
+              if (!name || b.is_active === false) return;
+              if (!allowed.has(name.toLowerCase())) return;
+              brandSet.add(name);
             });
           }
         }
       } catch {}
     }
 
-    // 2. Fetch from Supabase public.brands
+    // 2. Fetch from Supabase public.brands (fuente de verdad)
     try {
       const { data, error } = await supabase
         .from("brands")
@@ -478,21 +482,18 @@ export default function ProductosPage() {
       console.warn("Supabase fetch brands note:", err);
     }
 
-    // 3. Include any brands from current products list
-    products.forEach((p) => {
-      if (p.brand?.trim()) brandSet.add(p.brand.trim());
-    });
-
-    // 4. Include standard known brands
+    // 3. Catálogo oficial (sin inventar marcas desde productos)
     KNOWN_BRANDS.forEach((kb) => brandSet.add(kb));
 
     const list = Array.from(brandSet);
     list.sort((a, b) => {
-      if (a.toLowerCase() === "apolo") return -1;
-      if (b.toLowerCase() === "apolo") return 1;
-      if (a.toLowerCase() === "overts") return -1;
-      if (b.toLowerCase() === "overts") return 1;
-      return a.localeCompare(b);
+      const order = ["apolo", "overts", "valtrom"];
+      const ia = order.indexOf(a.toLowerCase());
+      const ib = order.indexOf(b.toLowerCase());
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, "es");
     });
 
     setAvailableBrands(list);
@@ -536,40 +537,27 @@ export default function ProductosPage() {
     };
   }, [loadDynamicBrands, supabase]);
 
-  // Extract unique brands with counts (ensures registered brands like 3BSI appear even with 0 products)
+  // Solo marcas oficiales/activas; no inventar marcas desde productos sueltos
   const brandListWithCounts = useMemo(() => {
     const counts = new Map<string, number>();
+    availableBrands.forEach((b) => counts.set(b, 0));
 
-    // Register active brands from database
-    availableBrands.forEach((b) => {
-      if (b.toLowerCase() === "apolo" || b.toLowerCase() === "overts" || b === "3BSI") {
-        counts.set(b, 0);
-      }
-    });
-
-    // Count products per brand
     products.forEach((p) => {
-      const b = p.brand?.trim() || "Apolo";
-      counts.set(b, (counts.get(b) || 0) + 1);
+      const raw = p.brand?.trim() || "Apolo";
+      const match = availableBrands.find((b) => b.toLowerCase() === raw.toLowerCase());
+      if (!match) return;
+      counts.set(match, (counts.get(match) || 0) + 1);
     });
 
-    // Ensure any brand in availableBrands that was added in /admin/marcas is in the list
-    availableBrands.forEach((b) => {
-      if (!counts.has(b)) {
-        // If it's a custom registered brand (not part of the long static fallback list)
-        if (!KNOWN_BRANDS.slice(2).includes(b)) {
-          counts.set(b, 0);
-        }
-      }
-    });
-
+    const order = ["apolo", "overts", "valtrom"];
     const list = Array.from(counts.entries()).map(([brand, count]) => ({ brand, count }));
     list.sort((a, b) => {
-      if (a.brand.toLowerCase() === "apolo") return -1;
-      if (b.brand.toLowerCase() === "apolo") return 1;
-      if (a.brand.toLowerCase() === "overts") return -1;
-      if (b.brand.toLowerCase() === "overts") return 1;
-      return a.brand.localeCompare(b.brand);
+      const ia = order.indexOf(a.brand.toLowerCase());
+      const ib = order.indexOf(b.brand.toLowerCase());
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.brand.localeCompare(b.brand, "es");
     });
 
     return list;
