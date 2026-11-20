@@ -1,6 +1,8 @@
 # Features
 
 ## Completed
+- Catálogo curado 2026-11-20: todos Apolo/Overts + máx. 20/marca resto (~685 xlsx); `short_description` = banner Excel; `getProductLineCategory` muestra título literal (`4T - MOTO APOLO`); scripts `parse_multimarcas_excel.py` + `import_multimarcas_products.js`
+- Import multimarcas 2026-11-19: carga masiva previa (~8482) reemplazada por la limpieza 2026-11-20
 - Playwright E2E 2026-11-14: 9 tests Chromium (smoke, drawer cotización, cookies, admin gate) — `e2e/`, puerto `3100` via `next start`, CI job `e2e`
 - ESLint 2026-11-14: 0 errors / 0 warnings (unused, any→unknown/tipos, purity/static-components, caughtErrors `^_`)
 - Hardening 2026-11-13: set-cookie valida sesión; remotePatterns Supabase; rate limit APIs; quotes RPC; catálogo activo paginado

@@ -4,15 +4,18 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
+import { cn } from "@/lib/utils";
 
 type Props = {
   name: string;
+  brand?: string | null;
   images?: string[];
   fallbackImage?: string;
   compact?: boolean;
 };
 
-export function ProductGallery({ name, images, fallbackImage, compact = false }: Props) {
+export function ProductGallery({ name, brand, images, fallbackImage, compact = false }: Props) {
   const gallery = useMemo(() => {
     const validFallback =
       fallbackImage && fallbackImage.trim().length > 0 && fallbackImage !== "/placeholder.svg"
@@ -39,20 +42,24 @@ export function ProductGallery({ name, images, fallbackImage, compact = false }:
   return (
     <div className={compact ? "flex h-full min-h-0 flex-col gap-2" : "space-y-3"}>
       <div
-        className={[
-          "relative flex items-center justify-center overflow-hidden",
+        className={cn(
+          "relative flex items-center justify-center overflow-hidden bg-white",
           compact
-            ? "h-[200px] rounded-none border-0 bg-[radial-gradient(ellipse_at_50%_78%,color-mix(in_oklab,var(--gold)_16%,transparent),transparent_58%),linear-gradient(180deg,#fff_0%,color-mix(in_oklab,var(--gold)_7%,#f6f3ea)_100%)] sm:h-full sm:min-h-[280px] dark:bg-[radial-gradient(ellipse_at_50%_78%,color-mix(in_oklab,var(--gold)_14%,transparent),transparent_60%),linear-gradient(180deg,#141414,#0c0c0c)]"
-            : "aspect-square rounded-2xl border border-border bg-card shadow-xs",
-        ].join(" ")}
+            ? "h-[200px] rounded-none border-0 sm:h-full sm:min-h-[280px]"
+            : "aspect-square rounded-2xl border border-border shadow-xs"
+        )}
       >
+        <OfficialBrandWatermark brand={brand} intensity="gallery" />
         {hasImages && currentImage ? (
           <>
             <Image
               src={currentImage}
               alt={`${name} - imagen ${safeActive + 1}`}
               fill
-              className={compact ? "object-contain object-center p-6 sm:p-8" : "object-contain object-center p-4"}
+              className={cn(
+                "z-[1] object-contain object-center",
+                compact ? "p-6 sm:p-8" : "p-4"
+              )}
               style={{ objectFit: "contain", objectPosition: "center" }}
               priority
               sizes={compact ? "(max-width: 768px) 100vw, 340px" : "(max-width: 768px) 100vw, 500px"}
@@ -60,7 +67,7 @@ export function ProductGallery({ name, images, fallbackImage, compact = false }:
 
             {/* Flechas solo si hay más de 1 */}
             {gallery.length > 1 && compact && (
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1">
+              <div className="absolute bottom-3 left-1/2 z-[2] flex -translate-x-1/2 gap-1">
                 {gallery.map((_, i) => (
                   <button
                     key={`dot-${i}`}
@@ -83,7 +90,7 @@ export function ProductGallery({ name, images, fallbackImage, compact = false }:
                   variant="secondary"
                   size="icon"
                   onClick={prev}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-card/80 hover:bg-card text-foreground border border-border shadow-xs cursor-pointer"
+                  className="absolute left-3 top-1/2 z-[2] -translate-y-1/2 cursor-pointer border border-border bg-card/80 text-foreground shadow-xs hover:bg-card"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -93,25 +100,25 @@ export function ProductGallery({ name, images, fallbackImage, compact = false }:
                   variant="secondary"
                   size="icon"
                   onClick={next}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-card/80 hover:bg-card text-foreground border border-border shadow-xs cursor-pointer"
+                  className="absolute right-3 top-1/2 z-[2] -translate-y-1/2 cursor-pointer border border-border bg-card/80 text-foreground shadow-xs hover:bg-card"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
 
-                <div className="absolute bottom-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full bg-card/90 text-foreground border border-border shadow-xs">
+                <div className="absolute bottom-3 right-3 z-[2] rounded-full border border-border bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-xs">
                   {safeActive + 1}/{gallery.length}
                 </div>
               </>
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
-            <Package className={compact ? "mb-2 h-10 w-10 text-primary opacity-70" : "w-16 h-16 text-primary opacity-70 mb-3"} />
+          <div className="relative z-[1] flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+            <Package className={compact ? "mb-2 h-10 w-10 text-primary opacity-70" : "mb-3 h-16 w-16 text-primary opacity-70"} />
             <p className={compact ? "text-sm font-semibold text-foreground" : "text-base font-bold text-foreground"}>
               Sin imagen asignada
             </p>
             {compact ? null : (
-              <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
                 Puedes agregar o modificar la foto de este producto en cualquier momento desde el panel de administración.
               </p>
             )}

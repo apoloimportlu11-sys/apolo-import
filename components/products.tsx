@@ -37,6 +37,7 @@ import { VehicleVectorDecor } from "@/components/VehicleVectorDecor";
 import { groupProductsByLine as groupProductsByLineShared, getProductLineCategory, resolveLineFilterToken, type ProductLineGroup } from "@/lib/product-grouping";
 import { useProductLineGroups } from "@/lib/product-line-groups";
 import { CatalogPagination } from "@/components/catalog/catalog-pagination";
+import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
 import { ProductQuickView } from "@/components/catalog/product-quick-view";
 import { scrollCatalogIntoView } from "@/lib/lenis-lock";
 
@@ -45,6 +46,7 @@ import {
   cardImageScale,
   formatViscosityBadge,
   getBrandChipVisual,
+  getOfficialBrandLogo,
   getPresentationVisual,
   OFFICIAL_BRANDS,
   CATALOG_PAGE_SIZE as PAGE_SIZE,
@@ -1657,8 +1659,9 @@ export function Products() {
               <button
                 type="button"
                 onClick={() => setQuickViewProduct(product)}
-                className="relative h-36 w-full shrink-0 overflow-hidden rounded-xl bg-[#f4f4f5] sm:h-44 sm:w-44"
+                className="relative h-36 w-full shrink-0 overflow-hidden rounded-xl bg-white sm:h-44 sm:w-44"
               >
+                <OfficialBrandWatermark brand={product.brand} />
               {hasValidImage ? (
                 <Image
                   src={product.image}
@@ -1667,19 +1670,19 @@ export function Products() {
                   unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                   sizes="(max-width: 640px) 100vw, 176px"
                   className={cn(
-                    "object-contain object-center p-3 drop-shadow-[0_8px_14px_rgba(0,0,0,0.16)]",
+                    "z-[1] object-contain object-center p-3 drop-shadow-[0_8px_14px_rgba(0,0,0,0.16)]",
                     outOfStock ? "grayscale contrast-75" : null
                   )}
                   style={{ transform: `scale(${imageScale})` }}
                 />
               ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center text-zinc-400">
+                <div className="relative z-[1] flex h-full w-full flex-col items-center justify-center text-zinc-400">
                   <Package className="mb-1 h-8 w-8 opacity-70" />
                   <span className="text-[11px] font-medium">Sin imagen</span>
                 </div>
               )}
                 {product.presentation ? (
-                  <span className="absolute left-2 top-2 z-[1] rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute left-2 top-2 z-[2] rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {packVisual.label}
                   </span>
                 ) : null}
@@ -1799,8 +1802,9 @@ export function Products() {
             <button
               type="button"
               onClick={() => setQuickViewProduct(product)}
-              className="relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#f4f4f5] sm:mb-3 sm:aspect-[5/6]"
+              className="relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl bg-white sm:mb-3 sm:aspect-[5/6]"
             >
+              <OfficialBrandWatermark brand={product.brand} />
               {hasValidImage ? (
                 <Image
                   src={product.image}
@@ -1809,19 +1813,19 @@ export function Products() {
                   unoptimized={Boolean(product.image && product.image.startsWith("data:"))}
                   sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
                   className={cn(
-                    "object-contain object-center p-2 drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)]",
+                    "z-[1] object-contain object-center p-2 drop-shadow-[0_10px_16px_rgba(0,0,0,0.18)]",
                     outOfStock ? "grayscale contrast-75" : null
                   )}
                   style={{ transform: `scale(${imageScale})` }}
                 />
               ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center text-zinc-400">
+                <div className="relative z-[1] flex h-full w-full flex-col items-center justify-center text-zinc-400">
                   <Package className="mb-1 h-8 w-8 opacity-70" />
                   <span className="text-[11px] font-medium">Sin imagen</span>
                 </div>
               )}
               {product.presentation ? (
-                <span className="absolute left-2 top-2 z-[1] max-w-[70%] truncate rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                <span className="absolute left-2 top-2 z-[2] max-w-[70%] truncate rounded-md bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                   {packVisual.label}
                 </span>
               ) : null}
@@ -2249,19 +2253,48 @@ export function Products() {
             {/* ENCABEZADO Y CONTROLES */}
             <div className="mb-6 flex flex-col gap-4">
               <div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
-                  {searchQuery
-                    ? `Resultados para "${searchQuery}"`
-                    : selectedLines.length === 1
-                      ? `Línea ${selectedLines[0]}`
-                      : selectedBrands.length === 1
-                        ? `Productos ${selectedBrands[0]}`
-                        : selectedSubcategory
-                          ? selectedSubcategory.name
-                          : selectedCategory
-                            ? selectedCategory.name
-                            : "Todos los productos"}
-                </h1>
+                {(() => {
+                  const officialBrandLogo =
+                    !searchQuery &&
+                    selectedLines.length === 0 &&
+                    selectedBrands.length === 1
+                      ? getOfficialBrandLogo(selectedBrands[0])
+                      : null;
+
+                  if (officialBrandLogo) {
+                    return (
+                      <h1 className="flex flex-wrap items-center gap-3 sm:gap-4">
+                        <Image
+                          src={officialBrandLogo}
+                          alt=""
+                          width={220}
+                          height={72}
+                          className="h-9 w-auto object-contain sm:h-11 md:h-12"
+                          priority
+                        />
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
+                          Productos {selectedBrands[0]}
+                        </span>
+                      </h1>
+                    );
+                  }
+
+                  return (
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
+                      {searchQuery
+                        ? `Resultados para "${searchQuery}"`
+                        : selectedLines.length === 1
+                          ? `Línea ${selectedLines[0]}`
+                          : selectedBrands.length === 1
+                            ? `Productos ${selectedBrands[0]}`
+                            : selectedSubcategory
+                              ? selectedSubcategory.name
+                              : selectedCategory
+                                ? selectedCategory.name
+                                : "Todos los productos"}
+                    </h1>
+                  );
+                })()}
 
                 <p className="text-sm sm:text-base text-muted-foreground mt-1">
                   {catalogStatus === "loading"

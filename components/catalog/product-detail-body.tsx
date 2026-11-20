@@ -133,6 +133,7 @@ export function ProductDetailBody({
           <div className="relative min-h-0 border-b border-border/70 lg:border-b-0 lg:border-r lg:border-r-[color:color-mix(in_oklab,var(--gold)_22%,transparent)]">
             <ProductGallery
               name={product.name}
+              brand={product.brand}
               images={galleryImages}
               fallbackImage={selectedImage}
               compact
@@ -274,6 +275,7 @@ export function ProductDetailBody({
       <div className="grid gap-8 lg:grid-cols-2">
         <ProductGallery
           name={product.name}
+          brand={product.brand}
           images={galleryImages}
           fallbackImage={selectedImage}
         />

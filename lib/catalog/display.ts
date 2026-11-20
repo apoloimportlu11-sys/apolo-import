@@ -5,6 +5,39 @@ export function brandEquals(a?: string | null, b?: string | null) {
 
 export const OFFICIAL_BRANDS = ["apolo", "overts", "valtrom"] as const;
 
+/** Logos oficiales de las 3 marcas principales del catálogo. */
+export const OFFICIAL_BRAND_LOGOS: Record<(typeof OFFICIAL_BRANDS)[number], string> = {
+  apolo: "/images/logoApolo.png",
+  overts: "/images/logo overts.png",
+  valtrom: "/images/logo valtrom ter.png",
+};
+
+/** Fondos de escena (marca de agua + esquinas) para priorizar Apolo / Overts / Valtrom. */
+export const OFFICIAL_BRAND_STAGES: Record<(typeof OFFICIAL_BRANDS)[number], string> = {
+  apolo: "/images/brand-stages/apolo.jpg",
+  overts: "/images/brand-stages/overts.jpg",
+  valtrom: "/images/brand-stages/valtrom.jpg",
+};
+
+export function isOfficialBrand(brand?: string | null): boolean {
+  const key = String(brand || "").trim().toLowerCase();
+  return (OFFICIAL_BRANDS as readonly string[]).includes(key);
+}
+
+/** Ruta del logo si la marca es Apolo, Overts o Valtrom; si no, null. */
+export function getOfficialBrandLogo(brand?: string | null): string | null {
+  const key = String(brand || "").trim().toLowerCase();
+  if (!(OFFICIAL_BRANDS as readonly string[]).includes(key)) return null;
+  return OFFICIAL_BRAND_LOGOS[key as (typeof OFFICIAL_BRANDS)[number]] ?? null;
+}
+
+/** Fondo de producto oficial (escena 4:5) para Apolo / Overts / Valtrom. */
+export function getOfficialBrandStage(brand?: string | null): string | null {
+  const key = String(brand || "").trim().toLowerCase();
+  if (!(OFFICIAL_BRANDS as readonly string[]).includes(key)) return null;
+  return OFFICIAL_BRAND_STAGES[key as (typeof OFFICIAL_BRANDS)[number]] ?? null;
+}
+
 export type BrandChipVisual = {
   isOfficial: boolean;
   accent: string;

@@ -26,6 +26,9 @@ yarn-error.log*
 .env
 .env.local*
 
+# generated catalog import dump (source of truth: Excel en datos/)
+/datos/multimarcas-2026-parsed.json
+
 
 # vercel
 .vercel

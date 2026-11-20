@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Imagen no encontrada">
+  <rect width="400" height="400" fill="#f4f4f5"/>
+  <g transform="translate(200 168)" fill="none" stroke="#a1a1aa" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="-70" y="-52" width="140" height="104" rx="10"/>
+    <circle cx="-28" cy="-10" r="12"/>
+    <path d="M-58 36 L-20 0 L8 22 L28 6 L70 36"/>
+    <line x1="-86" y1="-68" x2="86" y2="68"/>
+  </g>
+  <text x="200" y="286" text-anchor="middle" fill="#71717a" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="1.5">IMAGEN NO ENCONTRADA</text>
+</svg>

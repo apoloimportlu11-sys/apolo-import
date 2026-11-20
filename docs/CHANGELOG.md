@@ -4,6 +4,20 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-20 — Limpieza catálogo Apolo/Overts + títulos Excel
+
+- Reimport curado: **todos** Apolo y Overts; resto de marcas máximo **20** (orden Excel)
+- `short_description` guarda el banner de sección del Excel (`4T - MOTO APOLO`, `GRASAS APOLO`, etc.)
+- El catálogo público muestra ese título literal (`lib/product-grouping.ts`) en lugar de «Motos 4T» / «General / Otros»
+- Total aprox. 685 productos `xlsx-*` (+ previos no-xlsx)
+
+## 2026-11-19 — Import catálogo multimarcas 2026
+
+- Se importaron ~8482 productos desde `datos/LISTA DE PRECIOS MULTIMARCAS 2026 JUNIO OVERTS.xlsx` a Supabase
+- Excluidas las hojas `SAKURA JOSEPH`, `MANN JOSEPH` y `MOROSOS`; el resto mantiene el orden del Excel (`sort_order`)
+- Todas las imágenes usan `/imagen-no-encontrada.svg`; descripciones genéricas pendientes de edición
+- Scripts: `scripts/parse_multimarcas_excel.py` → JSON; `scripts/import_multimarcas_products.js` → upsert
+
 ## 2026-11-18 — Marcas del inicio
 
 - La sección «Marcas con las que trabajamos» pasa de marquesina a una cuadrícula de tarjetas; los logos y el conteo siguen saliendo de Supabase

@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-18**. La sección de marcas del inicio es una cuadrícula de tarjetas; banners del inicio en proporción 2:1.
+Última revisión de documentación: **2026-11-20**. Catálogo curado desde Excel: todos Apolo/Overts + máx. 20/marca resto (~685 xlsx); secciones con títulos literales del Excel; imágenes placeholder.
 
 ## Qué es
 

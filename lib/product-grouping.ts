@@ -127,6 +127,46 @@ export function resolveLineFilterToken(
   );
 }
 
+/** Pack / presentation strings must not become catalog section titles. */
+function looksLikePackLabel(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t) return false;
+  return /^(caja|balde|bidon|bidón|pza|und|pote|tambor|x\s*\d|gln|gal|lt|lts|\d+\s*x)/i.test(t)
+    || /\b(caja|balde|bidon|bidón|galones?|gln|und|pza)\b/i.test(t);
+}
+
+/**
+ * Excel price-list section banners (e.g. "4T - MOTO APOLO") should render as-is
+ * instead of collapsing into managed defaults like "Motos 4T".
+ */
+export function isExcelSectionTitle(text: string): boolean {
+  const raw = text.trim();
+  if (!raw || looksLikePackLabel(raw)) return false;
+  const upper = raw.toUpperCase();
+  if (
+    /\bAPOLO\b/.test(upper)
+    || /\bOVERTS\b/.test(upper)
+    || /^4T\s*-/.test(upper)
+    || /^GRASAS\b/.test(upper)
+    || /^MOTORES PETROL/.test(upper)
+    || /^TRANSMI/.test(upper)
+    || /^REFRIGERANTES?\b/.test(upper)
+    || /^SILICONA PARA\b/.test(upper)
+    || /^SHAMPOO?\b/.test(upper)
+    || /^ABRILLANTADOR\b/.test(upper)
+    || /^DOT\s*[345](?:\s*\/\s*\w+)?$/.test(upper)
+    || /TODO TIPO DE ESTABLECIMIENTOS/.test(upper)
+    || /LAVADEROS|CAR WASH/.test(upper)
+  ) {
+    return true;
+  }
+  // Generic uppercase multi-word banner without pack cues
+  if (raw === upper && raw.split(/\s+/).length >= 2 && raw.split(/\s+/).length <= 10 && !/\d/.test(raw)) {
+    return true;
+  }
+  return false;
+}
+
 export function getProductLineCategory(
   p: LineCategorizable,
   lineGroupsById?: Map<string, ManagedLineGroup>
@@ -137,7 +177,13 @@ export function getProductLineCategory(
     if (resolved) return resolved;
   }
 
-  // 2. Detección automática (heurística) por texto del producto
+  // 2. Título literal de sección del Excel (short_description / line)
+  const sectionCandidate = (p.short_description || p.line || "").trim();
+  if (sectionCandidate && isExcelSectionTitle(sectionCandidate)) {
+    return sectionCandidate;
+  }
+
+  // 3. Detección automática (heurística) por texto del producto
   const raw = (p.line || p.short_description || p.subcategory || "").trim();
   const upper = raw.toUpperCase();
 
