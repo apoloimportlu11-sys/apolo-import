@@ -502,9 +502,10 @@ export function Products({
     [brandCounts]
   );
 
-  /** Marcas con stock (o ya seleccionadas) para toolbar y sidebar. */
+  /** Oficiales siempre visibles; el resto solo si hay productos o está seleccionada. */
   const brandsWithStock = useMemo(() => {
     return availableBrands.filter((brand) => {
+      if (isOfficialBrand(brand)) return true;
       const count = countForBrand(brand);
       if (count > 0) return true;
       return selectedBrands.some((item) => brandEquals(item, brand));
@@ -717,9 +718,19 @@ export function Products({
     sortBy,
   ]);
 
-  const pinHouseBrands =
+  const catalogPage = useMemo(
+    () => sliceCatalogPage(filteredProducts, page, PAGE_SIZE),
+    [filteredProducts, page]
+  );
+  const totalPages = catalogPage.totalPages;
+  const currentPage = catalogPage.page;
+  const pagedProducts = catalogPage.items;
+
+  const showOfficialPlaceholders =
     sortBy === "featured" &&
+    currentPage === 1 &&
     !searchQuery.trim() &&
+    selectedBrands.length === 0 &&
     selectedLines.length === 0 &&
     !selectedCategory &&
     !selectedSubcategory &&
@@ -727,17 +738,7 @@ export function Products({
     selectedPresentations.length === 0 &&
     selectedApplications.length === 0 &&
     !priceMin.trim() &&
-    !priceMax.trim() &&
-    (selectedBrands.length === 0 ||
-      selectedBrands.every((brand) => isOfficialBrand(brand)));
-
-  const catalogPage = useMemo(
-    () => sliceCatalogPage(filteredProducts, page, PAGE_SIZE, pinHouseBrands),
-    [filteredProducts, page, pinHouseBrands]
-  );
-  const totalPages = catalogPage.totalPages;
-  const currentPage = catalogPage.page;
-  const pagedProducts = catalogPage.items;
+    !priceMax.trim();
 
   const goToPage = (next: number) => {
     const clamped = Math.min(Math.max(1, next), totalPages);
@@ -781,6 +782,14 @@ export function Products({
           lines: groupProductsByLineShared(prods, sortBy, lineGroupsById),
         });
         map.delete(b);
+      } else if (showOfficialPlaceholders && isOfficialBrand(b) && !map.has(b)) {
+        // Valtrom (u otra oficial sin SKU) se anuncia en la primera página.
+        groups.push({
+          brand: b,
+          totalProducts: 0,
+          products: [],
+          lines: [],
+        });
       }
     });
 
@@ -797,7 +806,7 @@ export function Products({
     });
 
     return groups;
-  }, [pagedProducts, availableBrands, sortBy, lineGroupsById]);
+  }, [pagedProducts, availableBrands, sortBy, lineGroupsById, showOfficialPlaceholders]);
 
   // Lista dinámica de líneas de productos
   const availableLines = useMemo(() => {

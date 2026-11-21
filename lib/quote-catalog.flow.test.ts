@@ -72,7 +72,7 @@ describe("flujo catálogo", () => {
   it("compara marcas y mantiene tamaño de página", () => {
     expect(brandEquals("Apolo", " apolo ")).toBe(true);
     expect(brandEquals("Apolo", "Overts")).toBe(false);
-    expect(CATALOG_PAGE_SIZE).toBe(24);
+    expect(CATALOG_PAGE_SIZE).toBe(12);
     expect(KNOWN_DELETED_PRODUCT_KEYS.length).toBeGreaterThan(5);
   });
 

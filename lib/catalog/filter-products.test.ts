@@ -86,16 +86,16 @@ describe("sliceCatalogPage", () => {
     stub({ id: "c", name: "Grasa", brand: "Chevron" }),
   ];
 
-  it("muestra completas las marcas propias y pagina el resto", () => {
-    const first = sliceCatalogPage(products, 1, 1, true);
-    expect(first.items.map((p) => p.id)).toEqual(["a", "o", "v", "b"]);
-    expect(first.totalPages).toBe(2);
+  it("pagina de forma uniforme sin amontonar marcas en una sola vista", () => {
+    const first = sliceCatalogPage(products, 1, 2);
+    expect(first.items.map((p) => p.id)).toEqual(["a", "o"]);
+    expect(first.totalPages).toBe(3);
     expect(first.rangeStart).toBe(1);
-    expect(first.rangeEnd).toBe(4);
+    expect(first.rangeEnd).toBe(2);
 
-    const second = sliceCatalogPage(products, 2, 1, true);
-    expect(second.items.map((p) => p.id)).toEqual(["c"]);
-    expect(second.rangeStart).toBe(5);
-    expect(second.rangeEnd).toBe(5);
+    const second = sliceCatalogPage(products, 2, 2);
+    expect(second.items.map((p) => p.id)).toEqual(["v", "b"]);
+    expect(second.rangeStart).toBe(3);
+    expect(second.rangeEnd).toBe(4);
   });
 });

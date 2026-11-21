@@ -8,7 +8,11 @@ import {
   CatalogProductCard,
   type CatalogViewMode,
 } from "@/components/catalog/catalog-product-card";
-import { getBrandChipVisual, getOfficialBrandLogo } from "@/lib/catalog/display";
+import {
+  getBrandChipVisual,
+  getOfficialBrandLogo,
+  isOfficialBrand,
+} from "@/lib/catalog/display";
 import Image from "next/image";
 
 export type BrandGroup = {
@@ -64,24 +68,34 @@ export function CatalogResults({
     (!shouldShowBrandDividers && lineGroups.some((g) => g.products.length > 0));
 
   if (!hasProducts) {
+    const officialEmpty = selectedBrand && isOfficialBrand(selectedBrand);
+    const logo = officialEmpty ? getOfficialBrandLogo(selectedBrand) : null;
     return (
       <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm">
         <div className="mx-auto max-w-md space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Search className="h-8 w-8" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
+            {logo ? (
+              <Image src={logo} alt="" width={40} height={40} className="object-contain" />
+            ) : (
+              <Search className="h-8 w-8" />
+            )}
           </div>
           <h3 className="text-lg font-bold text-foreground">
-            No encontramos productos con estos filtros
+            {officialEmpty
+              ? `${selectedBrand} es una marca principal de Apolo Import`
+              : "No encontramos productos con estos filtros"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Prueba otra búsqueda o quita algunos filtros para ver más opciones del catálogo.
+            {officialEmpty
+              ? "La línea comercial de esta marca se está incorporando al catálogo. Mientras tanto, puedes explorar Apolo y Overts."
+              : "Prueba otra búsqueda o quita algunos filtros para ver más opciones del catálogo."}
           </p>
           <button
             type="button"
             onClick={onClearFilters}
             className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
           >
-            Restablecer filtros
+            {officialEmpty ? "Ver catálogo completo" : "Restablecer filtros"}
           </button>
         </div>
       </div>
@@ -94,6 +108,8 @@ export function CatalogResults({
         {productsGroupedByBrand.map((group) => {
           const tone = getBrandChipVisual(group.brand);
           const logo = getOfficialBrandLogo(group.brand);
+          const isEmptyOfficial =
+            group.products.length === 0 && isOfficialBrand(group.brand);
 
           return (
             <section key={group.brand} className="space-y-4">
@@ -119,38 +135,54 @@ export function CatalogResults({
                     {group.brand}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {group.totalProducts}{" "}
-                    {group.totalProducts === 1 ? "producto" : "productos"} en esta página
+                    {isEmptyOfficial
+                      ? "Marca principal · línea en incorporación"
+                      : `${group.totalProducts} ${
+                          group.totalProducts === 1 ? "producto" : "productos"
+                        } en esta página`}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-7">
-                {group.lines.map((lineGroup) => (
-                  <div key={lineGroup.lineName} className="space-y-3">
-                    <div className="flex items-center justify-between gap-3 px-0.5">
-                      <h3 className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground sm:text-sm">
-                        <Tag className="h-3.5 w-3.5 shrink-0 text-primary/80" />
-                        <span className="truncate text-foreground">{lineGroup.lineName}</span>
-                      </h3>
-                      <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
-                        {lineGroup.products.length}
-                      </span>
+              {isEmptyOfficial ? (
+                <div
+                  className="rounded-xl border px-4 py-5 text-sm text-muted-foreground"
+                  style={{
+                    backgroundColor: tone.soft,
+                    borderColor: `${tone.accent}44`,
+                  }}
+                >
+                  {group.brand} forma parte de las tres marcas propias de Apolo Import.
+                  Los productos se publicarán aquí tan pronto estén listos en el catálogo.
+                </div>
+              ) : (
+                <div className="space-y-7">
+                  {group.lines.map((lineGroup) => (
+                    <div key={lineGroup.lineName} className="space-y-3">
+                      <div className="flex items-center justify-between gap-3 px-0.5">
+                        <h3 className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground sm:text-sm">
+                          <Tag className="h-3.5 w-3.5 shrink-0 text-primary/80" />
+                          <span className="truncate text-foreground">{lineGroup.lineName}</span>
+                        </h3>
+                        <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
+                          {lineGroup.products.length}
+                        </span>
+                      </div>
+                      <div data-catalog-grid className={catalogGridClass}>
+                        {lineGroup.products.map((product) => (
+                          <CatalogProductCard
+                            key={product.id}
+                            product={product}
+                            viewMode={viewMode}
+                            lineGroupsById={lineGroupsById}
+                            onOpenQuickView={onOpenQuickView}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <div data-catalog-grid className={catalogGridClass}>
-                      {lineGroup.products.map((product) => (
-                        <CatalogProductCard
-                          key={product.id}
-                          product={product}
-                          viewMode={viewMode}
-                          lineGroupsById={lineGroupsById}
-                          onOpenQuickView={onOpenQuickView}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           );
         })}

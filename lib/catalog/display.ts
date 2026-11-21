@@ -14,9 +14,9 @@ export const OFFICIAL_BRAND_LOGOS: Record<(typeof OFFICIAL_BRANDS)[number], stri
 
 /** Fondos de escena (marca de agua + esquinas) para priorizar Apolo / Overts / Valtrom. */
 export const OFFICIAL_BRAND_STAGES: Record<(typeof OFFICIAL_BRANDS)[number], string> = {
-  apolo: "/images/brand-stages/apolo.jpg",
-  overts: "/images/brand-stages/overts.jpg",
-  valtrom: "/images/brand-stages/valtrom.jpg",
+  apolo: "/images/brand-stages/apolo.jpg?v=2026-11-21",
+  overts: "/images/brand-stages/overts.jpg?v=2026-11-21",
+  valtrom: "/images/brand-stages/valtrom.jpg?v=2026-11-21",
 };
 
 export function isOfficialBrand(brand?: string | null): boolean {
@@ -142,7 +142,8 @@ export function formatViscosityBadge(visc?: string | null): string | null {
   return clean;
 }
 
-export const CATALOG_PAGE_SIZE = 24;
+/** Productos por página: evita un scroll excesivo en el catálogo. */
+export const CATALOG_PAGE_SIZE = 12;
 
 export type PresentationVisual = {
   /** Escala relativa del envase en la tarjeta (1 = galón de referencia). */

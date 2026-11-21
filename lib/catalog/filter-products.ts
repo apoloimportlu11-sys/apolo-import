@@ -4,7 +4,7 @@ import {
   getLineSortPriority,
   getProductLineCategory,
 } from "@/lib/product-grouping";
-import { isOfficialBrand, officialBrandRank } from "@/lib/catalog/display";
+import { officialBrandRank } from "@/lib/catalog/display";
 import {
   matchesPresentation,
   presentationLabelsOf,
@@ -239,44 +239,22 @@ export type CatalogPageSlice = {
   rangeEnd: number;
 };
 
-/**
- * En el catálogo general, Apolo, Overts y Valtrom salen completos
- * en la primera página. La paginación solo recorre las demás marcas.
- */
+/** Paginación uniforme del catálogo (Apolo / Overts / Valtrom ya van primero por orden). */
 export function sliceCatalogPage(
   products: Product[],
   page: number,
-  pageSize: number,
-  pinOfficial: boolean
+  pageSize: number
 ): CatalogPageSlice {
   const size = Math.max(1, pageSize);
-  if (!pinOfficial) {
-    const totalPages = Math.max(1, Math.ceil(products.length / size));
-    const current = Math.min(Math.max(1, page), totalPages);
-    const start = (current - 1) * size;
-    const items = products.slice(start, start + size);
-    return {
-      page: current,
-      totalPages,
-      items,
-      rangeStart: products.length ? start + 1 : 0,
-      rangeEnd: start + items.length,
-    };
-  }
-
-  const official = products.filter((product) => isOfficialBrand(product.brand));
-  const allies = products.filter((product) => !isOfficialBrand(product.brand));
-  const totalPages = Math.max(1, Math.ceil(allies.length / size));
+  const totalPages = Math.max(1, Math.ceil(products.length / size));
   const current = Math.min(Math.max(1, page), totalPages);
-  const allyStart = (current - 1) * size;
-  const allyItems = allies.slice(allyStart, allyStart + size);
-  const items = current === 1 ? [...official, ...allyItems] : allyItems;
-  const before = current === 1 ? 0 : official.length + allyStart;
+  const start = (current - 1) * size;
+  const items = products.slice(start, start + size);
   return {
     page: current,
     totalPages,
     items,
-    rangeStart: products.length ? before + 1 : 0,
-    rangeEnd: before + items.length,
+    rangeStart: products.length ? start + 1 : 0,
+    rangeEnd: start + items.length,
   };
 }
