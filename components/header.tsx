@@ -18,7 +18,6 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import LoginModal from "@/components/LoginModal";
-import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { useQuote } from "@/lib/quote-context";
 import FestiveTopBanner from "@/components/FestiveTopBanner";
 import { useProductLineGroups } from "@/lib/product-line-groups";
@@ -27,13 +26,6 @@ import { cn } from "@/lib/utils";
 export function Header() {
   const pathname = usePathname();
   const { theme, resolvedTheme, setTheme } = useTheme();
-  const { settings } = useBusinessSettings();
-  const activeLogo =
-    settings.logo_url &&
-    !settings.logo_url.toLowerCase().includes("overts") &&
-    !settings.logo_url.toLowerCase().includes("live_site")
-      ? settings.logo_url
-      : "/images/logoApolo.png";
   const { totalItems, openDrawer } = useQuote();
   const [mounted, setMounted] = useState(false);
   const currentTheme = mounted ? resolvedTheme || theme || "dark" : "dark";
@@ -114,6 +106,10 @@ export function Header() {
   const wordmarkClass = compact
     ? "h-8 w-auto max-w-[120px] object-contain"
     : "h-10 w-auto max-w-[150px] object-contain lg:h-12 lg:max-w-[190px]";
+  const brandLinkClass = cn(
+    "flex shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90",
+    compact ? "h-10 sm:h-11" : "h-11 sm:h-14 lg:h-16"
+  );
 
   return (
     <>
@@ -131,22 +127,16 @@ export function Header() {
         >
           <div
             className={cn(
-              "grid w-full grid-cols-[1fr_auto] items-center gap-3 px-4 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 lg:grid-cols-[auto_1fr_auto] lg:gap-6 lg:px-8 xl:px-12",
+              "grid w-full grid-cols-[1fr_auto] items-center gap-3 px-4 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 md:grid-cols-[auto_auto] lg:grid-cols-[auto_1fr_auto] lg:gap-6 lg:px-8 xl:px-12",
               compact ? "py-2 lg:py-2.5" : "py-3 lg:py-4"
             )}
           >
+            {/* Desktop / tablet: las 3 marcas en la barra */}
             <div
-              className="flex min-w-0 items-center gap-2 overflow-hidden sm:gap-3 lg:gap-3 xl:gap-4"
+              className="hidden min-w-0 items-center gap-3 overflow-hidden md:flex lg:gap-3 xl:gap-4"
               aria-label="Marcas Apolo, Overts y Valtrom"
             >
-              <Link
-                href="/"
-                className={cn(
-                  "flex shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90",
-                  compact ? "h-10 sm:h-11" : "h-11 sm:h-14 lg:h-16"
-                )}
-                title="Apolo"
-              >
+              <Link href="/" className={brandLinkClass} title="Apolo">
                 <Image
                   src="/images/logoApolo.png"
                   alt="Apolo"
@@ -157,17 +147,13 @@ export function Header() {
                   className={markClass}
                 />
               </Link>
-              {/* En móvil solo Apolo: Overts/Valtrom aplastaban el header con Catálogo */}
               <span
-                className="hidden h-10 w-px bg-zinc-300 dark:bg-white/20 md:block"
+                className="h-10 w-px shrink-0 bg-zinc-300 dark:bg-white/20"
                 aria-hidden
               />
               <Link
                 href="/productos?brand=Overts"
-                className={cn(
-                  "hidden shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90 md:flex",
-                  compact ? "h-11" : "h-14 lg:h-16"
-                )}
+                className={brandLinkClass}
                 title="Overts"
               >
                 <Image
@@ -180,15 +166,12 @@ export function Header() {
                 />
               </Link>
               <span
-                className="hidden h-10 w-px bg-zinc-300 dark:bg-white/20 md:block"
+                className="h-10 w-px shrink-0 bg-zinc-300 dark:bg-white/20"
                 aria-hidden
               />
               <Link
                 href="/productos?brand=Valtrom"
-                className={cn(
-                  "hidden shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90 md:flex",
-                  compact ? "h-11" : "h-14 lg:h-16"
-                )}
+                className={brandLinkClass}
                 title="Valtrom"
               >
                 <Image
@@ -201,6 +184,19 @@ export function Header() {
                 />
               </Link>
             </div>
+
+            {/* Móvil: Catálogo a la izquierda para dejar sitio a las marcas abajo */}
+            <Link
+              href="/productos"
+              className={cn(
+                "inline-flex h-9 w-fit items-center gap-1.5 rounded-full bg-primary px-3 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-primary/35 transition-[transform,background-color] hover:bg-red-500 active:scale-[0.98] md:hidden",
+                pathname.startsWith("/productos") && "ring-primary/55"
+              )}
+              aria-label="Ver catálogo de productos"
+            >
+              <Package className="h-4 w-4 shrink-0" />
+              Catálogo
+            </Link>
 
             <nav className="hidden min-w-0 items-center justify-center gap-3 overflow-visible lg:flex xl:gap-6 2xl:gap-8">
               <Link href="/" className={navLinkClass(isActive("/"))}>
@@ -301,23 +297,12 @@ export function Header() {
             </div>
 
             <div className="flex shrink-0 items-center justify-end gap-1 justify-self-end sm:gap-1.5 lg:hidden">
-              <Link
-                href="/productos"
-                className={cn(
-                  "inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-primary px-2.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-primary/35 transition-[transform,background-color] hover:bg-red-500 active:scale-[0.98] sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[11px]",
-                  pathname.startsWith("/productos") && "ring-primary/55"
-                )}
-                aria-label="Ver catálogo de productos"
-              >
-                <Package className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <span>Catálogo</span>
-              </Link>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={openDrawer}
-                className="relative h-10 w-10 shrink-0 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
+                className="relative h-9 w-9 shrink-0 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10 sm:h-10 sm:w-10"
                 aria-label="Ver Cotización"
               >
                 <FileText className="h-5 w-5" />
@@ -332,7 +317,7 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-10 w-10 shrink-0 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
+                    className="h-9 w-9 shrink-0 cursor-pointer rounded-full text-zinc-800 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10 sm:h-10 sm:w-10"
                     aria-label="Abrir menú"
                     suppressHydrationWarning
                   >
@@ -345,13 +330,29 @@ export function Header() {
                 >
                   <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
                   <div className="flex h-full flex-col">
-                    <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-4 pr-12 backdrop-blur-md">
+                    <div className="flex items-center gap-2 border-b border-border bg-card/60 px-4 py-4 pr-12 backdrop-blur-md">
                       <Image
-                        src={activeLogo}
-                        alt={settings.business_name || "Apolo Logo"}
-                        width={160}
-                        height={60}
-                        className="h-11 w-auto max-w-[180px] object-contain"
+                        src="/images/logoApolo.png"
+                        alt="Apolo"
+                        width={72}
+                        height={72}
+                        className="h-9 w-auto object-contain"
+                      />
+                      <span className="h-7 w-px bg-border" aria-hidden />
+                      <Image
+                        src="/images/logo%20overts.png"
+                        alt="Overts"
+                        width={110}
+                        height={44}
+                        className="h-7 w-auto object-contain"
+                      />
+                      <span className="h-7 w-px bg-border" aria-hidden />
+                      <Image
+                        src="/images/logo%20valtrom%20ter.png"
+                        alt="Valtrom"
+                        width={110}
+                        height={44}
+                        className="h-7 w-auto object-contain"
                       />
                     </div>
 
@@ -522,6 +523,56 @@ export function Header() {
               </Sheet>
             </div>
           </div>
+
+          {/* Móvil: franja con las 3 marcas bien legibles */}
+          <div
+            className="flex items-stretch justify-between gap-1 border-t border-border/50 px-2 py-2.5 md:hidden"
+            aria-label="Marcas Apolo, Overts y Valtrom"
+          >
+            <Link
+              href="/"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              title="Apolo"
+            >
+              <Image
+                src="/images/logoApolo.png"
+                alt="Apolo"
+                width={132}
+                height={52}
+                priority
+                className="h-10 w-auto max-w-full object-contain"
+              />
+            </Link>
+            <span className="my-1.5 w-px shrink-0 bg-zinc-300 dark:bg-white/15" aria-hidden />
+            <Link
+              href="/productos?brand=Overts"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              title="Overts"
+            >
+              <Image
+                src="/images/logo%20overts.png"
+                alt="Overts"
+                width={150}
+                height={52}
+                className="h-9 w-auto max-w-full object-contain"
+              />
+            </Link>
+            <span className="my-1.5 w-px shrink-0 bg-zinc-300 dark:bg-white/15" aria-hidden />
+            <Link
+              href="/productos?brand=Valtrom"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              title="Valtrom"
+            >
+              <Image
+                src="/images/logo%20valtrom%20ter.png"
+                alt="Valtrom"
+                width={150}
+                height={52}
+                className="h-9 w-auto max-w-full object-contain"
+              />
+            </Link>
+          </div>
+
           <SloganBar compact={compact} />
         </div>
 

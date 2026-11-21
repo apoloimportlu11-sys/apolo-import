@@ -59,20 +59,30 @@ export function QuoteProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const { settings } = useBusinessSettings();
 
-  // Load from localStorage after client mount to prevent hydration mismatch
+  // Carga localStorage solo en el cliente, después del primer paint,
+  // para no adelantar el estado frente a hijos que aún hidratan.
   useEffect(() => {
-    setMounted(true);
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      if (cancelled) return;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setItems(parsed);
+          }
         }
+      } catch (e) {
+        console.error("Error loading quote items from localStorage:", e);
+      } finally {
+        if (!cancelled) setMounted(true);
       }
-    } catch (e) {
-      console.error("Error loading quote items from localStorage:", e);
-    }
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   // Sync to localStorage

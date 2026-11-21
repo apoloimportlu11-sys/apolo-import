@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { MapPin, Phone, Mail, Clock, MessageCircle, Facebook, Instagram } from "lucide-react";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
+import { OFFICIAL_BRAND_LOGOS } from "@/lib/catalog/display";
 
 const footerLinks = {
   productos: [
@@ -32,13 +33,12 @@ function TikTokIcon({ className }: { className?: string }) {
 export function Footer() {
   const { settings } = useBusinessSettings();
   const cleanPhone = (settings.whatsapp || settings.phone || "51958400028").replace(/[^0-9]/g, "");
-  const activeLogo =
-    settings.logo_url &&
-    !settings.logo_url.toLowerCase().includes("overts") &&
-    !settings.logo_url.toLowerCase().includes("live_site")
-      ? settings.logo_url
-      : "/images/logoApolo.png";
   const name = settings.business_name || "Apolo Lubricantes";
+  const houseBrands = [
+    { key: "apolo", name: "Apolo", href: "/productos?brand=Apolo", logo: OFFICIAL_BRAND_LOGOS.apolo },
+    { key: "overts", name: "Overts", href: "/productos?brand=Overts", logo: OFFICIAL_BRAND_LOGOS.overts },
+    { key: "valtrom", name: "Valtrom", href: "/productos?brand=Valtrom", logo: OFFICIAL_BRAND_LOGOS.valtrom },
+  ] as const;
 
   const socials = [
     {
@@ -99,18 +99,30 @@ export function Footer() {
       <div className="relative z-10 mx-auto w-full px-4 py-14 lg:px-8 xl:px-12">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
-            <Link href="/" className="inline-block">
-              <Image
-                src={activeLogo}
-                alt={name}
-                width={180}
-                height={180}
-                loading="lazy"
-                className="h-20 w-auto object-contain"
-              />
-            </Link>
+            <div
+              className="flex flex-wrap items-center gap-3 sm:gap-4"
+              aria-label="Marcas Apolo, Overts y Valtrom"
+            >
+              {houseBrands.map((brand) => (
+                <Link
+                  key={brand.key}
+                  href={brand.href}
+                  title={brand.name}
+                  className="inline-flex h-14 items-center justify-center transition-opacity hover:opacity-90 sm:h-16"
+                >
+                  <Image
+                    src={brand.logo}
+                    alt={brand.name}
+                    width={160}
+                    height={80}
+                    loading="lazy"
+                    className="h-full w-auto max-w-[7.5rem] object-contain"
+                  />
+                </Link>
+              ))}
+            </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              {name}: tu socio en lubricantes para talleres, flotas y distribuidores.
+              Apolo · Overts · Valtrom: tu socio en lubricantes y repuestos para talleres, flotas y distribuidores.
             </p>
           </div>
 

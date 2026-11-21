@@ -6,6 +6,7 @@ import { motion, useInView, useReducedMotion } from "motion/react";
 import { useHomeContent } from "@/lib/home-content";
 import { usePublicBrands } from "@/hooks/use-public-brands";
 import styles from "./brands-stage.module.css";
+import { cn } from "@/lib/utils";
 
 export interface BrandItem {
   logo: string;
@@ -26,26 +27,17 @@ interface BrandsCarouselProps {
   className?: string;
 }
 
-function splitRows(items: BrandItem[]): [BrandItem[], BrandItem[]] {
-  if (items.length <= 1) return [items, items];
-  const mid = Math.ceil(items.length / 2);
-  return [items.slice(0, mid), items.slice(mid)];
-}
-
 function BrandCard({
   item,
   onPick,
-  index,
 }: {
   item: BrandItem;
   onPick: (item: BrandItem) => void;
-  index: number;
 }) {
   return (
     <button
       type="button"
       className={styles.card}
-      style={{ animationDelay: `${(index % 8) * 40}ms` }}
       onClick={() => onPick(item)}
       aria-label={`Ver ${item.name}`}
     >
@@ -57,38 +49,36 @@ function BrandCard({
   );
 }
 
-function MarqueeRow({
+function BrandRail({
   items,
-  direction,
   durationSec,
   onPick,
   paused,
 }: {
   items: BrandItem[];
-  direction: "left" | "right";
   durationSec: number;
   onPick: (item: BrandItem) => void;
   paused: boolean;
 }) {
   // Duplicar para loop infinito (-50%)
   const loop = useMemo(() => [...items, ...items], [items]);
-  const trackClass =
-    direction === "left" ? styles.marqueeTrackLeft : styles.marqueeTrackRight;
 
   return (
-    <div className={styles.marqueeViewport}>
-      <div
-        className={`${styles.marqueeTrack} ${trackClass}`}
-        style={{
-          animationDuration: `${durationSec}s`,
-          animationPlayState: paused ? "paused" : "running",
-        }}
-      >
-        {loop.map((item, index) => (
-          <div key={`${item.name}-${index}`} className={styles.marqueeItem}>
-            <BrandCard item={item} onPick={onPick} index={index} />
-          </div>
-        ))}
+    <div className={styles.rail}>
+      <div className={styles.marqueeViewport}>
+        <div
+          className={styles.marqueeTrack}
+          style={{
+            animationDuration: `${durationSec}s`,
+            animationPlayState: paused ? "paused" : "running",
+          }}
+        >
+          {loop.map((item, index) => (
+            <div key={`${item.name}-${index}`} className={styles.marqueeItem}>
+              <BrandCard item={item} onPick={onPick} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -104,7 +94,7 @@ export default function BrandsCarousel({
   const [marqueePaused, setMarqueePaused] = useState(false);
   const reduceMotion = useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
-  const inView = useInView(sectionRef, { once: true, amount: 0.2 });
+  const inView = useInView(sectionRef, { once: true, amount: 0.22 });
 
   const displayBrands = useMemo<BrandItem[]>(() => {
     if (dbBrands.length > 0) {
@@ -117,11 +107,7 @@ export default function BrandsCarousel({
     return brands;
   }, [dbBrands]);
 
-  const [rowA, rowB] = useMemo(() => splitRows(displayBrands), [displayBrands]);
-
-  // Velocidad proporcional a cantidad de logos (más marcas = un poco más lento)
-  const durationA = Math.max(28, rowA.length * 4.5);
-  const durationB = Math.max(32, rowB.length * 5);
+  const durationSec = Math.max(36, displayBrands.length * 3.2);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -148,9 +134,9 @@ export default function BrandsCarousel({
         {showTitle ? (
           <motion.header
             className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
-            initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={inView || reduceMotion ? { opacity: 1, y: 0 } : undefined}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="min-w-0">
               <h2 className="font-display text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl lg:text-[2.75rem] lg:leading-none">
@@ -163,34 +149,26 @@ export default function BrandsCarousel({
               <span className={styles.headerRule} aria-hidden="true" />
             </div>
             {status === "ready" ? (
-              <motion.div
-                className={styles.count}
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-                animate={inView || reduceMotion ? { opacity: 1, scale: 1 } : undefined}
-                transition={{ duration: 0.45, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-              >
+              <div className={styles.count}>
                 <span className={styles.countValue}>{displayBrands.length}</span>
                 <span className={styles.countLabel}>marcas activas</span>
-              </motion.div>
+              </div>
             ) : null}
           </motion.header>
         ) : null}
 
         {displayBrands.length > 0 ? (
           reduceMotion ? (
-            <ul className={`mt-6 sm:mt-8 ${styles.grid}`}>
-              {displayBrands.map((item, index) => (
+            <ul className={styles.grid}>
+              {displayBrands.map((item) => (
                 <li key={item.name} className="min-w-0">
-                  <BrandCard item={item} onPick={pick} index={index} />
+                  <BrandCard item={item} onPick={pick} />
                 </li>
               ))}
             </ul>
           ) : (
-            <motion.div
-              className={styles.marqueeStack}
-              initial={{ opacity: 0, y: 24 }}
-              animate={inView ? { opacity: 1, y: 0 } : undefined}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            <div
+              className={cn(styles.reveal, inView && styles.revealIn)}
               onMouseEnter={() => setMarqueePaused(true)}
               onMouseLeave={() => setMarqueePaused(false)}
               onFocusCapture={() => setMarqueePaused(true)}
@@ -200,23 +178,13 @@ export default function BrandsCarousel({
                 }
               }}
             >
-              <MarqueeRow
-                items={rowA.length ? rowA : displayBrands}
-                direction="left"
-                durationSec={durationA}
+              <BrandRail
+                items={displayBrands}
+                durationSec={durationSec}
                 onPick={pick}
                 paused={marqueePaused || !inView}
               />
-              {(rowB.length > 0 || displayBrands.length > 1) && (
-                <MarqueeRow
-                  items={rowB.length ? rowB : displayBrands}
-                  direction="right"
-                  durationSec={durationB}
-                  onPick={pick}
-                  paused={marqueePaused || !inView}
-                />
-              )}
-            </motion.div>
+            </div>
           )
         ) : (
           <p className="mt-6 text-sm text-zinc-400">Cargando marcas…</p>
@@ -236,9 +204,9 @@ export default function BrandsCarousel({
           />
           <motion.div
             className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#16181d] text-white shadow-2xl sm:max-w-md"
-            initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.96 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="p-6 sm:p-8">
               <button

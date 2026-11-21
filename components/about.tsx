@@ -1,279 +1,386 @@
 "use client";
 
 import Image from "next/image";
-import { Award, Users, Clock, Truck } from "lucide-react";
-import BrandsCarousel from "./BrandsCarousel";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useNosotrosContent } from "@/lib/nosotros-data";
-import { VehicleVectorDecor } from "./VehicleVectorDecor";
+import { CANONICAL_BRANDS } from "@/lib/catalog/canonical-brands";
+import {
+  OFFICIAL_BRAND_LOGOS,
+  OFFICIAL_BRAND_STAGES,
+  getBrandChipVisual,
+} from "@/lib/catalog/display";
+import { cn } from "@/lib/utils";
 
-const STAT_ICONS = [Clock, Users, Truck, Award];
+const HOUSE_BRANDS = [
+  {
+    key: "apolo" as const,
+    name: "Apolo",
+    tagline: "Lubricantes de alto rendimiento",
+    focus: "Motores, transmisiones, grasas e industria",
+    description:
+      "Nuestra línea propia: aceites, grasas y lubricantes formulados para proteger el motor en uso diario, flotas y trabajo pesado.",
+    href: "/productos?brand=Apolo",
+    accent: "#EF4444",
+  },
+  {
+    key: "overts" as const,
+    name: "Overts",
+    tagline: "Fluidos y especialidades",
+    focus: "Grasas, refrigerantes y fluidos automotrices",
+    description:
+      "Línea especializada en grasas, refrigerantes y fluidos para talleres y flotas que necesitan disponibilidad constante.",
+    href: "/productos?brand=Overts",
+    accent: "#F59E0B",
+  },
+  {
+    key: "valtrom" as const,
+    name: "Valtrom",
+    tagline: "Repuestos y componentes",
+    focus: "Autopartes y componentes de durabilidad",
+    description:
+      "Marca principal de repuestos y autopartes: complemento natural del lubricante para el mantenimiento integral del vehículo.",
+    href: "/productos?brand=Valtrom",
+    accent: "#A855F7",
+  },
+];
+
+const ALLIED_BRANDS = CANONICAL_BRANDS.filter(
+  (brand) => !["apolo", "overts", "valtrom"].includes(brand.slug)
+);
 
 export function About() {
   const { content } = useNosotrosContent();
 
-  const statsList = content.stats && content.stats.length > 0
-    ? content.stats
-    : [
-        { value: "15+", label: "Años de experiencia" },
-        { value: "5,000+", label: "Clientes satisfechos" },
-        { value: "500+", label: "Entregas mensuales" },
-        { value: "100%", label: "Productos certificados" },
-      ];
+  const statsList =
+    content.stats && content.stats.length > 0
+      ? content.stats
+      : [
+          { value: "15+", label: "Años de experiencia" },
+          { value: "5,000+", label: "Clientes satisfechos" },
+          { value: "500+", label: "Entregas mensuales" },
+          { value: "100%", label: "Productos certificados" },
+        ];
+
+  const portada = content.portadaImage || "/images/Portada/portada.png";
+  const heroLine =
+    (content.description1 || "")
+      .split(/(?<=\.)\s+/)
+      .map((part) => part.trim())
+      .find(Boolean) ||
+    "Importación y distribución de lubricantes de alto rendimiento para automotriz, flotas e industria.";
 
   return (
-    <section
-      id="nosotros"
-      className="relative bg-background text-foreground transition-colors duration-300 lg:[zoom:1.4]"
-    >
-      <div className="w-full">
-        {/* QUIÉNES SOMOS */}
-        <div className="absolute inset-0 bg-background/60" />
+    <section id="nosotros" className="relative bg-background text-foreground">
+      {/* HERO */}
+      <div className="relative isolate min-h-[min(88dvh,760px)] overflow-hidden">
+        <Image
+          src={portada}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          unoptimized={portada.startsWith("data:")}
+          className="object-cover object-center scale-[1.02]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(8,8,10,0.88)_0%,rgba(8,8,10,0.62)_48%,rgba(8,8,10,0.35)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(8,8,10,0.75)_100%)]" />
 
-        <div className="relative w-full overflow-hidden py-[var(--space-section-y-lg)]">
-          {/* Glow ambiental */}
-          <div className="absolute -inset-10 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.12),transparent_60%)] blur-3xl" />
+        <div className="relative z-10 mx-auto flex min-h-[min(88dvh,760px)] max-w-6xl flex-col justify-end px-5 pb-14 pt-28 sm:px-8 sm:pb-16 lg:pb-20">
+          <p className="font-display text-sm font-semibold tracking-[0.28em] text-[color:var(--gold)]">
+            APOLO IMPORT
+          </p>
+          <h1 className="mt-4 max-w-3xl font-display text-[clamp(2.4rem,6vw,4.6rem)] font-semibold leading-[0.95] tracking-tight text-white">
+            {content.title || "Apolo Lubricantes"}
+          </h1>
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
+            {heroLine}
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              href="/productos"
+              className="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Ver catálogo
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="#marcas"
+              className="inline-flex h-12 items-center rounded-full border border-white/25 bg-white/5 px-6 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:border-white/45 hover:bg-white/10"
+            >
+              Nuestras marcas
+            </Link>
+          </div>
+        </div>
+      </div>
 
-          {/* Ilustración Vectorial de Vehículos en el centro del lado izquierdo */}
-          <VehicleVectorDecor size="lg" className="absolute left-4 2xl:left-10 3xl:left-16 top-1/2 -translate-y-1/2" />
-
-          <div className="relative z-10 px-3 sm:px-6 lg:px-8 xl:px-10">
-            {/* TEXTO */}
-            <div className="text-foreground max-w-4xl mx-auto text-center mb-14 lg:mb-20">
-              <span className="inline-block uppercase tracking-[0.35em] text-xs sm:text-sm text-primary font-semibold">
-                {content.badge || "Sobre Nosotros"}
-              </span>
-
-              <h2
-                className="mt-3 text-[length:var(--fs-h1)] font-extrabold leading-tight
-        text-foreground drop-shadow-[0_6px_18px_rgba(var(--primary-rgb,220,38,38),0.45)]"
-              >
-                {content.title || "Apolo Lubricantes"}
-              </h2>
-
-              <div className="w-24 h-[3px] glow-line-full rounded-full mx-auto mt-4" />
-
-              {content.description1 && (
-                <p className="mt-6 text-[length:var(--fs-body-lg)] text-foreground/90 leading-relaxed">
-                  {content.description1}
-                </p>
-              )}
-
-              {content.description2 && (
-                <p className="mt-4 text-[length:var(--fs-body)] text-muted-foreground leading-relaxed">
-                  {content.description2}
-                </p>
-              )}
-
-              {content.highlight && (
-                <div
-                  className="mt-8 bg-card/75 backdrop-blur-md border border-primary/30 
-          p-5 rounded-xl max-w-xl mx-auto shadow-[0_0_30px_rgba(var(--primary-rgb,220,38,38),0.2)]"
-                >
-                  <p className="italic text-sm text-card-foreground">
-                    {content.highlight}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* GRAN PORTADA INSTITUCIONAL */}
-            <div className="w-full max-w-[1720px] mx-auto mb-16 lg:mb-24 px-1 sm:px-2">
-              <div className="relative group">
-                {/* Glow ambiental dinámico de alta gama */}
-                <div className="absolute -inset-3 sm:-inset-6 rounded-[32px] bg-gradient-to-r from-red-600/35 via-[#C7940A]/30 to-red-600/35 blur-3xl opacity-75 group-hover:opacity-100 transition-all duration-700 -z-10" />
-
-                {/* Marco de cristal templado oscuro */}
-                <div className="relative rounded-2xl sm:rounded-3xl p-2 sm:p-2.5 bg-gradient-to-b from-white/20 via-white/10 to-transparent border border-primary/35 shadow-[0_25px_65px_rgba(0,0,0,0.85),0_0_40px_rgba(var(--primary-rgb,220,38,38),0.25)] transition-all duration-500 group-hover:border-primary/60 group-hover:shadow-[0_30px_85px_rgba(0,0,0,0.95),0_0_55px_rgba(var(--primary-rgb,220,38,38),0.4)] overflow-hidden">
-                  <div
-                    className="relative w-full rounded-xl sm:rounded-[22px] overflow-hidden bg-neutral-950 flex items-center justify-center min-h-[240px] sm:min-h-[360px] md:min-h-[480px] lg:min-h-[580px] xl:min-h-[660px]"
-                    style={{ aspectRatio: "2462 / 938" }}
-                  >
-                    {/* Imagen principal */}
-                    <Image
-                      src={content.portadaImage || "/images/Portada/portada.png"}
-                      alt={content.title ? `${content.title} - Portada Institucional` : "Apolo Lubricantes - Portada Institucional"}
-                      fill
-                      priority
-                      unoptimized={Boolean(content.portadaImage && content.portadaImage.startsWith("data:"))}
-                      sizes="(max-width: 1024px) 100vw, 1720px"
-                      className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                    />
-
-                    {/* Sutil resplandor diagonal al hover */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* TARJETAS */}
-            <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-              {statsList.map((stat, index) => {
-                const Icon = STAT_ICONS[index % STAT_ICONS.length];
-
-                return (
-                  <div
-                    key={index}
-                    className="
-              relative group
-              rounded-2xl
-              p-4 sm:p-6 lg:p-7
-              bg-card
-              border border-primary/20
-              shadow-[0_0_25px_rgba(var(--primary-rgb,220,38,38),0.15)]
-              overflow-hidden
-              transition-all duration-300
-              hover:shadow-[0_0_40px_rgba(var(--primary-rgb,220,38,38),0.3)]
-              hover:-translate-y-1
-            "
-                  >
-                    {/* Glow animado */}
-                    <div
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition
-              bg-[radial-gradient(circle_at_top,rgba(var(--primary-rgb,220,38,38),0.18),transparent_65%)]"
-                    />
-
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                      <div
-                        className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-primary/10 
-                flex items-center justify-center mb-3"
-                      >
-                        <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
-                      </div>
-
-                      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-card-foreground">
-                        {stat.value}
-                      </h3>
-
-                      <p className="mt-1 text-[11px] sm:text-sm text-muted-foreground">
-                        {stat.label}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+      {/* MARCAS PRINCIPALES */}
+      <div id="marcas" className="relative border-t border-border/60 bg-background">
+        <div className="mx-auto max-w-6xl px-5 pb-8 pt-14 sm:px-8 sm:pb-10 sm:pt-16 lg:pt-20">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
+              Tres marcas. Una misma operación.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Apolo, Overts y Valtrom son el núcleo de nuestro catálogo: lubricantes,
+              fluidos y repuestos con stock y asesoría desde Lima para todo el país.
+            </p>
           </div>
         </div>
 
-        {/* NUESTRA HISTORIA */}
-        <div className="relative w-full py-20 sm:py-28">
-          {/* Halo */}
-          <div className="absolute inset-0 flex justify-center">
-            <div className="w-[60%] h-full bg-[radial-gradient(circle,rgba(var(--primary-rgb,220,38,38),0.14),transparent_65%)] blur-3xl" />
+        <div className="space-y-4 px-0 pb-16 sm:space-y-5 sm:px-4 sm:pb-20 lg:px-6">
+          {HOUSE_BRANDS.map((brand, index) => {
+            const stage = OFFICIAL_BRAND_STAGES[brand.key];
+            const logo = OFFICIAL_BRAND_LOGOS[brand.key];
+            const reverse = index % 2 === 1;
+
+            return (
+              <article
+                key={brand.key}
+                className={cn(
+                  "relative mx-auto grid max-w-[1400px] overflow-hidden border-y border-border/70 bg-card sm:rounded-3xl sm:border lg:min-h-[440px] lg:grid-cols-2",
+                  reverse && "lg:[&>*:first-child]:order-2"
+                )}
+              >
+                <div className="relative min-h-[280px] sm:min-h-[340px] lg:min-h-full">
+                  <Image
+                    src={stage}
+                    alt=""
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className="object-cover object-center"
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: `linear-gradient(160deg, ${brand.accent}40 0%, transparent 42%, rgba(0,0,0,0.62) 100%)`,
+                    }}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 sm:p-6">
+                    <Image
+                      src={logo}
+                      alt={brand.name}
+                      width={160}
+                      height={56}
+                      className="h-11 w-auto object-contain drop-shadow-lg sm:h-14"
+                    />
+                    <span
+                      className="rounded-full px-3 py-1 text-[11px] font-semibold text-zinc-950 sm:text-xs"
+                      style={{ backgroundColor: brand.accent }}
+                    >
+                      Marca principal
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-center px-6 py-9 sm:px-10 sm:py-12 lg:px-14">
+                  <p
+                    className="text-sm font-semibold tracking-wide"
+                    style={{ color: brand.accent }}
+                  >
+                    {brand.tagline}
+                  </p>
+                  <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+                    {brand.name}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{brand.focus}</p>
+                  <p className="mt-5 max-w-md text-base leading-relaxed text-foreground/90">
+                    {brand.description}
+                  </p>
+                  <Link
+                    href={brand.href}
+                    className="mt-8 inline-flex w-fit items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                  >
+                    Ver productos {brand.name}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CIFRAS */}
+      <div className="border-y border-border/70 bg-muted/20">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px bg-border/50 sm:grid-cols-4">
+          {statsList.map((stat) => (
+            <div
+              key={`${stat.value}-${stat.label}`}
+              className="bg-background px-5 py-8 text-center sm:py-10"
+            >
+              <p className="font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
+                {stat.value}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* HISTORIA + PROPÓSITO */}
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:items-end">
+          <div>
+            <p className="text-sm font-semibold text-[color:var(--gold)]">
+              {content.historySubtitle || "Nuestra historia"}
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              {content.historyTitle || "Construyendo confianza con el tiempo"}
+            </h2>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              {content.historyDescription}
+            </p>
+          </div>
+          {content.highlight ? (
+            <blockquote className="border-l-2 border-primary pl-5 text-lg font-medium leading-snug text-foreground sm:text-xl">
+              {content.highlight}
+            </blockquote>
+          ) : null}
+        </div>
+
+        {(content.description2 || content.highlight) && content.description2 ? (
+          <p className="mt-10 max-w-3xl text-base leading-relaxed text-foreground/85">
+            {content.description2}
+          </p>
+        ) : null}
+      </div>
+
+      {/* MISIÓN / VISIÓN */}
+      <div className="border-t border-border/60 bg-muted/15">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-8 lg:py-24">
+          <div className="overflow-hidden rounded-3xl border border-border/70 bg-card">
+            <div className="relative aspect-[16/10] bg-muted">
+              <Image
+                src={content.misionImage || "/images/about/mision.png"}
+                alt="Misión Apolo Lubricantes"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-contain object-center p-8 sm:p-10"
+                unoptimized={Boolean(
+                  content.misionImage && content.misionImage.startsWith("data:")
+                )}
+              />
+            </div>
+            <div className="px-6 py-7 sm:px-8">
+              <p className="text-sm font-semibold text-primary">
+                {content.misionSubtitle || "Misión"}
+              </p>
+              <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight">
+                {content.misionTitle || "Compromiso con la calidad"}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {content.misionDescription}
+              </p>
+            </div>
           </div>
 
-          <div className="relative max-w-6xl mx-auto text-center px-4 sm:px-6">
-            <div
-              className="
-              bg-card/75
-              backdrop-blur-2xl
-              border border-primary/30
-              rounded-3xl
-              p-8 sm:p-12
-              shadow-[0_0_50px_rgba(var(--primary-rgb,220,38,38),0.25)]
-              transition-transform duration-300 hover:scale-[1.01]
-            "
-            >
-              <span className="inline-block uppercase tracking-[0.35em] text-xs sm:text-sm text-primary font-semibold">
-                {content.historySubtitle || "Nuestra Historia"}
-              </span>
-
-              <h3
-                className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold 
-        text-primary drop-shadow-[0_6px_20px_rgba(var(--primary-rgb,239,68,68),0.6)]"
-              >
-                {content.historyTitle || "Construyendo confianza con el tiempo"}
+          <div className="overflow-hidden rounded-3xl border border-border/70 bg-card">
+            <div className="relative aspect-[16/10] bg-muted">
+              <Image
+                src={content.visionImage || "/images/about/vision.png"}
+                alt="Visión Apolo Lubricantes"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-contain object-center p-8 sm:p-10"
+                unoptimized={Boolean(
+                  content.visionImage && content.visionImage.startsWith("data:")
+                )}
+              />
+            </div>
+            <div className="px-6 py-7 sm:px-8">
+              <p className="text-sm font-semibold text-[color:var(--gold)]">
+                {content.visionSubtitle || "Visión"}
+              </p>
+              <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight">
+                {content.visionTitle || "Ser líderes a nivel nacional"}
               </h3>
-
-              <div className="w-24 h-[3px] glow-line-full rounded-full mx-auto my-6" />
-
-              <p className="text-sm sm:text-base lg:text-lg text-card-foreground/90 leading-relaxed">
-                {content.historyDescription}
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {content.visionDescription}
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* MISIÓN Y VISIÓN */}
-        <div className="relative w-full overflow-hidden py-[var(--space-section-y-lg)]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 space-y-20 text-foreground">
-            {/* MISIÓN */}
-            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              <div className="absolute -inset-6 bg-[radial-gradient(circle_at_left,rgba(var(--primary-rgb,220,38,38),0.12),transparent_60%)] blur-2xl" />
+      {/* MARCAS ALIADAS */}
+      <div className="border-t border-border/60">
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              Marcas aliadas
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+              Además de nuestras líneas oficiales, distribuimos marcas reconocidas
+              en lubricantes, filtros, refrigerantes y fluidos.
+            </p>
+          </div>
 
-              <div className="relative order-1 flex justify-center">
-                <Image
-                  src={content.misionImage || "/images/about/mision.png"}
-                  alt="Misión Apolo Lubricantes"
-                  width={420}
-                  height={340}
-                  loading="lazy"
-                  unoptimized={Boolean(content.misionImage && content.misionImage.startsWith("data:"))}
-                  className="max-h-[200px] sm:max-h-[260px] lg:max-h-[340px] w-auto h-auto object-contain
-          drop-shadow-[0_20px_40px_rgba(var(--primary-rgb,220,38,38),0.45)]"
-                />
-              </div>
+          <ul className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {ALLIED_BRANDS.map((brand) => {
+              const tone = getBrandChipVisual(brand.name);
+              return (
+                <li key={brand.slug}>
+                  <Link
+                    href={`/productos?brand=${encodeURIComponent(brand.name)}`}
+                    className="group flex h-full flex-col items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/60 px-3 py-5 text-center transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card"
+                  >
+                    <span className="relative flex h-14 w-full items-center justify-center">
+                      {brand.logo_url ? (
+                        <Image
+                          src={brand.logo_url}
+                          alt={brand.name}
+                          width={120}
+                          height={48}
+                          className="max-h-12 w-auto object-contain opacity-90 transition-opacity group-hover:opacity-100"
+                        />
+                      ) : (
+                        <span
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: tone.accent }}
+                        >
+                          {brand.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs font-semibold text-foreground sm:text-sm">
+                      {brand.name}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
 
-              <div className="relative order-2 text-center lg:text-left space-y-4">
-                <span className="inline-block uppercase tracking-[0.35em] text-xs text-primary font-semibold">
-                  {content.misionSubtitle || "Nuestra Misión"}
-                </span>
-
-                <h3
-                  className="text-[length:var(--fs-h2)] font-extrabold
-          text-primary leading-tight drop-shadow-[0_6px_18px_rgba(var(--primary-rgb,239,68,68),0.6)]"
-                >
-                  {content.misionTitle || "Compromiso con la calidad"}
-                </h3>
-
-                <div className="w-20 h-[3px] glow-line-full rounded-full mx-auto lg:mx-0" />
-
-                <p className="text-[length:var(--fs-body-lg)] text-foreground/90 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                  {content.misionDescription}
-                </p>
-              </div>
+          <div className="mt-14 flex flex-col items-start justify-between gap-6 rounded-3xl border border-border/70 bg-[linear-gradient(135deg,rgba(201,0,18,0.12),transparent_55%),var(--card)] px-6 py-8 sm:flex-row sm:items-center sm:px-10">
+            <div>
+              <h3 className="font-display text-2xl font-semibold tracking-tight">
+                ¿Buscas una marca o presentación?
+              </h3>
+              <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
+                Filtra el catálogo por marca o escríbenos por WhatsApp para cotizar
+                stock y alternativas.
+              </p>
             </div>
-
-            {/* VISIÓN */}
-            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              <div className="absolute -inset-6 bg-[radial-gradient(circle_at_right,rgba(var(--primary-rgb,220,38,38),0.12),transparent_60%)] blur-2xl" />
-
-              <div className="relative order-2 lg:order-1 text-center lg:text-left space-y-4">
-                <span className="inline-block uppercase tracking-[0.35em] text-xs text-primary font-semibold">
-                  {content.visionSubtitle || "Nuestra Visión"}
-                </span>
-
-                <h3
-                  className="text-[length:var(--fs-h2)] font-extrabold text-primary leading-tight drop-shadow-[0_6px_18px_rgba(var(--primary-rgb,239,68,68),0.6)]"
-                >
-                  {content.visionTitle || "Ser líderes a nivel nacional"}
-                </h3>
-
-                <div className="w-20 h-[3px] glow-line-full rounded-full mx-auto lg:mx-0" />
-
-                <p className="text-[length:var(--fs-body-lg)] text-foreground/90 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                  {content.visionDescription}
-                </p>
-              </div>
-
-              <div className="relative order-1 lg:order-2 flex justify-center">
-                <Image
-                  src={content.visionImage || "/images/about/vision.png"}
-                  alt="Visión Apolo Lubricantes"
-                  width={420}
-                  height={340}
-                  loading="lazy"
-                  unoptimized={Boolean(content.visionImage && content.visionImage.startsWith("data:"))}
-                  className="max-h-[200px] sm:max-h-[260px] lg:max-h-[340px] w-auto h-auto object-contain drop-shadow-[0_20px_40px_rgba(var(--primary-rgb,220,38,38),0.45)]"
-                />
-              </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/productos"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                Ir al catálogo
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/contacto"
+                className="inline-flex h-11 items-center rounded-full border border-border bg-background px-5 text-sm font-semibold hover:border-primary/40"
+              >
+                Contacto
+              </Link>
             </div>
           </div>
         </div>
-
-        {/* MARCAS */}
-        <BrandsCarousel />
       </div>
     </section>
   );

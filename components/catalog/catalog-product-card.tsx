@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { FileText, Package } from "lucide-react";
 import type { Product } from "@/lib/products-data";
@@ -56,6 +56,12 @@ function CatalogProductCardInner({
   onOpenQuickView,
 }: CatalogProductCardProps) {
   const { addItem, items, openDrawer } = useQuote();
+  // Evita mismatch SSR/cliente: la cotización vive en localStorage y puede
+  // hidratarse en el layout antes que estas tarjetas.
+  const [quoteReady, setQuoteReady] = useState(false);
+  useEffect(() => {
+    setQuoteReady(true);
+  }, []);
   const subcategory = product.subcategoryId
     ? getSubcategoryById(product.subcategoryId)
     : null;
@@ -74,7 +80,7 @@ function CatalogProductCardInner({
   });
   const outOfStock = level === "out";
   const validImage = hasUsableImage(product.image);
-  const isInQuote = items.some((it) => it.id === product.id);
+  const isInQuote = quoteReady && items.some((it) => it.id === product.id);
 
   const openDetails = useCallback(() => {
     onOpenQuickView(product);

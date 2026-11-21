@@ -17,15 +17,18 @@ type Props = {
 
 export function ProductGallery({ name, brand, images, fallbackImage, compact = false }: Props) {
   const gallery = useMemo(() => {
-    const validFallback =
-      fallbackImage && fallbackImage.trim().length > 0 && fallbackImage !== "/placeholder.svg"
-        ? fallbackImage.trim()
-        : "";
+    const isUsable = (src: string) =>
+      src.length > 0 &&
+      src !== "/placeholder.svg" &&
+      src !== "/imagen-no-encontrada.svg";
 
-    const rawList = images && images.length > 0 ? images : (validFallback ? [validFallback] : []);
+    const validFallback =
+      fallbackImage && isUsable(fallbackImage.trim()) ? fallbackImage.trim() : "";
+
+    const rawList = images && images.length > 0 ? images : validFallback ? [validFallback] : [];
     const filtered = rawList
       .map((item) => (typeof item === "string" ? item.trim() : ""))
-      .filter((item) => item.length > 0 && item !== "/placeholder.svg");
+      .filter((item) => isUsable(item));
 
     return Array.from(new Set(filtered));
   }, [images, fallbackImage]);
@@ -45,7 +48,7 @@ export function ProductGallery({ name, brand, images, fallbackImage, compact = f
         className={cn(
           "relative flex items-center justify-center overflow-hidden bg-white",
           compact
-            ? "h-[200px] rounded-none border-0 sm:h-full sm:min-h-[280px]"
+            ? "h-[240px] min-h-[240px] w-full rounded-none border-0 bg-white sm:h-full sm:min-h-[280px]"
             : "aspect-square rounded-2xl border border-border shadow-xs"
         )}
       >

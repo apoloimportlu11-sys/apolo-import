@@ -6,12 +6,12 @@ import { Footer } from "@/components/footer"
 export const metadata: Metadata = {
   title: "Nosotros",
   description:
-    "Conoce Apolo Lubricantes: importación y distribución de lubricantes de alto rendimiento para automotriz, flotas e industria.",
+    "Conoce Apolo Import: Apolo, Overts y Valtrom, más marcas aliadas en lubricantes, fluidos y repuestos para automotriz, flotas e industria.",
   alternates: { canonical: "/nosotros" },
   openGraph: {
     title: "Nosotros | Apolo Lubricantes",
     description:
-      "Historia, compromiso y marcas con las que trabajamos para proteger tu motor.",
+      "Historia, misión y nuestras marcas: Apolo, Overts, Valtrom y aliados comerciales.",
     url: "/nosotros",
   },
 }

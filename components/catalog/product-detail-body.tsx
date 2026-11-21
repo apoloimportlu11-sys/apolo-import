@@ -36,6 +36,7 @@ function hasValidImage(src?: string) {
     src &&
       src.trim() &&
       src !== "/placeholder.svg" &&
+      src !== "/imagen-no-encontrada.svg" &&
       (src.startsWith("/") ||
         src.startsWith("http://") ||
         src.startsWith("https://") ||
@@ -60,7 +61,18 @@ export function ProductDetailBody({
   }, [product.id]);
   const selected = options.find((item) => item.id === selectedId) || options.find((item) => item.isActive) || options[0];
   const selectedImage = selected?.imageUrl || product.image;
-  const galleryImages = selected?.imageUrl ? [selected.imageUrl] : product.images;
+  const galleryImages = useMemo(() => {
+    const fromPresentation = selected?.imageUrl?.trim() || "";
+    const fromProduct = Array.isArray(product.images) ? product.images : [];
+    const primary = product.image?.trim() || "";
+    return Array.from(
+      new Set(
+        [fromPresentation, primary, ...fromProduct]
+          .map((src) => (typeof src === "string" ? src.trim() : ""))
+          .filter((src) => hasValidImage(src))
+      )
+    );
+  }, [selected?.imageUrl, product.image, product.images]);
 
   const relatedResult = useMemo(
     () => getRelatedProductsResult(product, catalog, compact ? 6 : 8),
@@ -136,11 +148,11 @@ export function ProductDetailBody({
     const relatedRail =
       related.length > 0 ? (
         <aside
-          className="flex min-h-0 min-w-0 flex-col border-b border-border/70 bg-card lg:border-b-0 lg:border-r lg:border-border/60"
+          className="flex min-h-0 min-w-0 flex-col border-t border-border/70 bg-card lg:order-1 lg:border-t-0 lg:border-b-0 lg:border-r lg:border-border/60"
           data-catalog-related="true"
           data-related-mode={relatedMode}
         >
-          <p className="shrink-0 px-2.5 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="shrink-0 px-2.5 pb-1.5 pt-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground lg:pt-3">
             {relatedMode === "cross-brand"
               ? "Otras marcas"
               : `También de ${product.brand}`}
@@ -220,18 +232,17 @@ export function ProductDetailBody({
       ) : null;
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col bg-card">
         <div
           className={cn(
-            "grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]",
+            "grid min-h-0 flex-1",
             related.length > 0
-              ? "lg:grid-cols-[7.75rem_minmax(220px,34%)_1fr]"
-              : "lg:grid-cols-[minmax(240px,38%)_1fr]"
+              ? "grid-rows-[auto_minmax(0,1fr)_auto] lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[7.75rem_minmax(220px,34%)_1fr]"
+              : "grid-rows-[auto_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[minmax(240px,38%)_1fr]"
           )}
         >
-          {relatedRail}
-
-          <div className="relative min-h-0 border-b border-border/70 lg:border-b-0 lg:border-r lg:border-r-[color:color-mix(in_oklab,var(--gold)_22%,transparent)]">
+          {/* Móvil: foto primero. Desktop: columna central (related | gallery | info). */}
+          <div className="relative min-h-[240px] border-b border-border/70 bg-white sm:min-h-[280px] lg:order-2 lg:min-h-0 lg:border-b-0 lg:border-r lg:border-r-[color:color-mix(in_oklab,var(--gold)_22%,transparent)]">
             <ProductGallery
               name={product.name}
               brand={product.brand}
@@ -241,7 +252,7 @@ export function ProductDetailBody({
             />
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-col overflow-hidden lg:order-3">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 pr-12 custom-scrollbar sm:px-6">
               <p className="text-[11px] font-medium tracking-wide text-[color:var(--gold)]">
                 {[product.brand, product.line].filter(Boolean).join(" · ")}
@@ -273,6 +284,8 @@ export function ProductDetailBody({
               </div>
             </div>
           </div>
+
+          {relatedRail}
         </div>
 
         <div className="flex items-center gap-2 border-t border-border bg-muted/25 px-4 py-3 sm:px-5">
