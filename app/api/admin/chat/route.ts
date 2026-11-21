@@ -8,6 +8,7 @@ import {
   extractWhatsAppDraft,
   retrieveCatalogContext,
 } from "@/lib/admin-chat-context";
+import { completeChat } from "@/lib/chat-provider";
 
 export async function POST(req: Request) {
   try {
@@ -27,10 +28,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { message: "Asistente no configurado (falta OPENAI_API_KEY)." },
+        { message: "Asistente no configurado (falta GEMINI_API_KEY u OPENAI_API_KEY)." },
         { status: 503 }
       );
     }
@@ -67,7 +67,6 @@ export async function POST(req: Request) {
       pageContext: parsed.data.pageContext || null,
     });
 
-    const model = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
     const messages = [
       { role: "system" as const, content: systemPrompt },
       ...parsed.data.messages.map((m) => ({
@@ -76,33 +75,20 @@ export async function POST(req: Request) {
       })),
     ];
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages,
+    let reply: string;
+    try {
+      const completed = await completeChat(messages, {
         temperature: 0.4,
-        max_tokens: analyzingQuote ? 1100 : 700,
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("OpenAI admin chat error:", res.status, errText);
+        maxTokens: analyzingQuote ? 1100 : 700,
+      });
+      reply = completed.reply;
+    } catch (error) {
+      console.error("admin chat provider error:", error);
       return NextResponse.json(
         { message: "No se pudo obtener respuesta del asistente interno." },
         { status: 502 }
       );
     }
-
-    const data = await res.json();
-    const reply =
-      data?.choices?.[0]?.message?.content?.trim() ||
-      "No pude generar una respuesta. Revisa Productos o Inventario en el panel.";
 
     return NextResponse.json({
       reply,
