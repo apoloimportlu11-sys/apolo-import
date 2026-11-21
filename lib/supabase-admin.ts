@@ -1,9 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseSecretKey, getSupabaseUrl } from "@/lib/supabase-env";
 
-let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+/** Cliente admin sin schema generado: evita que `.insert()` infiera `never` en el build. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let supabaseAdmin: SupabaseClient<any> | null = null;
 
-export function getSupabaseAdmin() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getSupabaseAdmin(): SupabaseClient<any> {
   if (!supabaseAdmin) {
     const url = getSupabaseUrl();
     const secretKey = getSupabaseSecretKey();
@@ -12,7 +15,8 @@ export function getSupabaseAdmin() {
       throw new Error("Supabase URL or Secret Key not configured in environment");
     }
 
-    supabaseAdmin = createClient(url, secretKey, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    supabaseAdmin = createClient<any>(url, secretKey, {
       auth: { persistSession: false },
     });
   }
