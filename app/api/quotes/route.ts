@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { quoteCreateSchema } from "@/lib/validations/quote";
 import { generateQuoteCode } from "@/lib/quotes";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
@@ -27,20 +26,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const url = getSupabaseUrl();
-    const key = getSupabaseAnonKey();
-    if (!url || !key) {
-      return NextResponse.json({ message: "Supabase no configurado" }, { status: 500 });
+    let supabase;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch {
+      return NextResponse.json(
+        {
+          message:
+            "Falta SUPABASE_SECRET_KEY (o SUPABASE_SERVICE_ROLE_KEY) en el servidor para registrar cotizaciones.",
+        },
+        { status: 500 }
+      );
     }
 
-    const supabase = createClient(url, key);
     const { items, clientName, city, phone, notes } = parsed.data;
     const code = generateQuoteCode();
     const total_items = items.reduce((acc, i) => acc + i.quantity, 0);
 
     let customer_id: string | null = null;
     if (clientName || phone || city) {
-      const { data: customer } = await supabase
+      const { data: customer, error: customerError } = await supabase
         .from("customers")
         .insert({
           name: clientName || "Cliente web",
@@ -49,7 +54,12 @@ export async function POST(req: Request) {
         })
         .select("id")
         .maybeSingle();
-      customer_id = customer?.id || null;
+
+      if (customerError) {
+        console.error("customer insert:", customerError);
+      } else {
+        customer_id = customer?.id || null;
+      }
     }
 
     const { data, error } = await supabase
@@ -72,7 +82,7 @@ export async function POST(req: Request) {
     if (error) {
       console.error("quote insert:", error);
       return NextResponse.json(
-        { message: "No se pudo guardar la cotización. ¿Ejecutaste supabase_quotes.sql?" },
+        { message: "No se pudo guardar la cotización." },
         { status: 500 }
       );
     }

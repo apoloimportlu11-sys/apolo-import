@@ -85,7 +85,7 @@ export default function QuoteDrawer() {
         showAppToast({
           tone: "error",
           title: "No se pudo registrar la cotización",
-          description: "Revisa el celular e inténtalo de nuevo en unos segundos.",
+          description: "Inténtalo de nuevo en unos segundos. Si sigue fallando, escríbenos por WhatsApp.",
         });
         return;
       }
