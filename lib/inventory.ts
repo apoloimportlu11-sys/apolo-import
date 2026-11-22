@@ -49,6 +49,25 @@ async function insertMovement(
   throw error;
 }
 
+async function sumActivePresentationStock(
+  supabase: SupabaseClient,
+  productId: string
+) {
+  const { data, error } = await supabase
+    .from("product_presentations")
+    .select("stock, is_active")
+    .eq("product_id", productId);
+  if (error) throw error;
+  return (data || [])
+    .filter((row) => row.is_active !== false)
+    .reduce((sum, row) => sum + (Number(row.stock) || 0), 0);
+}
+
+/**
+ * Ajusta stock de producto. Si hay presentaciones y no se indica una,
+ * sincroniza las hijas (1 activa → ese valor; varias → todo en la primera
+ * o todas a 0) para que el catálogo (suma de presentaciones) coincida.
+ */
 export async function adjustStock(
   supabase: SupabaseClient,
   productId: string,
@@ -69,6 +88,7 @@ export async function adjustStock(
   const prev = Number(current?.stock) || 0;
   let nextProductStock = stock;
   let delta = stock - prev;
+  let movementPresentationId: string | null = presentationId;
 
   if (presentationId) {
     const { data: currentPresentation, error: presentationReadError } = await supabase
@@ -84,15 +104,48 @@ export async function adjustStock(
       .update({ stock, updated_at: new Date().toISOString() })
       .eq("id", presentationId);
     if (presentationWriteError) throw presentationWriteError;
-
-    const { data: siblings, error: siblingsError } = await supabase
+    nextProductStock = await sumActivePresentationStock(supabase, productId);
+  } else {
+    const { data: presentations, error: presentationsError } = await supabase
       .from("product_presentations")
-      .select("stock, is_active")
-      .eq("product_id", productId);
-    if (siblingsError) throw siblingsError;
-    nextProductStock = (siblings || [])
-      .filter((row) => row.is_active !== false)
-      .reduce((sum, row) => sum + (Number(row.stock) || 0), 0);
+      .select("id, stock, is_active, sort_order")
+      .eq("product_id", productId)
+      .order("sort_order", { ascending: true });
+    if (presentationsError) {
+      if (!/schema cache|does not exist|relation/i.test(presentationsError.message)) {
+        throw presentationsError;
+      }
+    } else {
+      const active = (presentations || []).filter((row) => row.is_active !== false);
+      if (active.length === 1) {
+        const only = active[0];
+        const previousPresentation = Number(only.stock) || 0;
+        delta = stock - previousPresentation;
+        movementPresentationId = String(only.id);
+        const { error: presentationWriteError } = await supabase
+          .from("product_presentations")
+          .update({ stock, updated_at: new Date().toISOString() })
+          .eq("id", only.id);
+        if (presentationWriteError) throw presentationWriteError;
+        nextProductStock = stock;
+      } else if (active.length > 1) {
+        const stamp = new Date().toISOString();
+        const primary = active[0];
+        movementPresentationId = String(primary.id);
+        for (let index = 0; index < active.length; index += 1) {
+          const row = active[index];
+          const nextRowStock = index === 0 ? stock : 0;
+          if ((Number(row.stock) || 0) === nextRowStock) continue;
+          const { error: presentationWriteError } = await supabase
+            .from("product_presentations")
+            .update({ stock: nextRowStock, updated_at: stamp })
+            .eq("id", row.id);
+          if (presentationWriteError) throw presentationWriteError;
+        }
+        nextProductStock = stock;
+        delta = stock - prev;
+      }
+    }
   }
 
   const { data: updated, error: upErr } = await supabase
@@ -115,7 +168,7 @@ export async function adjustStock(
       delta,
       reason,
       created_by: user?.id || null,
-      presentation_id: presentationId,
+      presentation_id: movementPresentationId,
     });
   }
 

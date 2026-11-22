@@ -1235,26 +1235,31 @@ export default function ProductosPage() {
     };
 
     try {
-      const primary = (targetProduct.presentations || []).find((draft) => draft.persisted);
-      const result = primary
-        ? await adjustStock(
-            supabase,
-            id,
-            Math.max(0, Number(primary.stock) + (validStock - targetProduct.stock)),
-            "ajuste_manual",
-            { presentationId: primary.id }
-          )
-        : await adjustStock(supabase, id, validStock, "ajuste_manual");
+      // adjustStock sincroniza presentaciones hijas; no usar delta sobre product.stock
+      // (si producto y presentaciones estaban desfasados, el delta dejaba stock fantasma).
+      const result = await adjustStock(supabase, id, validStock, "ajuste_manual");
+      const persisted = (targetProduct.presentations || []).filter((draft) => draft.persisted);
+      const activePersisted = persisted.filter((draft) => draft.isActive !== false);
+      let nextPresentations = targetProduct.presentations;
+      if (activePersisted.length === 1) {
+        const onlyId = activePersisted[0].id;
+        nextPresentations = (targetProduct.presentations || []).map((draft) =>
+          draft.id === onlyId ? { ...draft, stock: String(validStock) } : draft
+        );
+      } else if (activePersisted.length > 1) {
+        const primaryId = activePersisted[0].id;
+        nextPresentations = (targetProduct.presentations || []).map((draft) => {
+          if (!draft.persisted || draft.isActive === false) return draft;
+          return {
+            ...draft,
+            stock: draft.id === primaryId ? String(validStock) : "0",
+          };
+        });
+      }
       const savedProduct = {
         ...updatedProduct,
         stock: result.stock,
-        presentations: primary
-          ? (targetProduct.presentations || []).map((draft) =>
-              draft.id === primary.id
-                ? { ...draft, stock: String(Math.max(0, Number(primary.stock) + (validStock - targetProduct.stock))) }
-                : draft
-            )
-          : targetProduct.presentations,
+        presentations: nextPresentations,
       };
       persistProductsState((prev) => prev.map((p) => (p.id === id ? savedProduct : p)));
       setRecentlyUpdatedId(id);

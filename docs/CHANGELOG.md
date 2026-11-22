@@ -4,6 +4,18 @@ Registro de cambios importantes del producto y de la memoria del proyecto. Basad
 
 Formato: más reciente primero.
 
+## 2026-11-22 — Limpieza import Excel inactivo
+
+- Borrados **680** `xlsx-*` y **23** `prod-*` inactivos (primer import / pruebas)
+- Quedan **172** productos activos `cat-*` (catálogo vivo)
+- Script: `scripts/cleanup_inactive_imports.js` (`--dry-run` disponible)
+
+## 2026-11-22 — Stock 0 sincroniza presentaciones (Agotado)
+
+- `adjustStock` sin `presentationId` actualiza también `product_presentations` (1 activa → mismo valor; varias → todo en la primera o todas a 0)
+- El ajuste rápido en admin productos ya no calcula delta sobre `products.stock` desfasado
+- Corregido en DB el caso `cat-apolo-grasa-calcio-rojo-2` (producto 0 / presentación 24)
+
 ## 2026-11-20 — Limpieza catálogo Apolo/Overts + títulos Excel
 
 - Reimport curado: **todos** Apolo y Overts; resto de marcas máximo **20** (orden Excel)

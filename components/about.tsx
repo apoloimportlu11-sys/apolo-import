@@ -252,13 +252,13 @@ export function About() {
       <div className="border-t border-border/60 bg-muted/15">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-8 lg:py-24">
           <div className="overflow-hidden rounded-3xl border border-border/70 bg-card">
-            <div className="relative aspect-[16/10] bg-muted">
+            <div className="relative aspect-[16/10] bg-[#0b0b0d]">
               <Image
-                src={content.misionImage || "/images/about/mision.png"}
+                src={content.misionImage || "/images/about/mision.jpg"}
                 alt="Misión Apolo Lubricantes"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain object-center p-8 sm:p-10"
+                className="object-cover object-center"
                 unoptimized={Boolean(
                   content.misionImage && content.misionImage.startsWith("data:")
                 )}
@@ -278,13 +278,13 @@ export function About() {
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-border/70 bg-card">
-            <div className="relative aspect-[16/10] bg-muted">
+            <div className="relative aspect-[16/10] bg-[#0b0b0d]">
               <Image
-                src={content.visionImage || "/images/about/vision.png"}
+                src={content.visionImage || "/images/about/vision.jpg"}
                 alt="Visión Apolo Lubricantes"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain object-center p-8 sm:p-10"
+                className="object-cover object-center"
                 unoptimized={Boolean(
                   content.visionImage && content.visionImage.startsWith("data:")
                 )}

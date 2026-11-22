@@ -8,6 +8,7 @@
 - **Workaround**: definir `RESEND_API_KEY` y, si aplica, `RESEND_FROM_EMAIL` / `RESEND_CONTACT_TEMPLATE_ID`
 
 ## Fixed
+- Stock 0 en admin no mostraba «Agotado» en catálogo: el listado suma `product_presentations.stock` y `adjustStock` sin presentación solo tocaba `products.stock`. Ahora sincroniza hijas; quick-stock deja de usar delta desfasado (`lib/inventory.ts`, `app/admin/productos/page.tsx`) (2026-11-22)
 - [BUG-002] `typescript.ignoreBuildErrors` / lint no bloqueante → tipado en build + ESLint CI bloqueante (`eslint.config.mjs`, workflow sin `continue-on-error`) (2026-11-12)
 - [BUG-001] Gate admin solo por cookie → `proxy.ts` valida `getUser` (+ fallback `sb-access-token`/`sb-refresh-token`) y `role === admin` (2026-11-12)
 - Flash de catálogo público (~49 estáticos antes de Supabase) → skeleton hasta sync; fallback local solo si falla la red (2026-11-12). `components/products.tsx`

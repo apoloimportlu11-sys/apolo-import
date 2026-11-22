@@ -241,9 +241,49 @@ export function isExcelSectionTitle(text: string): boolean {
   return false;
 }
 
+/** Subtipos de filtro para el catálogo (más específicos que “Filtros”). */
+export const FILTER_SUBTYPE_LINES = [
+  "Filtros de aceite",
+  "Filtros de aire",
+  "Filtros de combustible",
+  "Filtros de cabina",
+  "Filtros varios",
+] as const;
+
+export type FilterSubtypeLine = (typeof FILTER_SUBTYPE_LINES)[number];
+
+/** Clasifica un filtro por nombre/texto → sección del catálogo. */
+export function classifyFilterSubtype(
+  ...parts: Array<string | null | undefined>
+): FilterSubtypeLine | null {
+  const t = parts
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!/\bfiltro|\bfilter\b/.test(t)) return null;
+  if (/\bcabina\b|\bcabin\b|\bhabitaculo\b|\bpollen\b|\bacondicionado\b/.test(t)) {
+    return "Filtros de cabina";
+  }
+  if (/\baceite\b|\boil\b/.test(t)) return "Filtros de aceite";
+  if (/\baire\b|\bair\b/.test(t)) return "Filtros de aire";
+  if (
+    /\bdiesel\b|\bgasolina\b|\bcombustible\b|\bfuel\b|\bpetroleo\b|\bpetrol\b/.test(t)
+  ) {
+    return "Filtros de combustible";
+  }
+  return "Filtros varios";
+}
+
 /** Categorías impresas del catálogo. No se colapsan en líneas genéricas. */
 const CATALOG_CATEGORY_LINES = new Set([
   "filtros",
+  "filtros de aceite",
+  "filtros de aire",
+  "filtros de combustible",
+  "filtros de cabina",
+  "filtros varios",
   "refrigerantes",
   "grasas automotrices",
   "limpieza y mantenimiento",
@@ -295,7 +335,18 @@ export function getProductLineCategory(
     && !isGenericBrandPremiumLine(sectionCandidate)
     && (isExcelSectionTitle(sectionCandidate) || isCatalogCategoryLine(sectionCandidate))
   ) {
+    // "Filtros" genérico → subtipo por nombre del producto
+    if (/^filtros$/i.test(sectionCandidate)) {
+      const subtype = classifyFilterSubtype(p.name, p.type, p.subcategory);
+      if (subtype) return subtype;
+    }
     return sectionCandidate;
+  }
+
+  // 2b. Filtros: priorizar subtipo aunque no haya short_description útil
+  {
+    const subtype = classifyFilterSubtype(p.name, p.short_description, p.type, p.line, p.subcategory);
+    if (subtype) return subtype;
   }
 
   // 3. Texto usable para heurística (ignora premium genérico de otra marca)
@@ -348,8 +399,8 @@ export function getProductLineCategory(
   ) {
     return resolveManagedLineName("limpieza-y-cuidado-automotriz", lineGroupsById);
   }
-  if (blob.includes("FILTRO")) {
-    return resolveManagedLineName("filtros-automotrices", lineGroupsById);
+  if (blob.includes("FILTRO") || blob.includes("FILTER")) {
+    return classifyFilterSubtype(p.name, p.type, raw) || resolveManagedLineName("filtros-automotrices", lineGroupsById);
   }
   if (/\bLUBRICANTE/.test(blob)) {
     if (/75W|80W|85W|90|140|250|ATF|CVT/i.test((p.name || "") + " " + (p.viscosity || ""))) {

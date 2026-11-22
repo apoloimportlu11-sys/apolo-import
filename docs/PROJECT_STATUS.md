@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión de documentación: **2026-11-20**. Catálogo curado desde Excel: todos Apolo/Overts + máx. 20/marca resto (~685 xlsx); secciones con títulos literales del Excel; imágenes placeholder.
+Última revisión de documentación: **2026-11-22**. Catálogo vivo: **172** `cat-*` activos. Limpieza: borrados 680 `xlsx-*` + 23 `prod-*` inactivos. Stock: `adjustStock` sincroniza presentaciones (Agotado).
 
 ## Qué es
 

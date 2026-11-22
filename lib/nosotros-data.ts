@@ -52,12 +52,27 @@ export const DEFAULT_NOSOTROS_CONTENT: NosotrosContent = {
   misionSubtitle: "Nuestra Misión",
   misionTitle: "Compromiso con la calidad",
   misionDescription: "Brindar lubricantes de alto rendimiento que garanticen la eficiencia, seguridad y durabilidad de los equipos automotrices e industriales, ofreciendo asesoría técnica y un servicio confiable a nivel nacional.",
-  misionImage: "/images/about/mision.png",
+  misionImage: "/images/about/mision.jpg",
   visionSubtitle: "Nuestra Visión",
   visionTitle: "Ser líderes a nivel nacional",
   visionDescription: "Consolidarnos como una empresa líder en la distribución de lubricantes, reconocida por la calidad de nuestros productos, innovación constante y confianza construida con nuestros clientes.",
-  visionImage: "/images/about/vision.png",
+  visionImage: "/images/about/vision.jpg",
 };
+
+/** Rutas antiguas de ilustraciones genéricas → fotos reales de la empresa. */
+const LEGACY_NOSOTROS_IMAGES: Record<string, string> = {
+  "/images/about/mision.png": "/images/about/mision.jpg",
+  "/images/about/vision.png": "/images/about/vision.jpg",
+};
+
+function normalizeNosotrosImages(content: NosotrosContent): NosotrosContent {
+  const misionImage = LEGACY_NOSOTROS_IMAGES[content.misionImage] || content.misionImage;
+  const visionImage = LEGACY_NOSOTROS_IMAGES[content.visionImage] || content.visionImage;
+  if (misionImage === content.misionImage && visionImage === content.visionImage) {
+    return content;
+  }
+  return { ...content, misionImage, visionImage };
+}
 
 export function getLocalNosotrosContent(): NosotrosContent {
   if (typeof window === "undefined") return DEFAULT_NOSOTROS_CONTENT;
@@ -65,7 +80,7 @@ export function getLocalNosotrosContent(): NosotrosContent {
     const raw = localStorage.getItem(NOSOTROS_STORAGE_KEY);
     if (!raw) return DEFAULT_NOSOTROS_CONTENT;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_NOSOTROS_CONTENT, ...parsed };
+    return normalizeNosotrosImages({ ...DEFAULT_NOSOTROS_CONTENT, ...parsed });
   } catch (_e) {
     return DEFAULT_NOSOTROS_CONTENT;
   }
@@ -135,11 +150,11 @@ export function useNosotrosContent() {
       if (data && data.content && !error) {
         try {
           const parsed = JSON.parse(data.content);
-          const merged: NosotrosContent = {
+          const merged: NosotrosContent = normalizeNosotrosImages({
             ...DEFAULT_NOSOTROS_CONTENT,
             ...parsed,
             stats: Array.isArray(parsed.stats) && parsed.stats.length > 0 ? parsed.stats : DEFAULT_NOSOTROS_CONTENT.stats,
-          };
+          });
           setContent(merged);
           saveLocalNosotrosContent(merged);
         } catch (parseError) {
@@ -186,7 +201,7 @@ export function useNosotrosContent() {
           if (row?.content) {
             try {
               const parsed = JSON.parse(row.content);
-              const merged = { ...DEFAULT_NOSOTROS_CONTENT, ...parsed };
+              const merged = normalizeNosotrosImages({ ...DEFAULT_NOSOTROS_CONTENT, ...parsed });
               setContent(merged);
               saveLocalNosotrosContent(merged);
             } catch (_e) {

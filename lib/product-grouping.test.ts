@@ -106,13 +106,43 @@ describe("getProductLineCategory", () => {
         short_description: "Aceites para motocicletas",
       })
     ).toBe("Aceites para motocicletas");
+  });
+
+  it("categoriza filtros por tipo (aceite, aire, combustible, cabina)", () => {
     expect(
       getProductLineCategory({
         name: "Filtro de aceite L-1006",
         brand: "Lys Filtros",
         short_description: "Filtros",
       })
-    ).toBe("Filtros");
+    ).toBe("Filtros de aceite");
+    expect(
+      getProductLineCategory({
+        name: "Filtro de aire A-2709S",
+        brand: "Sakura",
+        short_description: "Filtros",
+      })
+    ).toBe("Filtros de aire");
+    expect(
+      getProductLineCategory({
+        name: "Filtro diésel FC-1310",
+        brand: "Sakura",
+        short_description: "Filtros",
+      })
+    ).toBe("Filtros de combustible");
+    expect(
+      getProductLineCategory({
+        name: "Filtro de gasolina WK 69",
+        brand: "Mann Filter",
+      })
+    ).toBe("Filtros de combustible");
+    expect(
+      getProductLineCategory({
+        name: "Filtro de cabina CAC-65220",
+        brand: "Sakura",
+        short_description: "Filtros",
+      })
+    ).toBe("Filtros de cabina");
   });
 
   it("still uses heuristic when no Excel section is present", () => {
@@ -132,7 +162,7 @@ describe("getProductLineCategory", () => {
         line: "Apolo Premium",
         type: "Filtro",
       })
-    ).toBe("Filtros Automotrices");
+    ).toBe("Filtros varios");
 
     expect(
       getProductLineCategory({
@@ -140,7 +170,7 @@ describe("getProductLineCategory", () => {
         brand: "Bosch",
         line: "Apolo Premium",
       })
-    ).not.toMatch(/apolo/i);
+    ).toBe("Filtros de aceite");
   });
 });
 
