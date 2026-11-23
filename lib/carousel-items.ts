@@ -22,22 +22,82 @@ export interface CarouselRowsData {
   recomendados: CarouselItemData[];
 }
 
-const HOUSE_BRANDS = ["Apolo", "Overts", "Valtrom"] as const;
+export const HOUSE_BRANDS = ["Apolo", "Overts", "Valtrom"] as const;
+export type HouseBrand = (typeof HOUSE_BRANDS)[number];
 
-/** Quita guion SAE (15W-40 → 15W40) y completa marca de casa si falta. */
+/** Cache local v2: invalida entradas antiguas sin brand. */
+export const CAROUSEL_ITEMS_STORAGE_KEY = "apolo_carousel_row_items_v2";
+export const CAROUSEL_ITEMS_PAGE_SLUG = "home-carousel-items";
+
+export function detectFormat(url: string): CarouselItemFormat {
+  if (!url) return "png";
+  const cleanUrl = url.split("?")[0].toLowerCase();
+  if (cleanUrl.endsWith(".glb")) return "glb";
+  if (cleanUrl.endsWith(".gltf")) return "gltf";
+  return "png";
+}
+
+/** Detecta Apolo / Overts / Valtrom en texto o URL. */
+export function inferHouseBrand(...parts: Array<string | null | undefined>): HouseBrand | null {
+  const blob = parts
+    .map((p) => String(p || "").toLowerCase())
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (/\bvaltrom\b/.test(blob) || blob.includes("valtrom") || blob.includes("valtron")) {
+    return "Valtrom";
+  }
+  if (/\boverts?\b/.test(blob) || blob.includes("overts") || blob.includes("/overs")) {
+    return "Overts";
+  }
+  if (/\bapolo\b/.test(blob) || blob.includes("apolo") || blob.includes("apollo")) {
+    return "Apolo";
+  }
+  return null;
+}
+
+export function canonicalizeHouseBrand(raw?: string | null): HouseBrand | null {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  return HOUSE_BRANDS.find((b) => b.toLowerCase() === value.toLowerCase()) || null;
+}
+
+function normalizeProductName(name: string) {
+  return String(name || "")
+    .trim()
+    .replace(/(\d{1,2})\s*[Ww]\s*-\s*(\d{2,3})/g, (_, a: string, b: string) => `${a}W${b}`);
+}
+
+/**
+ * Prioridad de marca:
+ * 1) brand explícito Apolo/Overts/Valtrom
+ * 2) inferencia desde url/name si brand vacío
+ * 3) fallback de fila
+ * Nunca pisa una marca de casa ya guardada.
+ */
 export function normalizeCarouselItem(
   item: CarouselItemData,
   fallbackBrand: string = "Apolo"
 ): CarouselItemData {
-  const name = String(item.name || "")
-    .trim()
-    .replace(/(\d{1,2})\s*[Ww]\s*-\s*(\d{2,3})/g, (_, a: string, b: string) => `${a}W${b}`);
-  const rawBrand = String(item.brand || "").trim();
-  const brand =
-    HOUSE_BRANDS.find((b) => b.toLowerCase() === rawBrand.toLowerCase()) ||
-    rawBrand ||
-    fallbackBrand;
-  return { ...item, name, brand };
+  const name = normalizeProductName(item.name);
+  const explicit = canonicalizeHouseBrand(item.brand);
+  const inferred =
+    explicit ||
+    (!String(item.brand || "").trim()
+      ? inferHouseBrand(item.url, name, item.id)
+      : null);
+  const fallback =
+    canonicalizeHouseBrand(fallbackBrand) ||
+    (HOUSE_BRANDS.includes(fallbackBrand as HouseBrand) ? (fallbackBrand as HouseBrand) : "Apolo");
+
+  const brand = explicit || inferred || fallback;
+
+  return {
+    ...item,
+    name,
+    brand,
+  };
 }
 
 export function normalizeCarouselRows(
@@ -66,17 +126,6 @@ export function normalizeCarouselRows(
       normalizeCarouselItem(item, brandFromDefault("recomendados", item.id, index))
     ),
   };
-}
-
-export const CAROUSEL_ITEMS_STORAGE_KEY = "apolo_carousel_row_items";
-export const CAROUSEL_ITEMS_PAGE_SLUG = "home-carousel-items";
-
-export function detectFormat(url: string): CarouselItemFormat {
-  if (!url) return "png";
-  const cleanUrl = url.split("?")[0].toLowerCase();
-  if (cleanUrl.endsWith(".glb")) return "glb";
-  if (cleanUrl.endsWith(".gltf")) return "gltf";
-  return "png";
 }
 
 export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
@@ -160,17 +209,30 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
   ],
 };
 
+function parseRowsPayload(parsed: unknown): CarouselRowsData {
+  const data = (parsed && typeof parsed === "object" ? parsed : {}) as Partial<CarouselRowsData>;
+  return normalizeCarouselRows({
+    vendidos:
+      Array.isArray(data.vendidos) && data.vendidos.length > 0
+        ? data.vendidos
+        : DEFAULT_CAROUSEL_ITEMS.vendidos,
+    populares:
+      Array.isArray(data.populares) && data.populares.length > 0
+        ? data.populares
+        : DEFAULT_CAROUSEL_ITEMS.populares,
+    recomendados:
+      Array.isArray(data.recomendados) && data.recomendados.length > 0
+        ? data.recomendados
+        : DEFAULT_CAROUSEL_ITEMS.recomendados,
+  });
+}
+
 export function getLocalCarouselItems(): CarouselRowsData {
   if (typeof window === "undefined") return DEFAULT_CAROUSEL_ITEMS;
   try {
     const raw = localStorage.getItem(CAROUSEL_ITEMS_STORAGE_KEY);
     if (!raw) return DEFAULT_CAROUSEL_ITEMS;
-    const parsed = JSON.parse(raw);
-    return normalizeCarouselRows({
-      vendidos: Array.isArray(parsed.vendidos) && parsed.vendidos.length > 0 ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
-      populares: Array.isArray(parsed.populares) && parsed.populares.length > 0 ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
-      recomendados: Array.isArray(parsed.recomendados) && parsed.recomendados.length > 0 ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
-    });
+    return parseRowsPayload(JSON.parse(raw));
   } catch (_e) {
     return DEFAULT_CAROUSEL_ITEMS;
   }
@@ -179,9 +241,10 @@ export function getLocalCarouselItems(): CarouselRowsData {
 export function saveLocalCarouselItems(items: CarouselRowsData) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(CAROUSEL_ITEMS_STORAGE_KEY, JSON.stringify(items));
+    const normalized = normalizeCarouselRows(items);
+    localStorage.setItem(CAROUSEL_ITEMS_STORAGE_KEY, JSON.stringify(normalized));
     if (realtimeBus) {
-      realtimeBus.emit("carousel_items_updated", items);
+      realtimeBus.emit("carousel_items_updated", normalized);
     }
   } catch (e) {
     console.error("Error saving local carousel items:", e);
@@ -189,7 +252,8 @@ export function saveLocalCarouselItems(items: CarouselRowsData) {
 }
 
 export async function saveCarouselItems(items: CarouselRowsData): Promise<{ success: boolean; error?: string }> {
-  saveLocalCarouselItems(items);
+  const normalized = normalizeCarouselRows(items);
+  saveLocalCarouselItems(normalized);
 
   try {
     const supabase = createBrowserSupabase();
@@ -197,7 +261,7 @@ export async function saveCarouselItems(items: CarouselRowsData): Promise<{ succ
       {
         slug: CAROUSEL_ITEMS_PAGE_SLUG,
         title: "Elementos Carruseles 3D Inicio",
-        content: JSON.stringify(items),
+        content: JSON.stringify(normalized),
         is_published: true,
         updated_at: new Date().toISOString(),
       },
@@ -231,12 +295,7 @@ export function useCarouselItems() {
 
       if (data && data.content && !error) {
         try {
-          const parsed = JSON.parse(data.content);
-          const merged = normalizeCarouselRows({
-            vendidos: Array.isArray(parsed.vendidos) && parsed.vendidos.length > 0 ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
-            populares: Array.isArray(parsed.populares) && parsed.populares.length > 0 ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
-            recomendados: Array.isArray(parsed.recomendados) && parsed.recomendados.length > 0 ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
-          });
+          const merged = parseRowsPayload(JSON.parse(data.content));
           setItems(merged);
           if (typeof window !== "undefined") {
             localStorage.setItem(CAROUSEL_ITEMS_STORAGE_KEY, JSON.stringify(merged));
@@ -260,7 +319,7 @@ export function useCarouselItems() {
     if (realtimeBus) {
       unsubBus = realtimeBus.on<CarouselRowsData>("carousel_items_updated", (updated) => {
         if (updated) {
-          setItems(updated);
+          setItems(normalizeCarouselRows(updated));
         }
       });
     }
@@ -268,14 +327,7 @@ export function useCarouselItems() {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === CAROUSEL_ITEMS_STORAGE_KEY && e.newValue) {
         try {
-          const parsed = JSON.parse(e.newValue);
-          setItems(
-            normalizeCarouselRows({
-              vendidos: Array.isArray(parsed.vendidos) ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
-              populares: Array.isArray(parsed.populares) ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
-              recomendados: Array.isArray(parsed.recomendados) ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
-            })
-          );
+          setItems(parseRowsPayload(JSON.parse(e.newValue)));
         } catch (_err) {}
       }
     };

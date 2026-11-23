@@ -22,10 +22,17 @@ import { useBusinessSettings, type BusinessSettings } from "@/hooks/useBusinessS
 import { useCarouselLogos, type CarouselRowLogos } from "@/lib/carousel-logos";
 import {
   detectFormat,
+  HOUSE_BRANDS,
+  inferHouseBrand,
   useCarouselItems,
   type CarouselItemData,
   type CarouselRowsData,
+  type HouseBrand,
 } from "@/lib/carousel-items";
+import {
+  getBrandChipVisual,
+  getOfficialBrandLogo,
+} from "@/lib/catalog/display";
 
 type Section = "contacto" | "apariencia" | "carruseles";
 type RowKey = "vendidos" | "populares" | "recomendados";
@@ -186,12 +193,19 @@ export default function ConfiguracionPage() {
   function updateItem(index: number, partial: Partial<CarouselItemData>) {
     setItems((current) => {
       const list = [...current[row]];
-      const nextUrl = partial.url ?? list[index].url;
+      const prev = list[index];
+      const nextUrl = partial.url ?? prev.url;
+      const nextName = partial.name ?? prev.name;
+      const inferred =
+        partial.url !== undefined || (partial.name !== undefined && !partial.brand)
+          ? inferHouseBrand(nextUrl, nextName)
+          : null;
       list[index] = {
-        ...list[index],
+        ...prev,
         ...partial,
         url: nextUrl,
-        format: partial.url !== undefined ? detectFormat(nextUrl) : list[index].format,
+        format: partial.url !== undefined ? detectFormat(nextUrl) : prev.format,
+        brand: partial.brand || inferred || prev.brand || "Apolo",
       };
       return { ...current, [row]: list };
     });
@@ -239,6 +253,12 @@ export default function ConfiguracionPage() {
       if (items[entry.id].length === 0) return `${entry.label} se quedó sin tarjetas.`;
       const missing = items[entry.id].findIndex((item) => !item.name.trim() || !item.url.trim());
       if (missing >= 0) return `Completa el nombre y el archivo de la tarjeta ${missing + 1} en ${entry.label}.`;
+      const badBrand = items[entry.id].findIndex(
+        (item) => !HOUSE_BRANDS.includes((item.brand || "") as HouseBrand)
+      );
+      if (badBrand >= 0) {
+        return `Elige marca Apolo, Overts o Valtrom en la tarjeta ${badBrand + 1} de ${entry.label}.`;
+      }
     }
     return null;
   }
@@ -501,10 +521,24 @@ export default function ConfiguracionPage() {
 
       {section === "carruseles" && (
         <section className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-5" aria-label="Carruseles del inicio">
-          <h2 className="font-heading text-xl text-white">Tres filas del inicio</h2>
-          <p className="mt-1 max-w-2xl text-sm text-zinc-300">
-            Cada fila tiene un logo a los lados y tarjetas en PNG, glTF o GLB. Una fila vacía deja ese carrusel sin piezas.
-          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-heading text-xl text-white">Vitrina del inicio</h2>
+              <p className="mt-1 max-w-2xl text-sm text-zinc-300">
+                Cada tarjeta muestra logo y nombre de marca (Apolo, Overts o Valtrom) en la sección de productos destacados.
+                Los cambios se publican al guardar en el mismo contenido que usa el home (`home-carousel-items`).
+              </p>
+            </div>
+            {edited ? (
+              <p className="rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-200">
+                Cambios sin guardar
+              </p>
+            ) : (
+              <p className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200">
+                Publicado en el sitio
+              </p>
+            )}
+          </div>
           <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Filas del inicio">
             {ROWS.map((entry) => (
               <button
@@ -537,60 +571,138 @@ export default function ConfiguracionPage() {
             {items[row].map((item, index) => {
               const format = item.format === "glb" ? "GLB" : item.format === "gltf" ? "glTF" : "PNG";
               const isImage = item.format === "png" && item.url;
+              const brand = (item.brand || "Apolo") as HouseBrand;
+              const visual = getBrandChipVisual(brand);
+              const brandLogo = getOfficialBrandLogo(brand);
               return (
                 <article key={item.id || index} className="rounded-xl border border-white/10 bg-black/30 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-14 place-items-center overflow-hidden rounded-lg bg-black">
-                        {isImage ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.url} alt="" className="size-full object-contain" />
-                        ) : (
-                          <Box className="size-5 text-zinc-300" />
-                        )}
+                  <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="grid size-14 place-items-center overflow-hidden rounded-lg bg-black">
+                            {isImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={item.url} alt="" className="size-full object-contain" />
+                            ) : (
+                              <Box className="size-5 text-zinc-300" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">Tarjeta {index + 1}</p>
+                            <p className="text-xs text-zinc-300">{item.url ? format : "Falta el archivo"}</p>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => removeItem(index)} className="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-3 text-sm text-zinc-100" aria-label={`Quitar tarjeta ${index + 1}`}>
+                          <Trash2 className="size-4" />
+                          Quitar
+                        </button>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">Tarjeta {index + 1}</p>
-                        <p className="text-xs text-zinc-300">{item.url ? format : "Falta el archivo"}</p>
+
+                      <label className="mt-3 block text-sm text-zinc-200">
+                        Nombre
+                        <input className={inputClass} value={item.name} placeholder="Grasa de litio" onChange={(event) => updateItem(index, { name: event.target.value })} />
+                      </label>
+
+                      <div className="mt-3">
+                        <p className="text-sm text-zinc-200">Marca de casa</p>
+                        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={`Marca de la tarjeta ${index + 1}`}>
+                          {HOUSE_BRANDS.map((option) => {
+                            const optionLogo = getOfficialBrandLogo(option);
+                            const optionVisual = getBrandChipVisual(option);
+                            const selected = brand === option;
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => updateItem(index, { brand: option })}
+                                className={`inline-flex h-11 items-center gap-2 rounded-full border px-3 text-sm font-semibold transition-colors ${
+                                  selected ? "text-white" : "border-white/15 bg-black/40 text-zinc-200 hover:border-white/30"
+                                }`}
+                                style={
+                                  selected
+                                    ? {
+                                        borderColor: optionVisual.accent,
+                                        background: optionVisual.soft,
+                                        boxShadow: `0 0 0 1px ${optionVisual.accent}66`,
+                                      }
+                                    : undefined
+                                }
+                                aria-pressed={selected}
+                              >
+                                {optionLogo ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={optionLogo} alt="" className="size-6 rounded-full object-contain bg-black/40 p-0.5" />
+                                ) : null}
+                                {option}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="mt-1.5 text-xs text-zinc-400">
+                          Si el archivo o el nombre contiene la marca, se sugiere sola al subir/cambiar la imagen.
+                        </p>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-end gap-3">
+                        <div className="min-w-0 flex-1">
+                          <FileField
+                            label="Archivo"
+                            description="PNG, glTF o GLB."
+                            value={item.url}
+                            allowedExtensions={[".png", ".gltf", ".glb"]}
+                            onChange={(url) => updateItem(index, { url })}
+                            categoryFilter="products"
+                          />
+                        </div>
+                        <label className="text-sm text-zinc-200">
+                          Resplandor
+                          <input type="color" value={rgbToHex(item.color)} onChange={(event) => updateItem(index, { color: hexToRgb(event.target.value) })} aria-label={`Color de resplandor de la tarjeta ${index + 1}`} className="mt-1.5 block size-10 cursor-pointer rounded bg-transparent" />
+                        </label>
                       </div>
                     </div>
-                    <button type="button" onClick={() => removeItem(index)} className="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-3 text-sm text-zinc-100" aria-label={`Quitar tarjeta ${index + 1}`}>
-                      <Trash2 className="size-4" />
-                      Quitar
-                    </button>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,10rem)_auto]">
-                    <label className="text-sm text-zinc-200">
-                      Nombre
-                      <input className={inputClass} value={item.name} placeholder="Grasa de litio" onChange={(event) => updateItem(index, { name: event.target.value })} />
-                    </label>
-                    <label className="text-sm text-zinc-200">
-                      Marca
-                      <select
-                        className={inputClass}
-                        value={item.brand || "Apolo"}
-                        onChange={(event) => updateItem(index, { brand: event.target.value })}
-                        aria-label={`Marca de la tarjeta ${index + 1}`}
-                      >
-                        <option value="Apolo">Apolo</option>
-                        <option value="Overts">Overts</option>
-                        <option value="Valtrom">Valtrom</option>
-                      </select>
-                    </label>
-                    <label className="text-sm text-zinc-200">
-                      Resplandor
-                      <input type="color" value={rgbToHex(item.color)} onChange={(event) => updateItem(index, { color: hexToRgb(event.target.value) })} aria-label={`Color de resplandor de la tarjeta ${index + 1}`} className="mt-1.5 block size-10 cursor-pointer rounded bg-transparent" />
-                    </label>
-                  </div>
-                  <div className="mt-3">
-                    <FileField
-                      label="Archivo"
-                      description="PNG, glTF o GLB."
-                      value={item.url}
-                      allowedExtensions={[".png", ".gltf", ".glb"]}
-                      onChange={(url) => updateItem(index, { url })}
-                      categoryFilter="products"
-                    />
+
+                    <aside
+                      className="rounded-xl border border-white/10 bg-[#0b0c10] p-3"
+                      aria-label={`Vista previa marca ${brand}`}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Vista previa</p>
+                      <div className="relative mt-3 flex h-40 items-center justify-center rounded-lg border border-white/10 bg-black/50">
+                        <div
+                          className="absolute left-2 top-1/2 flex size-14 -translate-y-1/2 items-center justify-center overflow-hidden rounded-2xl border bg-black/70"
+                          style={{ boxShadow: `0 0 0 1px ${visual.accent}77, 0 0 18px ${visual.glow}` }}
+                        >
+                          {brandLogo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={brandLogo} alt="" className="size-full object-contain p-1.5" />
+                          ) : (
+                            <span className="text-[10px] font-bold" style={{ color: visual.accent }}>{brand.slice(0, 3)}</span>
+                          )}
+                        </div>
+                        {isImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.url} alt="" className="relative z-10 max-h-32 max-w-[45%] object-contain" />
+                        ) : (
+                          <Box className="relative z-10 size-8 text-zinc-500" />
+                        )}
+                        <span
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border px-2 py-3 text-[10px] font-extrabold uppercase tracking-[0.22em]"
+                          style={{
+                            writingMode: "vertical-rl",
+                            transform: "translateY(-50%) rotate(180deg)",
+                            color: visual.accent,
+                            borderColor: `${visual.accent}66`,
+                            textShadow: `0 0 12px ${visual.glow}`,
+                          }}
+                        >
+                          {brand}
+                        </span>
+                      </div>
+                      <p className="mt-3 truncate text-center text-sm font-semibold text-white">{item.name || "Sin nombre"}</p>
+                      <p className="mt-1 text-center text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: visual.accent }}>
+                        {brand}
+                      </p>
+                    </aside>
                   </div>
                 </article>
               );
