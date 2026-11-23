@@ -551,21 +551,17 @@ html.light .line-card:hover {
     0 0 0 2px #FFD000;
 }
 
+/* Vitrina de protección: siempre cinematic dark (póster Apolo/Overts/Valtrom). */
 html.light .section-protect {
-  --blob-a: color-mix(in oklab, #C90012 14%, transparent);
-  --blob-b: color-mix(in oklab, #FFD000 16%, transparent);
-  --blob-c: color-mix(in oklab, #8A8F98 14%, transparent);
-  background: #FFFFFF;
-  color: #171A20;
+  --blob-a: color-mix(in oklab, #C90012 22%, transparent);
+  --blob-b: color-mix(in oklab, #FFD000 18%, transparent);
+  --blob-c: color-mix(in oklab, #38BDF8 16%, transparent);
+  background: #070912;
+  color: #FFFFFF;
 }
 
-html.light .section-protect :is(h2, h3),
-html.light .section-protect .text-muted-foreground {
-  color: #171A20;
-}
-
-html.light .section-protect .text-muted-foreground {
-  color: #8A8F98;
+html.light .section-protect :is(h2, h3) {
+  color: #FFFFFF;
 }
 
 html.light .section-protect .absolute p {
@@ -576,7 +572,10 @@ html.light .section-protect .absolute p:first-child {
   color: #FFD000;
 }
 
-html.light .section-protect .section-kicker,
+html.light .section-protect .section-kicker {
+  color: #FFD000;
+}
+
 html.light .section-experience .section-kicker {
   color: #C90012;
 }
@@ -586,12 +585,8 @@ html.light .section-cta .section-kicker {
 }
 
 html.light .section-protect .icon-bubble {
-  background: #F2F3F5;
-  border-color: color-mix(in oklab, #8A8F98 42%, #FFFFFF);
-}
-
-html.light .section-protect .icon-bubble svg {
-  color: #C90012;
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 html.light .section-showcase {

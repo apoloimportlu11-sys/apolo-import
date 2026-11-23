@@ -7,9 +7,9 @@ export const OFFICIAL_BRANDS = ["apolo", "overts", "valtrom"] as const;
 
 /** Logos oficiales de las 3 marcas principales del catálogo. */
 export const OFFICIAL_BRAND_LOGOS: Record<(typeof OFFICIAL_BRANDS)[number], string> = {
-  apolo: "/images/logoApolo.png",
-  overts: "/images/logo overts.png",
-  valtrom: "/images/logo valtrom ter.png",
+  apolo: "/images/logo-apolo.png?v=2026-11-23",
+  overts: "/images/logo-overts.png?v=2026-11-23",
+  valtrom: "/images/logo-valtrom.png?v=2026-11-23",
 };
 
 /** Fondos de escena (marca de agua + esquinas) para priorizar Apolo / Overts / Valtrom. */

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import { useHomeContent } from "@/lib/home-content";
 import { usePublicBrands } from "@/hooks/use-public-brands";
+import { getOfficialBrandLogo, OFFICIAL_BRAND_LOGOS } from "@/lib/catalog/display";
 import styles from "./brands-stage.module.css";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +18,9 @@ export interface BrandItem {
 
 /** Respaldo visual si Supabase aún no responde. */
 export const brands: BrandItem[] = [
-  { logo: "/images/logoApolo.png", name: "Apolo" },
-  { logo: "/images/logo overts.png", name: "Overts" },
-  { logo: "/images/logo valtrom ter.png", name: "Valtrom" },
+  { logo: OFFICIAL_BRAND_LOGOS.apolo, name: "Apolo" },
+  { logo: OFFICIAL_BRAND_LOGOS.overts, name: "Overts" },
+  { logo: OFFICIAL_BRAND_LOGOS.valtrom, name: "Valtrom" },
 ];
 
 interface BrandsCarouselProps {
@@ -100,7 +101,7 @@ export default function BrandsCarousel({
     if (dbBrands.length > 0) {
       return dbBrands.map((b) => ({
         name: b.name,
-        logo: b.logo_url || "/images/logoApolo.png",
+        logo: getOfficialBrandLogo(b.name) || b.logo_url || OFFICIAL_BRAND_LOGOS.apolo,
         href: `/productos?brand=${encodeURIComponent(b.name)}`,
       }));
     }

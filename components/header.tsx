@@ -138,7 +138,7 @@ export function Header() {
             >
               <Link href="/" className={brandLinkClass} title="Apolo">
                 <Image
-                  src="/images/logoApolo.png"
+                  src="/images/logo-apolo.png?v=2026-11-23"
                   alt="Apolo"
                   width={260}
                   height={260}
@@ -157,7 +157,7 @@ export function Header() {
                 title="Overts"
               >
                 <Image
-                  src="/images/logo%20overts.png"
+                  src="/images/logo-overts.png?v=2026-11-23"
                   alt="Overts"
                   width={220}
                   height={110}
@@ -175,7 +175,7 @@ export function Header() {
                 title="Valtrom"
               >
                 <Image
-                  src="/images/logo%20valtrom%20ter.png"
+                  src="/images/logo-valtrom.png?v=2026-11-23"
                   alt="Valtrom"
                   width={220}
                   height={110}
@@ -332,7 +332,7 @@ export function Header() {
                   <div className="flex h-full flex-col">
                     <div className="flex items-center gap-2 border-b border-border bg-card/60 px-4 py-4 pr-12 backdrop-blur-md">
                       <Image
-                        src="/images/logoApolo.png"
+                        src="/images/logo-apolo.png?v=2026-11-23"
                         alt="Apolo"
                         width={72}
                         height={72}
@@ -340,7 +340,7 @@ export function Header() {
                       />
                       <span className="h-7 w-px bg-border" aria-hidden />
                       <Image
-                        src="/images/logo%20overts.png"
+                        src="/images/logo-overts.png?v=2026-11-23"
                         alt="Overts"
                         width={110}
                         height={44}
@@ -348,7 +348,7 @@ export function Header() {
                       />
                       <span className="h-7 w-px bg-border" aria-hidden />
                       <Image
-                        src="/images/logo%20valtrom%20ter.png"
+                        src="/images/logo-valtrom.png?v=2026-11-23"
                         alt="Valtrom"
                         width={110}
                         height={44}
@@ -535,7 +535,7 @@ export function Header() {
               title="Apolo"
             >
               <Image
-                src="/images/logoApolo.png"
+                src="/images/logo-apolo.png?v=2026-11-23"
                 alt="Apolo"
                 width={132}
                 height={52}
@@ -550,7 +550,7 @@ export function Header() {
               title="Overts"
             >
               <Image
-                src="/images/logo%20overts.png"
+                src="/images/logo-overts.png?v=2026-11-23"
                 alt="Overts"
                 width={150}
                 height={52}
@@ -564,7 +564,7 @@ export function Header() {
               title="Valtrom"
             >
               <Image
-                src="/images/logo%20valtrom%20ter.png"
+                src="/images/logo-valtrom.png?v=2026-11-23"
                 alt="Valtrom"
                 width={150}
                 height={52}
