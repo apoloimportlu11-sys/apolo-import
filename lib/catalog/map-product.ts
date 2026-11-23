@@ -1,4 +1,5 @@
 import type { Product } from "@/lib/products-data";
+import { normalizeViscosityLabel } from "@/lib/catalog/display";
 import {
   parseAttributeValues,
   parseCommercial,
@@ -27,14 +28,21 @@ export function mapRowToProduct(item: Record<string, unknown>): Product {
   const brand = String(item.brand || "Apolo");
   const type = item.type != null ? String(item.type) : "";
   const short = item.short_description != null ? String(item.short_description).trim() : "";
+  const attributes = parseAttributeValues(item.attributes);
+  if (attributes.viscosity) {
+    attributes.viscosity = normalizeViscosityLabel(attributes.viscosity);
+  }
+  const viscosity = normalizeViscosityLabel(
+    item.viscosity != null ? String(item.viscosity) : attributes.viscosity || ""
+  );
 
   return {
     id: String(item.id || ""),
-    name: String(item.name || "Producto"),
+    name: normalizeViscosityLabel(String(item.name || "Producto")),
     line: short || defaultCatalogLine(brand, type),
     code: String(item.slug || item.id || "APL-001"),
     brand,
-    viscosity: item.viscosity != null ? String(item.viscosity) : "",
+    viscosity,
     type,
     presentation: activeLabel || String(item.presentation || "Galón / Cuarto / Balde"),
     description: String(
@@ -62,7 +70,7 @@ export function mapRowToProduct(item: Record<string, unknown>): Product {
       )
     ),
     family: item.family != null ? String(item.family) : null,
-    attributes: parseAttributeValues(item.attributes),
+    attributes,
     commercial: parseCommercial(item.commercial),
     presentations,
   };

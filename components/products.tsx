@@ -45,6 +45,7 @@ import {
   getBrandChipVisual,
   getOfficialBrandLogo,
   isOfficialBrand,
+  normalizeViscosityLabel,
   OFFICIAL_BRANDS,
   CATALOG_PAGE_SIZE as PAGE_SIZE,
 } from "@/lib/catalog/display";
@@ -863,7 +864,8 @@ export function Products({
     }
 
     productsToCheck.forEach((p) => {
-      if (p.viscosity && p.viscosity.trim()) viscs.add(p.viscosity.trim());
+      const label = normalizeViscosityLabel(p.viscosity);
+      if (label) viscs.add(label);
     });
 
     const known = viscosities.filter((v) => viscs.has(v));
@@ -1280,7 +1282,7 @@ export function Products({
               <div className="custom-scrollbar mt-3 max-h-52 space-y-1 overflow-y-auto overscroll-contain pr-0.5">
                 {availableViscosities.map((viscosity) => {
                   const count = allMergedProducts.filter(
-                    (p) => (p.viscosity || "").trim() === viscosity
+                    (p) => normalizeViscosityLabel(p.viscosity) === viscosity
                   ).length;
                   const isChecked = selectedViscosities.includes(viscosity);
                   return (

@@ -134,12 +134,21 @@ export function getBrandChipVisual(brand?: string | null): BrandChipVisual {
   return { isOfficial: false, accent, soft, text, active, glow };
 }
 
+/**
+ * Nomenclatura SAE sin guion: 15W-40 → 15W40, SAE 5W-30 → SAE 5W30.
+ * No altera ISO/NLGI/DOT/HD ni otros textos.
+ */
+export function normalizeViscosityLabel(visc?: string | null): string {
+  if (!visc) return "";
+  return visc
+    .trim()
+    .replace(/(\d{1,2})\s*[Ww]\s*-\s*(\d{2,3})/g, (_, a: string, b: string) => `${a}W${b}`);
+}
+
 /** Badge de viscosidad para tarjetas del catálogo. */
 export function formatViscosityBadge(visc?: string | null): string | null {
-  if (!visc) return null;
-  const clean = visc.trim();
-  if (!clean) return null;
-  return clean;
+  const clean = normalizeViscosityLabel(visc);
+  return clean || null;
 }
 
 /** Productos por página: evita un scroll excesivo en el catálogo. */

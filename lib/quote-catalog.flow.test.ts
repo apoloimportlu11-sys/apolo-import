@@ -66,7 +66,8 @@ describe("flujo catálogo", () => {
     expect(product.code).toBe("ovt-die-1540");
     expect(product.brand).toBe("Overts");
     expect(product.categoryId).toBe("camiones");
-    expect(formatViscosityBadge(product.viscosity)).toBe("15W-40");
+    expect(formatViscosityBadge(product.viscosity)).toBe("15W40");
+    expect(product.viscosity).toBe("15W40");
   });
 
   it("compara marcas y mantiene tamaño de página", () => {

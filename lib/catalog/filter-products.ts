@@ -4,7 +4,7 @@ import {
   getLineSortPriority,
   getProductLineCategory,
 } from "@/lib/product-grouping";
-import { officialBrandRank } from "@/lib/catalog/display";
+import { normalizeViscosityLabel, officialBrandRank } from "@/lib/catalog/display";
 import {
   matchesPresentation,
   presentationLabelsOf,
@@ -177,8 +177,11 @@ export function filterAndSortCatalogProducts(
 
   if (selectedViscosities.length > 0) {
     filtered = filtered.filter((p) => {
-      const visc = (p.viscosity || "").trim();
-      return visc && selectedViscosities.some((v) => v.trim() === visc);
+      const visc = normalizeViscosityLabel(p.viscosity);
+      return (
+        visc &&
+        selectedViscosities.some((v) => normalizeViscosityLabel(v) === visc)
+      );
     });
   }
 
