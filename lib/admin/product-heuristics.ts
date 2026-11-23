@@ -54,26 +54,26 @@ export const PRESENTATION_PRESETS = [
 
 /** SAE motor / transmisión / ISO hidráulicos / grasas */
 export const VISCOSITY_PRESETS = [
-  "0W-20",
-  "0W-30",
-  "5W-20",
-  "5W-30",
-  "5W-40",
-  "10W-30",
-  "10W-40",
-  "15W-40",
-  "15W-50",
-  "20W-40",
-  "20W-50",
-  "25W-50",
-  "25W-60",
+  "0W20",
+  "0W30",
+  "5W20",
+  "5W30",
+  "5W40",
+  "10W30",
+  "10W40",
+  "15W40",
+  "15W50",
+  "20W40",
+  "20W50",
+  "25W50",
+  "25W60",
   "SAE 30",
   "SAE 40",
   "SAE 50",
-  "75W-80",
-  "75W-90",
-  "80W-90",
-  "85W-140",
+  "75W80",
+  "75W90",
+  "80W90",
+  "85W140",
   "ATF",
   "DOT 3",
   "DOT 4",
@@ -98,7 +98,7 @@ export const PAGE_SIZE_OPTIONS = [20, 40, 80] as const;
 
 export function detectViscosity(text: string): string {
   const sae = text.match(/\b(\d{1,2})\s*w\s*-?\s*(\d{2})\b/i);
-  if (sae) return `${sae[1]}W-${sae[2]}`;
+  if (sae) return `${sae[1]}W${sae[2]}`;
   const isoVg = text.match(/\biso\s*(?:vg)?\s*-?\s*(\d{2,3})\b/i);
   if (isoVg) {
     const n = isoVg[1];
@@ -179,14 +179,14 @@ export type FamilyProfile = {
 };
 
 const SAE_PRESETS = [
-  "5W-30",
-  "5W-40",
-  "10W-30",
-  "10W-40",
-  "15W-40",
-  "20W-50",
-  "75W-90",
-  "80W-90",
+  "5W30",
+  "5W40",
+  "10W30",
+  "10W40",
+  "15W40",
+  "20W50",
+  "75W90",
+  "80W90",
   "ISO VG 46",
   "ISO VG 68",
   "NLGI 2",

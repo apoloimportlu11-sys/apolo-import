@@ -15,7 +15,7 @@ describe("suggestFromName", () => {
   it("completa viscosidad y presentación de un aceite", () => {
     const suggestion = suggestFromName("Aceite motor 15W-40 4 L");
     expect(suggestion.family).toBe("lubricante");
-    expect(suggestion.viscosity).toBe("15W-40");
+    expect(suggestion.viscosity).toBe("15W40");
     expect(suggestion.presentation).toBe("4 L");
     expect(familyProfile(suggestion.family).showViscosity).toBe(true);
   });
