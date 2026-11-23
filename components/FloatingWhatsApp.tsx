@@ -18,7 +18,7 @@ type ChatMsg = { role: "user" | "assistant"; content: string };
 const WELCOME: ChatMsg = {
   role: "assistant",
   content:
-    "¡Hola! Soy Artemisa, asistente de Apolo Lubricantes. ¿Buscas un aceite, grasa o refrigerante? Cuéntame vehículo o viscosidad (ej. 20W-50).",
+    "¡Hola! Soy Artemisa, de Apolo Import. Te ayudo con nuestras marcas principales: Apolo (lubricantes), Overts (grasas y fluidos) y Valtrom (repuestos). ¿Qué buscas: aceite, grasa, refrigerante o repuesto?",
 };
 
 export default function FloatingWhatsApp() {
