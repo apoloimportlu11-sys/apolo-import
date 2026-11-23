@@ -11,6 +11,8 @@ export interface CarouselItemData {
   url: string;
   name: string;
   format: CarouselItemFormat;
+  /** Marca comercial mostrada en la vitrina (Apolo / Overts / Valtrom prioritarias). */
+  brand?: string;
   color?: string; // e.g. "220, 38, 38"
 }
 
@@ -18,6 +20,52 @@ export interface CarouselRowsData {
   vendidos: CarouselItemData[];
   populares: CarouselItemData[];
   recomendados: CarouselItemData[];
+}
+
+const HOUSE_BRANDS = ["Apolo", "Overts", "Valtrom"] as const;
+
+/** Quita guion SAE (15W-40 → 15W40) y completa marca de casa si falta. */
+export function normalizeCarouselItem(
+  item: CarouselItemData,
+  fallbackBrand: string = "Apolo"
+): CarouselItemData {
+  const name = String(item.name || "")
+    .trim()
+    .replace(/(\d{1,2})\s*[Ww]\s*-\s*(\d{2,3})/g, (_, a: string, b: string) => `${a}W${b}`);
+  const rawBrand = String(item.brand || "").trim();
+  const brand =
+    HOUSE_BRANDS.find((b) => b.toLowerCase() === rawBrand.toLowerCase()) ||
+    rawBrand ||
+    fallbackBrand;
+  return { ...item, name, brand };
+}
+
+export function normalizeCarouselRows(
+  rows: CarouselRowsData,
+  fallbacks: Partial<Record<keyof CarouselRowsData, string>> = {
+    vendidos: "Overts",
+    populares: "Apolo",
+    recomendados: "Overts",
+  }
+): CarouselRowsData {
+  const brandFromDefault = (row: keyof CarouselRowsData, id: string, index: number) => {
+    const match = DEFAULT_CAROUSEL_ITEMS[row].find((entry) => entry.id === id);
+    if (match?.brand) return match.brand;
+    if (row === "recomendados") return index % 2 === 0 ? "Overts" : "Apolo";
+    return fallbacks[row] || "Apolo";
+  };
+
+  return {
+    vendidos: rows.vendidos.map((item, index) =>
+      normalizeCarouselItem(item, brandFromDefault("vendidos", item.id, index))
+    ),
+    populares: rows.populares.map((item, index) =>
+      normalizeCarouselItem(item, brandFromDefault("populares", item.id, index))
+    ),
+    recomendados: rows.recomendados.map((item, index) =>
+      normalizeCarouselItem(item, brandFromDefault("recomendados", item.id, index))
+    ),
+  };
 }
 
 export const CAROUSEL_ITEMS_STORAGE_KEY = "apolo_carousel_row_items";
@@ -37,6 +85,7 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "vendido-1",
       url: "/images/inicio/masvendido/grasa2.png",
       name: "Grasa Chasis 2",
+      brand: "Overts",
       format: "png",
       color: "220, 38, 38",
     },
@@ -44,6 +93,7 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "vendido-2",
       url: "/images/inicio/masvendido/litioazul.png",
       name: "Grasa Litio Azul",
+      brand: "Overts",
       format: "png",
       color: "220, 38, 38",
     },
@@ -53,6 +103,7 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "popular-1",
       url: "/images/inicio/maspopulares/aroma.png",
       name: "Silicona Aroma / Chicle",
+      brand: "Apolo",
       format: "png",
       color: "220, 38, 38",
     },
@@ -60,6 +111,7 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "popular-2",
       url: "/images/inicio/maspopulares/dolcegabbana.png",
       name: "Silicona Dolce Gabbana",
+      brand: "Apolo",
       format: "png",
       color: "239, 68, 68",
     },
@@ -67,6 +119,7 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "popular-3",
       url: "/images/inicio/maspopulares/fresa.png",
       name: "Silicona Fresa",
+      brand: "Apolo",
       format: "png",
       color: "220, 38, 38",
     },
@@ -74,6 +127,7 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "popular-4",
       url: "/images/inicio/maspopulares/newcar.png",
       name: "Silicona New Car",
+      brand: "Apolo",
       format: "png",
       color: "239, 68, 68",
     },
@@ -82,7 +136,8 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
     {
       id: "recomendado-1",
       url: "/images/inicio/recomendado/15w40.png",
-      name: "Aceite 15W-40",
+      name: "Aceite 15W40",
+      brand: "Overts",
       format: "png",
       color: "220, 38, 38",
     },
@@ -90,13 +145,15 @@ export const DEFAULT_CAROUSEL_ITEMS: CarouselRowsData = {
       id: "recomendado-2",
       url: "/images/inicio/recomendado/hidraulico68.png",
       name: "Aceite Hidráulico 68",
+      brand: "Apolo",
       format: "png",
       color: "239, 68, 68",
     },
     {
       id: "recomendado-3",
       url: "/images/inicio/recomendado/Sae25w60.png",
-      name: "Aceite SAE 25W-60",
+      name: "Aceite SAE 25W60",
+      brand: "Overts",
       format: "png",
       color: "220, 38, 38",
     },
@@ -109,11 +166,11 @@ export function getLocalCarouselItems(): CarouselRowsData {
     const raw = localStorage.getItem(CAROUSEL_ITEMS_STORAGE_KEY);
     if (!raw) return DEFAULT_CAROUSEL_ITEMS;
     const parsed = JSON.parse(raw);
-    return {
+    return normalizeCarouselRows({
       vendidos: Array.isArray(parsed.vendidos) && parsed.vendidos.length > 0 ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
       populares: Array.isArray(parsed.populares) && parsed.populares.length > 0 ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
       recomendados: Array.isArray(parsed.recomendados) && parsed.recomendados.length > 0 ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
-    };
+    });
   } catch (_e) {
     return DEFAULT_CAROUSEL_ITEMS;
   }
@@ -175,11 +232,11 @@ export function useCarouselItems() {
       if (data && data.content && !error) {
         try {
           const parsed = JSON.parse(data.content);
-          const merged: CarouselRowsData = {
+          const merged = normalizeCarouselRows({
             vendidos: Array.isArray(parsed.vendidos) && parsed.vendidos.length > 0 ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
             populares: Array.isArray(parsed.populares) && parsed.populares.length > 0 ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
             recomendados: Array.isArray(parsed.recomendados) && parsed.recomendados.length > 0 ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
-          };
+          });
           setItems(merged);
           if (typeof window !== "undefined") {
             localStorage.setItem(CAROUSEL_ITEMS_STORAGE_KEY, JSON.stringify(merged));
@@ -212,11 +269,13 @@ export function useCarouselItems() {
       if (e.key === CAROUSEL_ITEMS_STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setItems({
-            vendidos: Array.isArray(parsed.vendidos) ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
-            populares: Array.isArray(parsed.populares) ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
-            recomendados: Array.isArray(parsed.recomendados) ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
-          });
+          setItems(
+            normalizeCarouselRows({
+              vendidos: Array.isArray(parsed.vendidos) ? parsed.vendidos : DEFAULT_CAROUSEL_ITEMS.vendidos,
+              populares: Array.isArray(parsed.populares) ? parsed.populares : DEFAULT_CAROUSEL_ITEMS.populares,
+              recomendados: Array.isArray(parsed.recomendados) ? parsed.recomendados : DEFAULT_CAROUSEL_ITEMS.recomendados,
+            })
+          );
         } catch (_err) {}
       }
     };

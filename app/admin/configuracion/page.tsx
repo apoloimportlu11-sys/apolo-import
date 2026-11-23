@@ -203,6 +203,7 @@ export default function ConfiguracionPage() {
       id: `${row}-${Date.now()}`,
       url: "",
       name: "",
+      brand: row === "vendidos" ? "Overts" : row === "recomendados" ? "Overts" : "Apolo",
       format: "png",
       color: "220, 38, 38",
     };
@@ -558,10 +559,23 @@ export default function ConfiguracionPage() {
                       Quitar
                     </button>
                   </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,10rem)_auto]">
                     <label className="text-sm text-zinc-200">
                       Nombre
                       <input className={inputClass} value={item.name} placeholder="Grasa de litio" onChange={(event) => updateItem(index, { name: event.target.value })} />
+                    </label>
+                    <label className="text-sm text-zinc-200">
+                      Marca
+                      <select
+                        className={inputClass}
+                        value={item.brand || "Apolo"}
+                        onChange={(event) => updateItem(index, { brand: event.target.value })}
+                        aria-label={`Marca de la tarjeta ${index + 1}`}
+                      >
+                        <option value="Apolo">Apolo</option>
+                        <option value="Overts">Overts</option>
+                        <option value="Valtrom">Valtrom</option>
+                      </select>
                     </label>
                     <label className="text-sm text-zinc-200">
                       Resplandor

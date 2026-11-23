@@ -8,6 +8,12 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CarouselItemData } from "@/lib/carousel-items";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
+import {
+  getBrandChipVisual,
+  getOfficialBrandLogo,
+  isOfficialBrand,
+  OFFICIAL_BRANDS,
+} from "@/lib/catalog/display";
 
 export type ShowcaseLane = {
   kicker: string;
@@ -24,6 +30,76 @@ const GLOW = {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+function BrandMarks({ brand }: { brand?: string }) {
+  const label = (brand || "Apolo").trim() || "Apolo";
+  const official = isOfficialBrand(label);
+  const logo = getOfficialBrandLogo(label);
+  const visual = getBrandChipVisual(label);
+
+  return (
+    <>
+      <div
+        className={cn(
+          "absolute left-2 top-1/2 z-20 flex w-[3.25rem] -translate-y-1/2 flex-col items-center gap-1.5 sm:left-3 sm:w-16",
+          official && "drop-shadow-[0_0_18px_rgba(255,255,255,0.12)]"
+        )}
+      >
+        <div
+          className={cn(
+            "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border bg-black/55 backdrop-blur-md sm:h-14 sm:w-14",
+            official ? "border-white/25 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]" : "border-white/15"
+          )}
+          style={
+            official
+              ? { boxShadow: `0 0 0 1px ${visual.accent}55, 0 10px 28px ${visual.glow}` }
+              : undefined
+          }
+        >
+          {logo ? (
+            <Image src={logo} alt={`Logo ${label}`} fill sizes="56px" className="object-contain p-1.5" />
+          ) : (
+            <span
+              className="px-1 text-center font-display text-[10px] font-bold uppercase leading-tight tracking-wide"
+              style={{ color: visual.text }}
+            >
+              {label.slice(0, 3)}
+            </span>
+          )}
+        </div>
+        {official ? (
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.14em] text-white"
+            style={{ backgroundColor: visual.active }}
+          >
+            Casa
+          </span>
+        ) : null}
+      </div>
+
+      <div className="absolute right-2 top-1/2 z-20 flex w-[3.1rem] -translate-y-1/2 justify-center sm:right-3 sm:w-14">
+        <span
+          className={cn(
+            "inline-flex max-h-40 items-center justify-center rounded-full border px-2 py-3 font-display text-[11px] font-bold uppercase tracking-[0.22em] backdrop-blur-md sm:text-xs",
+            official ? "border-white/25 bg-black/55 text-white" : "border-white/15 bg-black/45 text-white/80"
+          )}
+          style={
+            official
+              ? {
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  color: "#fff",
+                  boxShadow: `inset 0 0 0 1px ${visual.accent}66`,
+                }
+              : { writingMode: "vertical-rl", transform: "rotate(180deg)" }
+          }
+        >
+          {label}
+        </span>
+      </div>
+    </>
+  );
+}
+
 function ShowcaseCard({
   lane,
   index,
@@ -38,6 +114,9 @@ function ShowcaseCard({
   const list = lane.items.filter((item) => item.url);
   const [active, setActive] = useState(0);
   const product = list[active] ?? list[0];
+  const brand = product?.brand || "Apolo";
+  const official = isOfficialBrand(brand);
+  const visual = getBrandChipVisual(brand);
 
   useEffect(() => {
     if (reduce || paused || list.length < 2) return;
@@ -53,11 +132,18 @@ function ShowcaseCard({
     <article
       data-lane={lane.tone}
       className={cn(
-        "flex h-full flex-col rounded-[1.6rem] border bg-white/[0.04] p-5 backdrop-blur-md transition-[transform,box-shadow] duration-300 sm:p-6 dark:bg-white/[0.04]",
+        "flex h-full flex-col rounded-[1.6rem] border bg-white/[0.04] p-5 backdrop-blur-md transition-[transform,box-shadow,border-color] duration-300 sm:p-6 dark:bg-white/[0.04]",
         lane.featured
           ? "border-[color:var(--gold)]/70 shadow-[0_0_0_1px_rgba(201,162,39,0.25),0_24px_60px_rgba(0,0,0,0.35)]"
-          : "border-white/10"
+          : official
+            ? "border-white/15"
+            : "border-white/10"
       )}
+      style={
+        official && !lane.featured
+          ? { boxShadow: `0 0 0 1px ${visual.accent}33, 0 18px 40px rgba(0,0,0,0.28)` }
+          : undefined
+      }
     >
       <div className="relative z-10 mb-2 flex items-center justify-between gap-3">
         <p className="lane-kicker font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
@@ -79,6 +165,9 @@ function ShowcaseCard({
         />
         <div className="lane-shadow pointer-events-none absolute bottom-4 left-1/2 h-3 w-28 -translate-x-1/2 rounded-[100%] bg-black/80" />
         <div className="pointer-events-none absolute bottom-1 left-1/2 h-2 w-36 -translate-x-1/2 rounded-[100%] border border-white/20 bg-white/10" />
+
+        <BrandMarks brand={brand} />
+
         <AnimatePresence mode="wait">
           <motion.div
             key={product.id}
@@ -86,7 +175,7 @@ function ShowcaseCard({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
             transition={{ duration: 0.35, ease: EASE }}
-            className="relative z-10 h-52 w-40"
+            className="relative z-10 h-52 w-36 sm:w-40"
           >
             <Image
               src={product.url}
@@ -102,9 +191,20 @@ function ShowcaseCard({
         </AnimatePresence>
       </div>
 
-      <h3 className="lane-title relative z-10 mt-4 text-center font-display text-lg font-semibold tracking-tight text-white">
-        {product.name}
-      </h3>
+      <div className="relative z-10 mt-4 flex flex-col items-center gap-1.5">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]",
+            official ? "border-white/20 bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70"
+          )}
+          style={official ? { color: visual.accent } : undefined}
+        >
+          {brand}
+        </span>
+        <h3 className="lane-title text-center font-display text-lg font-semibold tracking-tight text-white">
+          {product.name}
+        </h3>
+      </div>
       <p className="lane-count relative z-10 mt-1 text-center text-xs text-white/45">
         {String(active + 1).padStart(2, "0")} / {String(list.length).padStart(2, "0")}
       </p>
@@ -117,7 +217,7 @@ function ShowcaseCard({
               type="button"
               role="tab"
               aria-selected={dot === active}
-              aria-label={item.name}
+              aria-label={`${item.brand || "Apolo"} · ${item.name}`}
               onClick={() => setActive(dot)}
               className={cn(
                 "lane-dot h-1.5 rounded-full transition-[width,background-color] duration-300",
@@ -162,8 +262,31 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
             Productos <span className="title-heat-on-dark text-[color:var(--gold)]">destacados</span>
           </h2>
           <p className="showcase-lead mt-3 text-sm text-white/60 sm:text-base">
-            Lo más vendido, lo más popular y lo que recomendamos para tu motor.
+            Lo más vendido, lo más popular y lo que recomendamos — con énfasis en{" "}
+            <span className="text-white">Apolo</span>, <span className="text-white">Overts</span> y{" "}
+            <span className="text-white">Valtrom</span>.
           </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            {OFFICIAL_BRANDS.map((key) => {
+              const logo = getOfficialBrandLogo(key);
+              const visual = getBrandChipVisual(key);
+              const label = key.charAt(0).toUpperCase() + key.slice(1);
+              return (
+                <span
+                  key={key}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/85"
+                  style={{ boxShadow: `inset 0 0 0 1px ${visual.accent}44` }}
+                >
+                  {logo ? (
+                    <span className="relative h-5 w-5 overflow-hidden rounded-full bg-black/50">
+                      <Image src={logo} alt="" fill sizes="20px" className="object-contain p-0.5" />
+                    </span>
+                  ) : null}
+                  {label}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         <div className="grid items-stretch gap-4 md:grid-cols-3">
