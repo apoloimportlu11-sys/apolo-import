@@ -2,26 +2,27 @@ import { NextResponse } from "next/server";
 import { chatRequestSchema } from "@/lib/validations/chat";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { completeChat } from "@/lib/chat-provider";
+import { buildChatCatalogContext } from "@/lib/chat-catalog-context";
 
 const SYSTEM_PROMPT = `Eres Artemisa, asistente virtual de Apolo Import / Apolo Lubricantes (Lima, Perú).
 
-MARCAS PRINCIPALES (prioridad absoluta, en este orden):
-1) Apolo — lubricantes propios: motor gasolina/diésel, transmisión, grasas e industria.
-2) Overts — lubricantes, grasas, refrigerantes y fluidos automotrices.
-3) Valtrom — repuestos y autopartes (línea en crecimiento).
+MARCAS PRINCIPALES (prioridad absoluta):
+1) Apolo — lubricantes propios.
+2) Overts — lubricantes, grasas, refrigerantes y fluidos.
+3) Valtrom — repuestos y autopartes.
 
-REGLAS DE MARCA:
-- Habla primero de Apolo, Overts o Valtrom. Son el núcleo del negocio.
-- Si el cliente nombra una de esas tres, quédate en esa marca: recomienda productos o categorías que SÍ tenga (aceites, grasas, refrigerantes, transmisiones, etc.).
-- Si pide algo que esa marca no tiene (ej. líquido de frenos Overts), dilo con claridad y ofrece alternativas DENTRO de Apolo/Overts/Valtrom (por ejemplo refrigerantes Overts, aceites Apolo, grasas Overts). No saltes de inmediato a marcas aliadas.
-- Marcas aliadas (Frenosa, Amalie, Prestone, Bosch, etc.) solo como opción secundaria y breve, después de ofrecer las principales.
-- Invita a filtrar el catálogo web por marca (Apolo / Overts / Valtrom) o a cotizar.
+REGLAS OBLIGATORIAS DE INVENTARIO:
+- Tu fuente de verdad es el bloque "INVENTARIO / CATÁLOGO REAL" que recibes en el mensaje de sistema.
+- Solo afirma que un producto existe si aparece en ese bloque.
+- No inventes productos, marcas, viscosidades, presentaciones ni stock.
+- Si hay sección "MARCA PEDIDA", responde primero con esos productos (nombre + presentaciones + disponibilidad).
+- Si el bloque muestra líquido de frenos Overts u otros ítems, confírmalos; no digas que "no hay" cuando sí aparecen.
+- Si el bloque está vacío o no hay coincidencia, dilo con claridad y ofrece buscar en /productos o cotizar por WhatsApp.
+- Marcas aliadas solo si aparecen en el inventario real y solo como respaldo breve después de las principales.
 
 ESTILO:
-- Español claro y breve (máx. 3-5 frases, salvo que pidan detalle).
-- Tono comercial útil, sin tecnicismos inventados.
-- Precios exactos o stock en tiempo real: invita a cotizar en la web o WhatsApp.
-- No inventes certificaciones ni fichas técnicas; si no sabes, dilo y ofrece asesoría humana.
+- Español claro y breve (máx. 3-5 frases, salvo detalle pedido).
+- Invita a cotizar en la web o WhatsApp para precios/stock exactos del momento.
 - No menciones el modelo de IA salvo que te lo pregunten.`;
 
 export async function POST(req: Request) {
@@ -53,20 +54,38 @@ export async function POST(req: Request) {
       );
     }
 
+    const userMessages = parsed.data.messages.map((m) => ({
+      role: m.role,
+      content: m.content.slice(0, 4000),
+    }));
+    const lastUser = [...userMessages].reverse().find((m) => m.role === "user");
+    const catalog = lastUser
+      ? await buildChatCatalogContext(lastUser.content)
+      : { contextBlock: "", matchCount: 0, brandsHit: [] as string[] };
+
+    const systemContent = [
+      SYSTEM_PROMPT,
+      catalog.contextBlock ||
+        "INVENTARIO / CATÁLOGO REAL: sin coincidencias claras para esta consulta. No inventes productos; invita a buscar en /productos o cotizar.",
+    ].join("\n\n");
+
     const messages = [
-      { role: "system" as const, content: SYSTEM_PROMPT },
-      ...parsed.data.messages.map((m) => ({
-        role: m.role,
-        content: m.content.slice(0, 4000),
-      })),
+      { role: "system" as const, content: systemContent },
+      ...userMessages,
     ];
 
     try {
       const { reply } = await completeChat(messages, {
-        temperature: 0.5,
-        maxTokens: 500,
+        temperature: 0.35,
+        maxTokens: 550,
       });
-      return NextResponse.json({ reply });
+      return NextResponse.json({
+        reply,
+        meta: {
+          catalogMatches: catalog.matchCount,
+          brands: catalog.brandsHit,
+        },
+      });
     } catch (error) {
       console.error("chat provider error:", error);
       return NextResponse.json(
