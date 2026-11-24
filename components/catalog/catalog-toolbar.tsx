@@ -30,7 +30,7 @@ export function CatalogToolbar({
       className="mb-4 space-y-2.5"
       data-catalog-toolbar="true"
     >
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto w-full max-w-3xl">
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input

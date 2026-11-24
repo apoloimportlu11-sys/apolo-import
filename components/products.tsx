@@ -1546,7 +1546,7 @@ export function Products({
 
   return (
     <section ref={sectionRef} className="relative min-h-screen bg-transparent py-4 md:py-6">
-      <div className="container relative z-10 mx-auto px-4 sm:px-5 lg:px-6">
+      <div className="site-container relative z-10">
         {renderBreadcrumb()}
 
         <header className="mb-4 flex flex-wrap items-end justify-between gap-3">

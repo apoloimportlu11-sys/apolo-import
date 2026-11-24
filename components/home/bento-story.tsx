@@ -73,7 +73,7 @@ export function BentoStory() {
       <div className="carbon-grain pointer-events-none absolute inset-0 opacity-10 dark:opacity-25" />
       <div className="speed-divider absolute inset-x-0 top-0" />
 
-      <ScrollReveal className="relative z-10 mx-auto mb-10 w-full px-4 lg:mb-16 lg:px-8 xl:px-12">
+      <ScrollReveal className="site-container relative z-10 mb-10 w-full lg:mb-16">
         <p className="section-kicker mb-3 font-display text-xs font-semibold uppercase tracking-[0.22em] text-primary">
           Más que catálogo
         </p>

@@ -72,7 +72,7 @@ export function Footer() {
     <footer className="relative border-t border-border bg-card text-foreground dark:border-white/10 dark:bg-[#141414] dark:text-white">
       <LightAtmosphere seam="gold" />
       <div className="relative z-10 border-b border-border bg-muted dark:border-white/10 dark:bg-[#1a1a1a]">
-        <div className="mx-auto flex w-full flex-col items-start justify-between gap-5 px-4 py-8 sm:flex-row sm:items-center lg:px-8 xl:px-12">
+        <div className="site-container flex w-full flex-col items-start justify-between gap-5 py-8 sm:flex-row sm:items-center">
           <div>
             <p className="font-display text-2xl font-semibold tracking-tight">
               ¿Listo para cotizar?
@@ -101,7 +101,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto w-full px-4 py-14 lg:px-8 xl:px-12">
+      <div className="site-container relative z-10 w-full py-14">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             {/* Triángulo: Apolo + Overts arriba, Valtrom abajo (logos desde Admin → Marcas) */}
@@ -236,7 +236,7 @@ export function Footer() {
       </div>
 
       <div className="relative z-10 border-t border-border dark:border-white/10">
-        <div className="mx-auto flex w-full flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-muted-foreground sm:flex-row lg:px-8 xl:px-12">
+        <div className="site-container flex w-full flex-col items-center justify-between gap-4 py-6 text-sm text-muted-foreground sm:flex-row">
           <p>
             {new Date().getFullYear()} {name}. Todos los derechos reservados.
           </p>

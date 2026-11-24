@@ -111,7 +111,7 @@ export default function FloatingWhatsApp() {
 
   return (
     <div
-      className={`pointer-events-auto fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 flex flex-col items-end gap-2 transition-opacity duration-300 md:bottom-4 ${
+      className={`site-fab-dock pointer-events-auto fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] flex flex-col items-end gap-2 transition-opacity duration-300 md:bottom-4 ${
         showOnHomeMobile ? "opacity-100" : "pointer-events-none opacity-0 md:pointer-events-auto md:opacity-100"
       }`}
     >

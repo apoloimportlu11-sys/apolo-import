@@ -343,7 +343,7 @@ export function About() {
 
       {/* MARCAS PRINCIPALES — detalle por marca */}
       <div id="marcas" className="relative border-t border-border/60 bg-background">
-        <div className="mx-auto max-w-6xl px-5 pb-8 pt-14 sm:px-8 sm:pb-10 sm:pt-16 lg:pt-20">
+        <div className="site-container pb-8 pt-14 sm:pb-10 sm:pt-16 lg:pt-20">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--gold)]">
               Marcas de casa
@@ -548,7 +548,7 @@ export function About() {
 
       {/* MARCAS ALIADAS */}
       <div className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
+        <div className="site-container section-y">
           <div className="max-w-2xl">
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               Marcas aliadas

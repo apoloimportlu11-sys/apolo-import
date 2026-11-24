@@ -20,10 +20,10 @@ export function FinalCta() {
     : "https://maps.app.goo.gl/wjX9XbJxaYfqnFhn8";
 
   return (
-    <section className="section-cta relative overflow-hidden bg-[#FFE4E6] py-16 dark:bg-[#16120C] md:py-24">
+    <section className="section-cta section-y relative overflow-hidden bg-[#FFE4E6] dark:bg-[#16120C]">
       <LightAtmosphere seam="ink" variant="fade" />
       <div className="speed-divider absolute inset-x-0 top-0" />
-      <div className="relative z-10 mx-auto grid w-full items-center gap-10 px-4 lg:grid-cols-2 lg:gap-16 lg:px-8 xl:px-12">
+      <div className="site-container relative z-10 grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <ScrollReveal className="cta-copy">
           <p className="section-kicker mb-3 font-display text-xs font-semibold uppercase tracking-[0.22em] text-primary">
             Siguiente paso

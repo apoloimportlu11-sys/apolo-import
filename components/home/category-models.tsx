@@ -157,10 +157,10 @@ export function CategoryModels() {
   const stacked = MODELS.slice(1);
 
   return (
-    <section className="section-lines relative overflow-hidden bg-[#FFF1C9] py-16 dark:bg-[#1A1012] md:py-24">
+    <section className="section-lines section-y relative overflow-hidden bg-[#FFF1C9] dark:bg-[#1A1012]">
       <LightAtmosphere seam="ink" />
       <div className="speed-divider absolute inset-x-0 top-0" />
-      <div className="relative z-10 mx-auto w-full px-4 lg:px-8 xl:px-12">
+      <div className="site-container relative z-10 w-full">
         <div className="mb-10 flex flex-col gap-6 md:mb-14 md:flex-row md:items-end md:justify-between">
           <ScrollReveal className="max-w-2xl">
             <p className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.22em] text-primary">

@@ -13,7 +13,7 @@ export default function FloatingQuoteButton() {
   if (pathname.startsWith("/admin") || totalCount === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end">
+    <div className="site-fab-dock pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 flex flex-col items-end">
       <div className="pointer-events-auto mb-[3.75rem] animate-in fade-in slide-in-from-bottom-5 duration-300 md:mb-[3.75rem]">
         <button
           type="button"

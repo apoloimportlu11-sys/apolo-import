@@ -118,7 +118,7 @@ export function Header() {
 
   return (
     <>
-      <header ref={headerRef} className="sticky top-0 z-50 w-full">
+      <header ref={headerRef} className="sticky top-0 z-[var(--z-header)] w-full">
         <FestiveTopBanner />
 
         <div
@@ -132,7 +132,7 @@ export function Header() {
         >
           <div
             className={cn(
-              "grid w-full grid-cols-[1fr_auto] items-center gap-3 px-4 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 md:grid-cols-[auto_auto] lg:grid-cols-[auto_1fr_auto] lg:gap-6 lg:px-8 xl:px-12",
+              "site-container grid w-full grid-cols-[1fr_auto] items-center gap-3 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-cols-[auto_auto] lg:grid-cols-[auto_1fr_auto] lg:gap-6",
               compact ? "py-2 lg:py-2.5" : "py-3 lg:py-4"
             )}
           >
@@ -531,7 +531,7 @@ export function Header() {
             ref={megaMenuRef}
             className="absolute left-0 right-0 z-50 hidden border-b border-border bg-card text-card-foreground shadow-2xl lg:block"
           >
-            <div className="w-full px-4 py-6 sm:px-6 lg:px-8 xl:px-12">
+            <div className="site-container w-full py-6">
               <div className="mb-4 flex items-center justify-between border-b border-border pb-4">
                 <div>
                   <h3 className="text-lg font-bold text-foreground">

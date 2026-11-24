@@ -109,7 +109,7 @@ export default function QuoteDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[var(--z-drawer-overlay)] overflow-hidden animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
         onClick={closeDrawer}
@@ -117,7 +117,7 @@ export default function QuoteDrawer() {
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-card border-l border-border shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300">
+        <div className="z-[var(--z-drawer-panel)] flex h-full w-screen max-w-md animate-in flex-col border-l border-border bg-card shadow-2xl slide-in-from-right duration-300">
           {/* Header */}
           <div className="px-6 py-5 border-b border-border bg-muted/40 flex items-center justify-between">
             <div className="flex items-center gap-3">

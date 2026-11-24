@@ -16,7 +16,7 @@ export default function CookiesPage() {
   return (
     <main className="min-h-screen bg-background">
       <Header />
-      <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <article className="site-container max-w-3xl py-12 sm:py-14">
         <p className="text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground">
             Inicio
@@ -31,7 +31,7 @@ export default function CookiesPage() {
           Última actualización: 12 de noviembre de 2026
         </p>
 
-        <div className="mt-8 space-y-6 text-sm leading-relaxed text-foreground/90 sm:text-base">
+        <div className="legal-prose mt-8 space-y-6">
           <section className="space-y-2">
             <h2 className="text-lg font-semibold text-foreground">1. Qué son las cookies</h2>
             <p>

@@ -307,7 +307,7 @@ export function ProductDetailClient({
     return (
       <main className="min-h-screen flex flex-col justify-between">
         <Header />
-        <div className="container mx-auto px-4 py-20 text-center flex flex-col items-center justify-center">
+        <div className="site-container flex flex-col items-center justify-center py-20 text-center">
           <h1 className="text-2xl font-bold mb-4 text-foreground">Producto no disponible</h1>
           <p className="text-muted-foreground mb-8 max-w-md">
             Este producto ha sido retirado del catálogo o ya no se encuentra disponible.
@@ -328,7 +328,7 @@ export function ProductDetailClient({
     <main className="min-h-screen">
       <Header />
 
-      <div className="container mx-auto px-4 lg:px-8 py-8">
+      <div className="site-container py-8 md:py-10">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link href="/" className="hover:text-foreground">

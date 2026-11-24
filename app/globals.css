@@ -2031,3 +2031,127 @@ html.admin-tone-dark .public-atmosphere {
   }
 }
 
+/* ── Storefront: layout, superficies y motion (no afecta admin) ── */
+:root {
+  --site-max: 80rem;
+  --z-header: 50;
+  --z-fab: 40;
+  --z-cookie: 60;
+  --z-drawer-overlay: 65;
+  --z-drawer-panel: 70;
+}
+
+.site-container {
+  width: 100%;
+  max-width: var(--site-max);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 0.35rem + 2.8vw, 3rem);
+}
+
+.section-y {
+  padding-block: var(--space-section-y);
+}
+
+.section-y-sm {
+  padding-block: var(--space-section-y-sm);
+}
+
+.section-y-lg {
+  padding-block: var(--space-section-y-lg);
+}
+
+.card-surface {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--foreground) 5%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--border) 40%, transparent);
+}
+
+.card-surface-interactive {
+  transition:
+    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-surface-interactive:hover {
+  border-color: color-mix(in oklab, var(--primary) 42%, var(--border));
+  box-shadow:
+    0 10px 28px color-mix(in oklab, var(--foreground) 8%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+.card-surface-interactive:active {
+  transform: scale(0.995);
+}
+
+.stats-bar {
+  border-color: var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+}
+
+html.dark:not(.admin-tone-light):not(.admin-tone-dark) .stats-bar {
+  background: color-mix(in oklab, var(--card) 12%, #070912);
+  color: var(--on-dark, #fff);
+}
+
+.legal-prose {
+  font-size: clamp(0.875rem, 0.82rem + 0.25vw, 1rem);
+  line-height: 1.65;
+  color: color-mix(in oklab, var(--foreground) 92%, transparent);
+}
+
+.legal-prose h2 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+}
+
+.legal-prose section + section {
+  margin-top: 1.25rem;
+}
+
+.legal-prose a {
+  color: var(--primary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.legal-prose a:hover {
+  text-decoration: underline;
+}
+
+.site-fab-dock {
+  z-index: var(--z-fab);
+}
+
+.site-header-bar:focus-within {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(:has(.admin-layout-active)) *:not(.admin-layout-root):not(.admin-layout-root *),
+  html:not(:has(.admin-layout-active)) *:not(.admin-layout-root):not(.admin-layout-root *)::before,
+  html:not(:has(.admin-layout-active)) *:not(.admin-layout-root):not(.admin-layout-root *)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-marquee,
+  .animate-marquee-reverse {
+    animation: none;
+  }
+
+  .card-surface-interactive:active {
+    transform: none;
+  }
+}
+

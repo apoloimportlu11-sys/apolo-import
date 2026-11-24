@@ -282,7 +282,7 @@ function CatalogProductCardInner({
       >
         <div
           className={cn(
-            "rounded-2xl border bg-card p-3 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/55 hover:shadow-md sm:p-4",
+            "card-surface card-surface-interactive p-3 sm:p-4",
             outOfStock ? "border-red-500/35" : "border-border",
             level === "low" ? "border-amber-500/35" : null
           )}
@@ -385,7 +385,7 @@ function CatalogProductCardInner({
     >
       <div
         className={cn(
-          "flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-md",
+          "card-surface card-surface-interactive flex h-full flex-col overflow-hidden",
             outOfStock ? "border-zinc-500/45" : "border-border",
             level === "low" ? "border-amber-500/40" : null
           )}

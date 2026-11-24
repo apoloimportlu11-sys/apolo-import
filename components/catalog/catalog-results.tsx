@@ -71,7 +71,7 @@ export function CatalogResults({
     const officialEmpty = selectedBrand && isOfficialBrand(selectedBrand);
     const logo = officialEmpty ? getOfficialBrandLogo(selectedBrand) : null;
     return (
-      <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm">
+      <div className="card-surface px-6 py-16 text-center">
         <div className="mx-auto max-w-md space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
             {logo ? (

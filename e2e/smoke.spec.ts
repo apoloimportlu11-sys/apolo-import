@@ -1,6 +1,31 @@
 import { test, expect } from "@playwright/test";
 import { dismissCookiesIfPresent, expectCookieBanner } from "./helpers";
 
+const viewports = [
+  { width: 375, height: 812 },
+  { width: 768, height: 1024 },
+  { width: 1280, height: 800 },
+];
+
+test.describe("responsive overflow", () => {
+  test.describe.configure({ mode: "serial", timeout: 120_000 });
+
+  for (const viewport of viewports) {
+    test(`sin desborde horizontal en inicio y contacto (${viewport.width}px)`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      for (const path of ["/", "/contacto"] as const) {
+        await page.goto(path, { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await dismissCookiesIfPresent(page);
+        const fits = await page.evaluate(() => {
+          const doc = document.documentElement;
+          return doc.scrollWidth <= doc.clientWidth + 1;
+        });
+        expect(fits, `desborde en ${path}`).toBe(true);
+      }
+    });
+  }
+});
+
 test.describe("Storefront smoke", () => {
   test("home carga con marca y navegación principal", async ({ page }) => {
     await page.goto("/");

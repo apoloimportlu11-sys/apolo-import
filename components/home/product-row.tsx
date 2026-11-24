@@ -93,7 +93,7 @@ export function ProductRow({
         </div>
       ) : null}
 
-      <div className="relative z-10 mx-auto w-full px-4 lg:px-8 xl:px-12">
+      <div className="site-container relative z-10 w-full">
         {list.length === 0 ? (
           <div className="mx-auto flex max-w-xl flex-col items-center rounded-3xl border border-border bg-card/70 px-6 py-16 text-center">
             <Package className="mb-4 h-10 w-10 text-[color:var(--gold)]" />

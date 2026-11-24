@@ -485,7 +485,7 @@ export function FeaturedProductsCarousel() {
         </svg>
       </div>
 
-      <div className="container mx-auto px-4 lg:px-8 relative z-10">
+      <div className="site-container relative z-10">
         {/* Section Header */}
         <div className="flex flex-col items-center text-center mb-8 md:mb-12">
           <div className="flex items-center justify-center gap-3 sm:gap-5 mb-3">

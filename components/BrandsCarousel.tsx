@@ -132,7 +132,7 @@ export default function BrandsCarousel({
       ref={sectionRef}
       className={`section-brands ${styles.stage} relative w-full overflow-hidden ${className}`}
     >
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+      <div className="site-container relative z-10 w-full py-8 sm:py-10 lg:py-12">
         {showTitle ? (
           <motion.header
             className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"

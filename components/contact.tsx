@@ -145,11 +145,11 @@ export function Contact() {
     : "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d487.78884404766546!2d-77.01365181216998!3d-12.022114500000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9105cfbf69af8b91%3A0xc683fa1038c0b33e!2sLas%20flores%20SJL!5e0!3m2!1ses!2spe!4v1787330485651!5m2!1ses!2spe";
 
   return (
-    <section id="contacto" className="py-20 bg-transparent relative overflow-hidden lg:[zoom:1.4]">
+    <section id="contacto" className="section-y relative overflow-hidden bg-transparent">
       {/* Ilustración Vectorial de Vehículos en el centro del lado izquierdo */}
       <VehicleVectorDecor size="lg" className="absolute left-4 2xl:left-8 3xl:left-14 top-1/2 -translate-y-1/2" />
 
-      <div className="container mx-auto px-4 lg:px-8 relative z-10">
+      <div className="site-container relative z-10">
         <div className="text-center mb-12">
           <span className="text-primary font-semibold text-sm uppercase tracking-wider">
             Contacto

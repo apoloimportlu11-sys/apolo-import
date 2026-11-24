@@ -308,7 +308,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(220,38,38,0.16),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--gold)]/50 to-transparent" />
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 lg:pr-24">
+      <div className="site-container relative z-10 w-full lg:pr-16 xl:pr-24">
         <div className="mx-auto mb-10 max-w-2xl text-center md:mb-12">
           <p className="showcase-kicker mx-auto mb-4 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
             Nuestros productos

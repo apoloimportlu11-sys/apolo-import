@@ -57,7 +57,7 @@ export default function CookieConsent() {
       role="dialog"
       aria-label="Preferencias de cookies"
       aria-live="polite"
-      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[60] mx-auto max-w-3xl rounded-2xl border border-border bg-card/95 p-4 text-foreground shadow-2xl backdrop-blur-md sm:inset-x-4 sm:p-5"
+      className="fixed inset-x-3 bottom-[max(5.5rem,env(safe-area-inset-bottom))] z-[var(--z-cookie)] mx-auto max-w-3xl rounded-2xl border border-border bg-card/95 p-4 text-foreground shadow-2xl backdrop-blur-md sm:inset-x-4 sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-5"
     >
       <div className="flex gap-3">
         <div className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary sm:flex">

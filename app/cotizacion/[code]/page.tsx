@@ -116,22 +116,22 @@ export default async function CotizacionPublicPage({
   const whatsapp = `https://wa.me/${waDigits(phone)}?text=${encodeURIComponent(message)}`;
 
   return (
-    <main className="min-h-screen bg-[#f4f4f5] px-4 py-8 text-[#141414] sm:py-12">
-      <div className="mx-auto max-w-xl space-y-5">
+    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:py-12">
+      <div className="site-container mx-auto max-w-xl space-y-5">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/logo-apolo.jpg?v=2026-11-24" alt={business} className="h-12 w-auto" />
           <div>
             <p className="text-sm font-semibold">{business}</p>
-            <p className="text-xs text-[#71717a]">Detalle de tu pedido</p>
+            <p className="text-xs text-muted-foreground">Detalle de tu pedido</p>
           </div>
         </div>
 
-        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#71717a]">Cotización</p>
-          <h1 className="mt-1 font-mono text-2xl font-black text-[#dc2626]">{quote.code}</h1>
-          <p className="mt-2 text-sm text-[#52525b]">
-            Estado: <strong className="text-[#141414]">{status}</strong>
+        <section className="card-surface p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Cotización</p>
+          <h1 className="mt-1 font-mono text-2xl font-black text-primary">{quote.code}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Estado: <strong className="text-foreground">{status}</strong>
             {" · "}
             {when}
           </p>
@@ -153,8 +153,8 @@ export default async function CotizacionPublicPage({
           ) : null}
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
-          <div className="border-b border-[#e5e7eb] px-5 py-3">
+        <section className="card-surface overflow-hidden p-0">
+          <div className="border-b border-border px-5 py-3">
             <h2 className="text-sm font-semibold">Productos cotizados</h2>
           </div>
           <ul>
@@ -162,19 +162,19 @@ export default async function CotizacionPublicPage({
               const image = pictureOf(item, catalog);
               const detail = [item.brand, item.presentation, item.viscosity, item.line].filter(Boolean).join(" · ");
               return (
-                <li key={`${item.id || item.name}-${index}`} className="flex gap-3 border-t border-[#f4f4f5] px-4 py-4 first:border-t-0">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#f4f4f5]">
+                <li key={`${item.id || item.name}-${index}`} className="flex gap-3 border-t border-border px-4 py-4 first:border-t-0">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={image} alt={item.name || "Producto"} className="h-full w-full object-contain" />
                     ) : (
-                      <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-[#a1a1aa]">Sin foto</div>
+                      <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-muted-foreground">Sin foto</div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold leading-tight">{item.name}</p>
-                    {detail ? <p className="mt-1 text-xs text-[#52525b]">{detail}</p> : null}
-                    <p className="mt-2 inline-flex rounded-full bg-[#fee2e2] px-2.5 py-0.5 text-sm font-bold text-[#dc2626]">
+                    {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
+                    <p className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-bold text-primary">
                       x{item.quantity || 1}
                     </p>
                   </div>
@@ -182,8 +182,8 @@ export default async function CotizacionPublicPage({
               );
             })}
           </ul>
-          <div className="flex items-center justify-between border-t border-[#e5e7eb] bg-[#fafafa] px-5 py-3 text-sm">
-            <span className="text-[#52525b]">Total del pedido</span>
+          <div className="flex items-center justify-between border-t border-border bg-muted/40 px-5 py-3 text-sm">
+            <span className="text-muted-foreground">Total del pedido</span>
             <strong>
               {units} {units === 1 ? "unidad" : "unidades"}
             </strong>
@@ -191,8 +191,8 @@ export default async function CotizacionPublicPage({
         </section>
 
         {quote.notes ? (
-          <section className="rounded-2xl border border-[#e5e7eb] bg-white px-5 py-4 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#71717a]">Nota</p>
+          <section className="card-surface px-5 py-4 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nota</p>
             <p className="mt-1">{quote.notes}</p>
           </section>
         ) : null}
@@ -206,7 +206,7 @@ export default async function CotizacionPublicPage({
           </a>
           <Link
             href="/productos"
-            className="inline-flex flex-1 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold"
+            className="btn-gold inline-flex flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold transition-colors hover:border-primary"
           >
             Seguir viendo productos
           </Link>

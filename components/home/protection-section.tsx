@@ -49,7 +49,7 @@ export function ProtectionSection() {
   const glowOpacity = useTransform(scrollYProgress, [0, 0.45, 1], reduce ? [0.55, 0.55, 0.55] : [0.35, 0.9, 0.45]);
 
   return (
-    <section className="section-protect relative overflow-hidden bg-[#070912] py-16 text-white md:py-24 dark:bg-[#070912]">
+    <section className="section-protect section-y relative overflow-hidden bg-[#070912] text-white dark:bg-[#070912]">
       <LightAtmosphere seam="bronze" variant="diagonal" />
       <div className="carbon-grain pointer-events-none absolute inset-0 opacity-20" />
       <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-red-600/25 blur-[100px]" />
@@ -57,7 +57,7 @@ export function ProtectionSection() {
       <div className="pointer-events-none absolute left-1/2 top-0 h-40 w-[70%] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(201,162,39,0.18),transparent_70%)]" />
       <div className="speed-divider absolute inset-x-0 top-0" />
 
-      <div className="relative z-10 mx-auto grid w-full items-center gap-10 px-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14 lg:px-8 xl:px-12">
+      <div className="site-container relative z-10 grid w-full items-center gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14">
         <ScrollReveal>
           <p className="section-kicker mb-3 font-display text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--gold)]">
             Ingeniería de protección
