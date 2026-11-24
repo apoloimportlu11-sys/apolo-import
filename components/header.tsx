@@ -132,13 +132,13 @@ export function Header() {
         >
           <div
             className={cn(
-              "site-container grid w-full grid-cols-[1fr_auto] items-center gap-3 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-cols-[auto_auto] lg:grid-cols-[auto_1fr_auto] lg:gap-6",
+              "grid w-full grid-cols-[1fr_auto] items-center gap-2 px-3 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:gap-3 sm:px-4 md:grid-cols-[auto_1fr_auto] md:px-5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-5 lg:px-6 xl:px-8",
               compact ? "py-2 lg:py-2.5" : "py-3 lg:py-4"
             )}
           >
             {/* Desktop / tablet: logos desde Admin → Marcas, mismo tamaño */}
             <div
-              className="hidden min-w-0 items-center gap-2 overflow-hidden md:flex lg:gap-3"
+              className="hidden min-w-0 shrink-0 items-center justify-self-start gap-2 overflow-hidden md:flex lg:gap-3"
               aria-label="Marcas Apolo, Overts y Valtrom"
             >
               {HEADER_BRANDS.map((brand, index) => (
@@ -174,7 +174,7 @@ export function Header() {
               Catálogo
             </Link>
 
-            <nav className="hidden min-w-0 items-center justify-center gap-3 overflow-visible lg:flex xl:gap-6 2xl:gap-8">
+            <nav className="hidden min-w-0 items-center justify-center gap-2 overflow-hidden px-2 lg:flex xl:gap-4 2xl:gap-6">
               <Link href="/" className={navLinkClass(isActive("/"))}>
                 Inicio
               </Link>
@@ -216,7 +216,7 @@ export function Header() {
             <div className="hidden shrink-0 items-center justify-end gap-1.5 justify-self-end lg:flex xl:gap-2">
               <Link
                 href="/productos"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-zinc-600 transition-colors hover:border-primary hover:text-primary dark:border-white/10 dark:text-white/70 dark:hover:border-white/25 dark:hover:text-white"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-zinc-600 transition-colors hover:border-primary hover:text-primary dark:border-white/10 dark:text-white/70 dark:hover:border-white/25 dark:hover:text-white"
                 aria-label="Buscar lubricante"
               >
                 <Search className="h-4 w-4" />
@@ -226,14 +226,14 @@ export function Header() {
                 onClick={openDrawer}
                 variant="outline"
                 size="sm"
-                className="relative h-10 cursor-pointer rounded-full border-border bg-white/70 px-3 text-zinc-800 hover:border-primary hover:bg-primary hover:text-white dark:border-white/15 dark:bg-white/5 dark:text-white 2xl:px-4"
+                className="relative h-10 shrink-0 cursor-pointer rounded-full border-border bg-white/70 px-3 text-zinc-800 hover:border-primary hover:bg-primary hover:text-white dark:border-white/15 dark:bg-white/5 dark:text-white"
                 title="Ver lista de cotización"
                 aria-label="Cotización"
               >
-                <FileText className="h-4 w-4 2xl:mr-2" />
-                <span className="hidden 2xl:inline">Cotización</span>
+                <FileText className="h-4 w-4" />
+                <span className="sr-only">Cotización</span>
                 {mounted && totalItems > 0 && (
-                  <span className="ml-2 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-bold text-zinc-950">
+                  <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-bold text-zinc-950">
                     {totalItems}
                   </span>
                 )}
@@ -243,11 +243,11 @@ export function Header() {
                 onClick={() => setIsLoginModalOpen(true)}
                 variant="outline"
                 size="sm"
-                className="h-10 cursor-pointer rounded-full border-border bg-white/70 px-3 text-zinc-800 hover:border-zinc-400 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:border-white/30 dark:hover:bg-white/10 2xl:px-4"
+                className="h-10 shrink-0 cursor-pointer rounded-full border-border bg-white/70 px-3 text-zinc-800 hover:border-zinc-400 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:border-white/30 dark:hover:bg-white/10"
                 aria-label="Ingresar"
               >
-                <User className="h-4 w-4 2xl:mr-2" />
-                <span className="hidden 2xl:inline">Ingresar</span>
+                <User className="h-4 w-4" />
+                <span className="sr-only">Ingresar</span>
               </Button>
               <Button
                 type="button"
@@ -531,7 +531,7 @@ export function Header() {
             ref={megaMenuRef}
             className="absolute left-0 right-0 z-50 hidden border-b border-border bg-card text-card-foreground shadow-2xl lg:block"
           >
-            <div className="site-container w-full py-6">
+            <div className="w-full px-3 py-6 sm:px-4 md:px-5 lg:px-6 xl:px-8">
               <div className="mb-4 flex items-center justify-between border-b border-border pb-4">
                 <div>
                   <h3 className="text-lg font-bold text-foreground">
