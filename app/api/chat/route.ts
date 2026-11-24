@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { chatRequestSchema } from "@/lib/validations/chat";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
-import { completeChat } from "@/lib/chat-provider";
-import { buildChatCatalogContext } from "@/lib/chat-catalog-context";
+import { completeChat, isProviderQuotaError } from "@/lib/chat-provider";
+import {
+  buildCatalogFallbackReply,
+  buildChatCatalogContext,
+} from "@/lib/chat-catalog-context";
 
 const SYSTEM_PROMPT = `Eres Artemisa, asistente virtual de Apolo Import / Apolo Lubricantes (Lima, Perú).
 
@@ -75,7 +78,7 @@ export async function POST(req: Request) {
     ];
 
     try {
-      const { reply } = await completeChat(messages, {
+      const { reply, provider } = await completeChat(messages, {
         temperature: 0.35,
         maxTokens: 550,
       });
@@ -84,14 +87,22 @@ export async function POST(req: Request) {
         meta: {
           catalogMatches: catalog.matchCount,
           brands: catalog.brandsHit,
+          provider,
         },
       });
     } catch (error) {
       console.error("chat provider error:", error);
-      return NextResponse.json(
-        { message: "No se pudo obtener respuesta del asistente." },
-        { status: 502 }
-      );
+      // Sin créditos/API: Artemisa sigue respondiendo con inventario real.
+      const reply = buildCatalogFallbackReply(catalog);
+      return NextResponse.json({
+        reply,
+        meta: {
+          catalogMatches: catalog.matchCount,
+          brands: catalog.brandsHit,
+          provider: "catalog-fallback",
+          quota: isProviderQuotaError(error),
+        },
+      });
     }
   } catch (e) {
     console.error("chat route:", e);

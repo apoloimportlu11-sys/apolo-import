@@ -326,3 +326,31 @@ export async function buildChatCatalogContext(
     brandsHit,
   };
 }
+
+/** Respuesta breve desde inventario cuando el proveedor de IA no está disponible. */
+export function buildCatalogFallbackReply(catalog: ChatCatalogMatch): string {
+  const products = catalog.contextBlock
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .slice(0, 5)
+    .map((line) => {
+      const body = line.slice(2);
+      const title = body.split(" | ")[0]?.trim() || body;
+      const stock = body.match(/Stock producto:\s*([^|]+)/i)?.[1]?.trim();
+      return stock ? `• ${title} — ${stock}` : `• ${title}`;
+    });
+
+  if (products.length) {
+    return [
+      "Encontré estas opciones en inventario:",
+      ...products,
+      "Para precio y stock exactos del momento, cotiza en la web o escríbenos por WhatsApp.",
+    ].join("\n");
+  }
+
+  return [
+    "Ahora mismo el asistente con IA no está disponible.",
+    "Puedes buscar en /productos o escribirnos por WhatsApp para atención inmediata.",
+  ].join(" ");
+}
