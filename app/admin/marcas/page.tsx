@@ -576,6 +576,7 @@ export default function MarcasPage() {
           <h1 className="font-heading text-3xl text-white">Marcas</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-300">
             El nombre se ofrece al crear un producto. Pausar una marca la quita de esa lista. Los productos que ya la usan siguen en la tienda.
+            Los logos de <strong className="font-semibold text-white">Apolo, Overts y Valtrom</strong> se muestran en el header, footer e inicio: cámbialos aquí y el sitio se actualiza.
           </p>
         </div>
         <p className="text-sm text-zinc-300">{connected ? "Otra pestaña del panel recibe los cambios." : "Puedes guardar. La actualización automática está en pausa."}</p>

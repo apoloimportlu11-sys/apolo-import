@@ -21,12 +21,21 @@ import LoginModal from "@/components/LoginModal";
 import { useQuote } from "@/lib/quote-context";
 import FestiveTopBanner from "@/components/FestiveTopBanner";
 import { useProductLineGroups } from "@/lib/product-line-groups";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
+import { OFFICIAL_BRAND_LOGO_IMG } from "@/lib/catalog/display";
 import { cn } from "@/lib/utils";
+
+const HEADER_BRANDS = [
+  { key: "apolo" as const, name: "Apolo", href: "/" },
+  { key: "overts" as const, name: "Overts", href: "/productos?brand=Overts" },
+  { key: "valtrom" as const, name: "Valtrom", href: "/productos?brand=Valtrom" },
+];
 
 export function Header() {
   const pathname = usePathname();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { totalItems, openDrawer } = useQuote();
+  const { logos: houseLogos } = useHouseBrandLogos();
   const [mounted, setMounted] = useState(false);
   const currentTheme = mounted ? resolvedTheme || theme || "dark" : "dark";
   const isDark = currentTheme === "dark";
@@ -100,15 +109,11 @@ export function Header() {
     );
 
   const compact = mounted && scrolled;
-  const markClass = compact
-    ? "h-10 w-auto max-w-[72px] object-contain object-left sm:h-11 sm:max-w-[88px]"
-    : "h-11 w-auto max-w-[80px] object-contain object-left sm:h-14 sm:max-w-[112px] lg:h-16 lg:max-w-[128px]";
-  const wordmarkClass = compact
-    ? "h-8 w-auto max-w-[120px] object-contain"
-    : "h-10 w-auto max-w-[150px] object-contain lg:h-12 lg:max-w-[190px]";
-  const brandLinkClass = cn(
-    "flex shrink-0 items-center justify-center transition-[height,opacity] duration-500 hover:opacity-90",
-    compact ? "h-10 sm:h-11" : "h-11 sm:h-14 lg:h-16"
+  const brandBoxClass = cn(
+    "inline-flex shrink-0 items-center justify-center overflow-hidden transition-[height,width,opacity] duration-500 hover:opacity-90",
+    compact
+      ? "h-10 w-[5.75rem] sm:h-11 sm:w-[6.5rem]"
+      : "h-11 w-[6.5rem] sm:h-14 sm:w-[7.75rem] lg:h-16 lg:w-[8.5rem]"
   );
 
   return (
@@ -131,58 +136,29 @@ export function Header() {
               compact ? "py-2 lg:py-2.5" : "py-3 lg:py-4"
             )}
           >
-            {/* Desktop / tablet: las 3 marcas en la barra */}
+            {/* Desktop / tablet: logos desde Admin → Marcas, mismo tamaño */}
             <div
-              className="hidden min-w-0 items-center gap-3 overflow-hidden md:flex lg:gap-3 xl:gap-4"
+              className="hidden min-w-0 items-center gap-2 overflow-hidden md:flex lg:gap-3"
               aria-label="Marcas Apolo, Overts y Valtrom"
             >
-              <Link href="/" className={brandLinkClass} title="Apolo">
-                <Image
-                  src="/images/logo-apolo.png?v=2026-11-23"
-                  alt="Apolo"
-                  width={260}
-                  height={260}
-                  priority
-                  style={{ width: "auto", height: "100%" }}
-                  className={markClass}
-                />
-              </Link>
-              <span
-                className="h-10 w-px shrink-0 bg-zinc-300 dark:bg-white/20"
-                aria-hidden
-              />
-              <Link
-                href="/productos?brand=Overts"
-                className={brandLinkClass}
-                title="Overts"
-              >
-                <Image
-                  src="/images/logo-overts.png?v=2026-11-23"
-                  alt="Overts"
-                  width={220}
-                  height={110}
-                  style={{ width: "auto", height: "100%" }}
-                  className={wordmarkClass}
-                />
-              </Link>
-              <span
-                className="h-10 w-px shrink-0 bg-zinc-300 dark:bg-white/20"
-                aria-hidden
-              />
-              <Link
-                href="/productos?brand=Valtrom"
-                className={brandLinkClass}
-                title="Valtrom"
-              >
-                <Image
-                  src="/images/logo-valtrom.png?v=2026-11-23"
-                  alt="Valtrom"
-                  width={220}
-                  height={110}
-                  style={{ width: "auto", height: "100%" }}
-                  className={wordmarkClass}
-                />
-              </Link>
+              {HEADER_BRANDS.map((brand, index) => (
+                <div key={brand.key} className="flex items-center gap-2 lg:gap-3">
+                  {index > 0 ? (
+                    <span className="h-10 w-px shrink-0 bg-zinc-300 dark:bg-white/20" aria-hidden />
+                  ) : null}
+                  <Link href={brand.href} className={brandBoxClass} title={brand.name}>
+                    <Image
+                      src={houseLogos[brand.key]}
+                      alt={brand.name}
+                      width={200}
+                      height={120}
+                      priority={brand.key === "apolo"}
+                      unoptimized={houseLogos[brand.key].includes("supabase") || houseLogos[brand.key].startsWith("http")}
+                      className={OFFICIAL_BRAND_LOGO_IMG}
+                    />
+                  </Link>
+                </div>
+              ))}
             </div>
 
             {/* Móvil: Catálogo a la izquierda para dejar sitio a las marcas abajo */}
@@ -331,29 +307,21 @@ export function Header() {
                   <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
                   <div className="flex h-full flex-col">
                     <div className="flex items-center gap-2 border-b border-border bg-card/60 px-4 py-4 pr-12 backdrop-blur-md">
-                      <Image
-                        src="/images/logo-apolo.png?v=2026-11-23"
-                        alt="Apolo"
-                        width={72}
-                        height={72}
-                        className="h-9 w-auto object-contain"
-                      />
-                      <span className="h-7 w-px bg-border" aria-hidden />
-                      <Image
-                        src="/images/logo-overts.png?v=2026-11-23"
-                        alt="Overts"
-                        width={110}
-                        height={44}
-                        className="h-7 w-auto object-contain"
-                      />
-                      <span className="h-7 w-px bg-border" aria-hidden />
-                      <Image
-                        src="/images/logo-valtrom.png?v=2026-11-23"
-                        alt="Valtrom"
-                        width={110}
-                        height={44}
-                        className="h-7 w-auto object-contain"
-                      />
+                      {HEADER_BRANDS.map((brand, index) => (
+                        <div key={brand.key} className="flex items-center gap-2">
+                          {index > 0 ? <span className="h-7 w-px bg-border" aria-hidden /> : null}
+                          <span className="inline-flex h-10 w-[5.5rem] items-center justify-center overflow-hidden">
+                            <Image
+                              src={houseLogos[brand.key]}
+                              alt={brand.name}
+                              width={120}
+                              height={72}
+                              unoptimized={houseLogos[brand.key].includes("supabase") || houseLogos[brand.key].startsWith("http")}
+                              className={OFFICIAL_BRAND_LOGO_IMG}
+                            />
+                          </span>
+                        </div>
+                      ))}
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
@@ -529,48 +497,30 @@ export function Header() {
             className="flex items-stretch justify-between gap-1 border-t border-border/50 px-2 py-2.5 md:hidden"
             aria-label="Marcas Apolo, Overts y Valtrom"
           >
-            <Link
-              href="/"
-              className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-              title="Apolo"
-            >
-              <Image
-                src="/images/logo-apolo.png?v=2026-11-23"
-                alt="Apolo"
-                width={132}
-                height={52}
-                priority
-                className="h-10 w-auto max-w-full object-contain"
-              />
-            </Link>
-            <span className="my-1.5 w-px shrink-0 bg-zinc-300 dark:bg-white/15" aria-hidden />
-            <Link
-              href="/productos?brand=Overts"
-              className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-              title="Overts"
-            >
-              <Image
-                src="/images/logo-overts.png?v=2026-11-23"
-                alt="Overts"
-                width={150}
-                height={52}
-                className="h-9 w-auto max-w-full object-contain"
-              />
-            </Link>
-            <span className="my-1.5 w-px shrink-0 bg-zinc-300 dark:bg-white/15" aria-hidden />
-            <Link
-              href="/productos?brand=Valtrom"
-              className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-              title="Valtrom"
-            >
-              <Image
-                src="/images/logo-valtrom.png?v=2026-11-23"
-                alt="Valtrom"
-                width={150}
-                height={52}
-                className="h-9 w-auto max-w-full object-contain"
-              />
-            </Link>
+            {HEADER_BRANDS.map((brand, index) => (
+              <div key={brand.key} className="flex min-w-0 flex-1 items-stretch">
+                {index > 0 ? (
+                  <span className="my-1.5 w-px shrink-0 bg-zinc-300 dark:bg-white/15" aria-hidden />
+                ) : null}
+                <Link
+                  href={brand.href}
+                  className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                  title={brand.name}
+                >
+                  <span className="inline-flex h-10 w-full max-w-[6.5rem] items-center justify-center overflow-hidden">
+                    <Image
+                      src={houseLogos[brand.key]}
+                      alt={brand.name}
+                      width={150}
+                      height={60}
+                      priority={brand.key === "apolo"}
+                      unoptimized={houseLogos[brand.key].includes("supabase") || houseLogos[brand.key].startsWith("http")}
+                      className={OFFICIAL_BRAND_LOGO_IMG}
+                    />
+                  </span>
+                </Link>
+              </div>
+            ))}
           </div>
 
           <SloganBar compact={compact} />
@@ -647,3 +597,4 @@ function SloganBar({ compact }: { compact: boolean }) {
     </div>
   );
 }
+

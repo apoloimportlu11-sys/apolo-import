@@ -4,45 +4,83 @@ export function brandEquals(a?: string | null, b?: string | null) {
 }
 
 export const OFFICIAL_BRANDS = ["apolo", "overts", "valtrom"] as const;
+export type OfficialBrandKey = (typeof OFFICIAL_BRANDS)[number];
 
-/** Logos oficiales de las 3 marcas principales del catálogo. */
-export const OFFICIAL_BRAND_LOGOS: Record<(typeof OFFICIAL_BRANDS)[number], string> = {
-  apolo: "/images/logo-apolo.png?v=2026-11-23",
-  overts: "/images/logo-overts.png?v=2026-11-23",
-  valtrom: "/images/logo-valtrom.png?v=2026-11-23",
+/**
+ * Respaldo local si Admin → Marcas aún no tiene logo_url.
+ * En runtime preferimos el logo editable de Supabase (`brands.logo_url`).
+ */
+export const OFFICIAL_BRAND_LOGOS: Record<OfficialBrandKey, string> = {
+  apolo: "/images/logo-apolo.jpg?v=2026-11-24",
+  overts: "/images/logo-overts.jpg?v=2026-11-24",
+  valtrom: "/images/logo-valtrom.jpg?v=2026-11-24",
 };
 
+/** Caja fija para que las 3 marcas midan igual. */
+export const OFFICIAL_BRAND_LOGO_BOX =
+  "inline-flex h-14 w-[7.5rem] shrink-0 items-center justify-center overflow-hidden sm:h-16 sm:w-32";
+
+export const OFFICIAL_BRAND_LOGO_IMG =
+  "h-full w-full object-contain object-center";
+
 /** Fondos de escena (marca de agua + esquinas) para priorizar Apolo / Overts / Valtrom. */
-export const OFFICIAL_BRAND_STAGES: Record<(typeof OFFICIAL_BRANDS)[number], string> = {
+export const OFFICIAL_BRAND_STAGES: Record<OfficialBrandKey, string> = {
   apolo: "/images/brand-stages/apolo.jpg?v=2026-11-21",
   overts: "/images/brand-stages/overts.jpg?v=2026-11-21",
   valtrom: "/images/brand-stages/valtrom.jpg?v=2026-11-21",
 };
 
+/** "Apolo", "Apolo Lubricants" y "OVERTS" cuentan como marca de casa. */
+export function matchOfficialBrand(brand?: string | null): OfficialBrandKey | null {
+  const key = String(brand || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!key) return null;
+  if ((OFFICIAL_BRANDS as readonly string[]).includes(key)) return key as OfficialBrandKey;
+  if (/\bapolo\b/.test(key)) return "apolo";
+  if (/\boverts\b/.test(key)) return "overts";
+  if (/\bvaltrom\b/.test(key)) return "valtrom";
+  return null;
+}
+
 export function isOfficialBrand(brand?: string | null): boolean {
-  const key = String(brand || "").trim().toLowerCase();
-  return (OFFICIAL_BRANDS as readonly string[]).includes(key);
+  return matchOfficialBrand(brand) !== null;
 }
 
 /** Apolo, Overts y Valtrom primero; el resto comparte el mismo rango. */
 export function officialBrandRank(brand?: string | null): number {
-  const key = String(brand || "").trim().toLowerCase();
-  const index = (OFFICIAL_BRANDS as readonly string[]).indexOf(key);
+  const key = matchOfficialBrand(brand);
+  const index = key ? (OFFICIAL_BRANDS as readonly string[]).indexOf(key) : -1;
   return index === -1 ? OFFICIAL_BRANDS.length : index;
 }
 
-/** Ruta del logo si la marca es Apolo, Overts o Valtrom; si no, null. */
+/**
+ * Logo de marca de casa.
+ * `liveLogos` viene de Admin → Marcas (Supabase) y tiene prioridad sobre el archivo local.
+ */
+export function resolveOfficialBrandLogo(
+  brand?: string | null,
+  liveLogos?: Partial<Record<string, string | null | undefined>>
+): string | null {
+  const key = matchOfficialBrand(brand);
+  if (!key) return null;
+  const live = liveLogos?.[key]?.trim();
+  if (live) return live;
+  return OFFICIAL_BRAND_LOGOS[key] ?? null;
+}
+
+/** Respaldo estático (sin admin). Preferir `resolveOfficialBrandLogo` + hook en cliente. */
 export function getOfficialBrandLogo(brand?: string | null): string | null {
-  const key = String(brand || "").trim().toLowerCase();
-  if (!(OFFICIAL_BRANDS as readonly string[]).includes(key)) return null;
-  return OFFICIAL_BRAND_LOGOS[key as (typeof OFFICIAL_BRANDS)[number]] ?? null;
+  return resolveOfficialBrandLogo(brand);
 }
 
 /** Fondo de producto oficial (escena 4:5) para Apolo / Overts / Valtrom. */
 export function getOfficialBrandStage(brand?: string | null): string | null {
-  const key = String(brand || "").trim().toLowerCase();
-  if (!(OFFICIAL_BRANDS as readonly string[]).includes(key)) return null;
-  return OFFICIAL_BRAND_STAGES[key as (typeof OFFICIAL_BRANDS)[number]] ?? null;
+  const key = matchOfficialBrand(brand);
+  if (!key) return null;
+  return OFFICIAL_BRAND_STAGES[key] ?? null;
 }
 
 export type BrandChipVisual = {
@@ -107,7 +145,8 @@ function hashBrandHue(name: string): number {
 
 /** Estilo de chip/punto por marca (oficiales fijos; resto conocido o hash estable). */
 export function getBrandChipVisual(brand?: string | null): BrandChipVisual {
-  const key = String(brand || "").trim().toLowerCase();
+  const officialKey = matchOfficialBrand(brand);
+  const key = officialKey || String(brand || "").trim().toLowerCase();
   if (!key) {
     return {
       isOfficial: false,

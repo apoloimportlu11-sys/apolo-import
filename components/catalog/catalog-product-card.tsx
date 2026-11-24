@@ -2,7 +2,13 @@
 
 import { memo, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { FileText, Package } from "lucide-react";
+import { FileText, Package, PackageX } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Product } from "@/lib/products-data";
 import { getSubcategoryById } from "@/lib/products-data";
 import { useQuote } from "@/lib/quote-context";
@@ -14,6 +20,7 @@ import {
   cardImageScale,
   formatViscosityBadge,
   getBrandChipVisual,
+  getOfficialBrandLogo,
   getPresentationVisual,
 } from "@/lib/catalog/display";
 import {
@@ -21,6 +28,7 @@ import {
   presentationRangeLabel,
   presentationsOfProduct,
 } from "@/lib/catalog/presentations";
+import { productAromas } from "@/lib/catalog/aromas";
 import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
 import { stockLevel } from "@/lib/catalog/stock-status";
@@ -59,6 +67,7 @@ function CatalogProductCardInner({
   // Evita mismatch SSR/cliente: la cotización vive en localStorage y puede
   // hidratarse en el layout antes que estas tarjetas.
   const [quoteReady, setQuoteReady] = useState(false);
+  const [unavailableOpen, setUnavailableOpen] = useState(false);
   useEffect(() => {
     setQuoteReady(true);
   }, []);
@@ -70,9 +79,12 @@ function CatalogProductCardInner({
   const packOptions = presentationsOfProduct(product);
   const primaryPack = activePresentations(packOptions)[0];
   const packRange = presentationRangeLabel(packOptions, product.presentation);
+  const aromas = productAromas(product);
   const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
   const imageScale = cardImageScale(product.presentation);
   const tone = getBrandChipVisual(product.brand);
+  const brandLogo = getOfficialBrandLogo(product.brand);
+  const brandName = product.brand || "Apolo";
   const lineLabel = getProductLineCategory(product, lineGroupsById);
   const level = stockLevel({
     stock: product.stock,
@@ -90,6 +102,10 @@ function CatalogProductCardInner({
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (outOfStock) {
+        setUnavailableOpen(true);
+        return;
+      }
       addItem(
         {
           id: product.id,
@@ -106,7 +122,94 @@ function CatalogProductCardInner({
       );
       openDrawer();
     },
-    [addItem, lineLabel, openDrawer, primaryPack, product]
+    [addItem, lineLabel, openDrawer, outOfStock, primaryPack, product]
+  );
+
+  const confirmConsult = useCallback(() => {
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        brand: product.brand || "Apolo",
+        line: lineLabel || product.line,
+        presentation: primaryPack?.label || product.presentation || "Estándar",
+        presentationId: primaryPack && !primaryPack.virtual ? primaryPack.id : undefined,
+        image: product.image,
+        viscosity: product.viscosity,
+      },
+      1
+    );
+    setUnavailableOpen(false);
+    openDrawer();
+  }, [addItem, lineLabel, openDrawer, primaryPack, product]);
+
+  const unavailableDialog = (
+    <Dialog open={unavailableOpen} onOpenChange={setUnavailableOpen}>
+      <DialogContent
+        className="overflow-hidden border border-white/10 bg-[#0c0d12] p-0 text-white shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:max-w-md"
+        style={{ backgroundColor: "#0c0d12" }}
+      >
+        <div className="h-1.5 w-full" style={{ backgroundColor: tone.accent }} />
+        <div className="px-6 pb-6 pt-5 text-center">
+          <div className="mx-auto flex items-center justify-center gap-3">
+            {brandLogo ? (
+              <span className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/40 p-1.5">
+                <Image
+                  src={brandLogo}
+                  alt={brandName}
+                  width={80}
+                  height={40}
+                  className="h-full w-full object-contain"
+                />
+              </span>
+            ) : (
+              <span
+                className="inline-flex h-10 items-center rounded-full px-3 text-xs font-bold uppercase tracking-[0.16em] text-white"
+                style={{ backgroundColor: tone.accent }}
+              >
+                {brandName}
+              </span>
+            )}
+            <span
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: tone.soft, color: tone.accent }}
+            >
+              <PackageX className="h-5 w-5" />
+            </span>
+          </div>
+          <p
+            className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: tone.accent }}
+          >
+            {brandName}
+          </p>
+          <DialogTitle className="mt-2 text-balance font-display text-2xl font-semibold tracking-tight text-white">
+            No disponible por el momento
+          </DialogTitle>
+          <DialogDescription className="mt-3 text-sm leading-relaxed text-white/70">
+            {product.name ? `${product.name} ` : "Este producto "}
+            no tiene stock en {brandName}. Podemos confirmarte reposición o una alternativa de la misma línea.
+          </DialogDescription>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={confirmConsult}
+              className="inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold text-white"
+              style={{ backgroundColor: tone.accent }}
+            >
+              Consultar disponibilidad
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnavailableOpen(false)}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white hover:bg-white/10"
+            >
+              Ver otras opciones
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 
   const imageBlock = (
@@ -143,11 +246,35 @@ function CatalogProductCardInner({
         </span>
       ) : null}
       <StockStatusBadge level={level} variant="overlay" />
+      {outOfStock ? (
+        <span className="pointer-events-none absolute inset-0 z-[4] flex flex-col items-center justify-center gap-2 bg-[#0c0d12]/88 px-3 text-center opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover/photo:opacity-100">
+          <span className="h-0.5 w-10 rounded-full" style={{ backgroundColor: tone.accent }} />
+          {brandLogo ? (
+            <span className="flex h-8 w-16 items-center justify-center">
+              <Image
+                src={brandLogo}
+                alt=""
+                width={64}
+                height={32}
+                className="h-full w-full object-contain"
+              />
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: tone.accent }}>
+              {brandName}
+            </span>
+          )}
+          <span className="max-w-[12rem] text-[13px] font-semibold leading-snug text-white">
+            No disponible por el momento
+          </span>
+        </span>
+      ) : null}
     </>
   );
 
   if (viewMode === "list") {
     return (
+      <>
       <article
         data-catalog-card
         className="group"
@@ -164,7 +291,7 @@ function CatalogProductCardInner({
             <button
               type="button"
               onClick={openDetails}
-              className="relative h-36 w-full shrink-0 overflow-hidden rounded-xl border border-border/50 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:h-40 sm:w-40"
+              className="group/photo relative h-36 w-full shrink-0 overflow-hidden rounded-xl border border-border/50 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:h-40 sm:w-40"
               aria-label={`Ver ficha de ${product.name}`}
             >
               {imageBlock}
@@ -205,6 +332,7 @@ function CatalogProductCardInner({
                 {packRange ? (
                   <p className="mt-1 truncate text-xs text-muted-foreground">{packRange}</p>
                 ) : null}
+                {aromas.length > 0 ? <AromaBoxes aromas={aromas} /> : null}
                 {(product.type || product.description) ? (
                   <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted-foreground">
                     {product.type || product.description}
@@ -243,10 +371,13 @@ function CatalogProductCardInner({
           </div>
         </div>
       </article>
+      {unavailableDialog}
+      </>
     );
   }
 
   return (
+    <>
     <article
       data-catalog-card
       className="group h-full"
@@ -298,7 +429,7 @@ function CatalogProductCardInner({
           <button
             type="button"
             onClick={openDetails}
-            className="relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl border border-border/40 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:mb-3"
+            className="group/photo relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl border border-border/40 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:mb-3"
             aria-label={`Ver ficha de ${product.name}`}
           >
             {imageBlock}
@@ -320,6 +451,7 @@ function CatalogProductCardInner({
             {packRange ? (
               <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{packRange}</p>
             ) : null}
+            {aromas.length > 0 ? <AromaBoxes aromas={aromas} /> : null}
             {(product.type || product.description) ? (
               <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
                 {product.type || product.description}
@@ -355,6 +487,23 @@ function CatalogProductCardInner({
         </div>
       </div>
     </article>
+    {unavailableDialog}
+    </>
+  );
+}
+
+function AromaBoxes({ aromas }: { aromas: string[] }) {
+  return (
+    <div className="mt-1.5 grid grid-cols-2 gap-1">
+      {aromas.map((aroma) => (
+        <span
+          key={aroma}
+          className="flex min-h-8 items-center justify-center rounded-lg border border-border bg-muted/70 px-1.5 py-1 text-center text-[10px] font-semibold leading-tight text-foreground"
+        >
+          {aroma}
+        </span>
+      ))}
+    </div>
   );
 }
 

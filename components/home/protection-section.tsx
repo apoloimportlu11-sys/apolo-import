@@ -9,9 +9,9 @@ import { ScrollReveal } from "@/components/home/scroll-reveal";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
 import {
   getBrandChipVisual,
-  getOfficialBrandLogo,
   OFFICIAL_BRANDS,
 } from "@/lib/catalog/display";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import { cn } from "@/lib/utils";
 
 const POINTS = [
@@ -39,6 +39,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function ProtectionSection() {
   const reduce = useReducedMotion();
+  const { logos: houseLogos } = useHouseBrandLogos();
   const photoRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: photoRef,
@@ -72,7 +73,7 @@ export function ProtectionSection() {
 
           <div className="mt-7 flex flex-wrap gap-3">
             {OFFICIAL_BRANDS.map((key, index) => {
-              const logo = getOfficialBrandLogo(key);
+              const logo = houseLogos[key];
               const visual = getBrandChipVisual(key);
               const label = key.charAt(0).toUpperCase() + key.slice(1);
               return (

@@ -1,0 +1,838 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #141414;
+  --card: #FFFFFF;
+  --card-foreground: #141414;
+  --popover: #FFFFFF;
+  --popover-foreground: #141414;
+  --primary: #DC2626;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #18181B;
+  --muted: #F4F4F5;
+  --muted-foreground: #606060;
+  --accent: #EF4444;
+  --accent-foreground: #FFFFFF;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #DC2626;
+  --chart-1: #DC2626;
+  --chart-2: #EF4444;
+  --chart-3: #1B1B1B;
+  --chart-4: #B0B0B0;
+  --chart-5: #FFFFFF;
+  --radius: 0.5rem;
+  --sidebar: #F9FAFB;
+  --sidebar-foreground: #141414;
+  --sidebar-primary: #DC2626;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F4F4F5;
+  --sidebar-accent-foreground: #141414;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #DC2626;
+
+  /*sidebar*/
+  --sb-title: #141414;     /* títulos: VISCOSIDAD, CATEGORIAS */
+  --sb-text: #4B5563;      /* texto normal */
+  --sb-muted: #9CA3AF;     /* apagado / contadores */
+  --sb-accent: #EF4444;    /* hover / activo */
+  --sb-border: #E5E7EB;
+
+  /* Escala tipográfica fluida (interpola con el viewport en vez de saltar por breakpoint) */
+  --fs-hero-title: clamp(1.5rem, 1rem + 3vw, 3.75rem);
+  --fs-h1: clamp(1.875rem, 1.4rem + 2vw, 3.75rem);
+  --fs-h2: clamp(1.25rem, 1rem + 1.5vw, 3rem);
+  --fs-h3: clamp(1.125rem, 1rem + 1vw, 2.25rem);
+  --fs-body-lg: clamp(0.875rem, 0.8rem + 0.4vw, 1.125rem);
+  --fs-body: clamp(0.75rem, 0.7rem + 0.3vw, 1rem);
+
+  /* Espaciado vertical fluido de secciones */
+  --space-section-y: clamp(2.5rem, 2rem + 3vw, 6rem);
+  --space-section-y-sm: clamp(2.5rem, 2rem + 2.2vw, 5rem);
+  --space-section-y-lg: clamp(2.5rem, 2rem + 3.4vw, 7rem);
+
+  /* Alturas fluidas de banners y carruseles del hero (calibradas linealmente entre 375px y 1280px) */
+  --h-category-banner: clamp(290px, 203px + 23.2vw, 500px);
+  --h-hero-slide: clamp(280px, 72px + 55.2vw, 780px);
+  --w-carousel-3d: clamp(300px, 85px + 57.5vw, 820px);
+  --h-carousel-3d: clamp(280px, 197px + 22.1vw, 480px);
+  --fs-slogan: clamp(12px, 2.5px + 2.54vw, 35px);
+  --fs-nav-desktop: clamp(16px, 8px + 0.78vw, 18px);
+  --fs-card-title: clamp(18px, 12px + 1.53vw, 24px);
+}
+
+/* Contención fluida de desbordamiento sin alterar escala natural */
+html {
+  overflow-x: clip;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: clip;
+  width: 100%;
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Densidad visual: en escritorio todo se ve más compacto (equivalente a 75% de zoom del navegador)
+   para que entre más contenido sin sensación de "todo gigante". Se limita a >=1024px (lg) porque
+   en móvil/tablet los tamaños ya están calibrados para el dedo (botones, iconos táctiles). */
+@media (min-width: 1024px) {
+  html {
+    zoom: 0.75;
+  }
+}
+
+.dark {
+  --background: #1a1a1a;
+  --foreground: #FFFFFF;
+  --card: #222222;
+  --card-foreground: #FFFFFF;
+  --popover: #222222;
+  --popover-foreground: #FFFFFF;
+  --primary: #DC2626;
+  --primary-foreground: #FFFFFF;
+  --secondary: #262626;
+  --secondary-foreground: #FFFFFF;
+  --muted: #262626;
+  --muted-foreground: #B0B0B0;
+  --accent: #EF4444;
+  --accent-foreground: #FFFFFF;
+  --destructive: #991B1B;
+  --destructive-foreground: #FFFFFF;
+  --border: #333333;
+  --input: #262626;
+  --ring: #DC2626;
+  --chart-1: #DC2626;
+  --chart-2: #EF4444;
+  --chart-3: #1B1B1B;
+  --chart-4: #B0B0B0;
+  --chart-5: #FFFFFF;
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #DC2626;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #333333;
+  --sidebar-ring: #DC2626;
+
+  /*sidebar*/
+  --sb-title: #FFFFFF;
+  --sb-text: #CFCFCF;
+  --sb-muted: #7A7A7A;
+  --sb-accent: #EF4444;
+  --sb-border: #333333;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-montserrat: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-roboto: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sb-title: var(--sb-title);
+  --color-sb-text: var(--sb-text);
+  --color-sb-muted: var(--sb-muted);
+  --color-sb-accent: var(--sb-accent);
+  --color-sb-border: var(--sb-border);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4, h5, h6,
+  .font-heading,
+  [data-heading] {
+    font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* animaciones para about carrusel dinamico*/ 
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee-reverse {
+  animation: marquee-reverse 25s linear infinite;
+}
+.pause-on-hover:hover {
+  animation-play-state: paused;
+}
+.paused {
+  animation-play-state: paused;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+.carousel-bg {
+  position: relative;
+  width: 100%;
+  padding: 100px 0;
+  background:
+    radial-gradient(circle at center,
+      rgba(220, 38, 38, 0.2),
+      rgba(0, 0, 0, 0.75) 70%);
+  overflow: visible; /* <-- IMPORTANTE */
+}
+.carousel-bg::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(circle at center,
+      rgba(239, 68, 68, 0.28),
+      transparent 60%);
+  pointer-events: none;
+}
+
+.carousel-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center,
+    rgba(0,0,0,0.15),
+    rgba(0,0,0,0.65) 80%);
+  pointer-events: none;
+}
+
+/* Iluminación / Resplandor Neón para líneas decorativas (Modo Claro y Oscuro) */
+.glow-line-r {
+  background: linear-gradient(to right, transparent 0%, #ff1f1f 50%, transparent 100%);
+  filter: drop-shadow(0 0 5px rgba(255, 31, 31, 0.95)) drop-shadow(0 0 12px rgba(239, 68, 68, 0.75)) drop-shadow(0 0 22px rgba(220, 38, 38, 0.45));
+}
+
+.glow-line-l {
+  background: linear-gradient(to left, transparent 0%, #ff1f1f 50%, transparent 100%);
+  filter: drop-shadow(0 0 5px rgba(255, 31, 31, 0.95)) drop-shadow(0 0 12px rgba(239, 68, 68, 0.75)) drop-shadow(0 0 22px rgba(220, 38, 38, 0.45));
+}
+
+.glow-line-full {
+  background: linear-gradient(90deg, transparent, #ff1f1f 25%, #ff4d4d 50%, #ff1f1f 75%, transparent);
+  filter: drop-shadow(0 0 5px rgba(255, 31, 31, 0.95)) drop-shadow(0 0 12px rgba(239, 68, 68, 0.75)) drop-shadow(0 0 22px rgba(220, 38, 38, 0.45));
+}
+
+/* Cortes diagonales dinámicos adaptativos para banners de categorías */
+.clip-diagonal-r {
+  clip-path: none;
+}
+@media (min-width: 768px) {
+  .clip-diagonal-r {
+    clip-path: polygon(0 0, 100% 0, calc(100% - 65px) 100%, 0 100%);
+  }
+}
+
+.clip-diagonal-l {
+  clip-path: none;
+}
+@media (min-width: 768px) {
+  .clip-diagonal-l {
+    clip-path: polygon(65px 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+/* ==========================================================================
+   Animaciones temáticas automotrices para el eslogan Apolo
+   "No te vendemos un producto, te damos experiencia"
+   ========================================================================== */
+
+@keyframes headlight-sweep {
+  0% {
+    transform: translateX(-150%) skewX(-25deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  35% {
+    transform: translateX(350%) skewX(-25deg);
+    opacity: 0.85;
+  }
+  36%, 100% {
+    transform: translateX(350%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes engine-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.45)) drop-shadow(0 0 12px rgba(220, 38, 38, 0.25));
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.85)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.55));
+    text-shadow: 0 0 14px rgba(239, 68, 68, 0.7), 0 0 22px rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes speed-streak-l {
+  0%, 100% {
+    transform: scaleX(0.75);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleX(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes speed-streak-r {
+  0%, 100% {
+    transform: scaleX(1.15);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleX(0.75);
+    opacity: 0.4;
+  }
+}
+
+@keyframes tachometer-pulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.12) rotate(12deg);
+  }
+  50% {
+    transform: scale(1.18) rotate(-6deg);
+  }
+  75% {
+    transform: scale(1.08) rotate(4deg);
+  }
+}
+
+.animate-headlight-sweep {
+  animation: headlight-sweep 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-engine-glow {
+  animation: engine-glow 3s ease-in-out infinite;
+}
+
+.animate-speed-streak-l {
+  animation: speed-streak-l 2.4s ease-in-out infinite;
+}
+
+.animate-speed-streak-r {
+  animation: speed-streak-r 2.4s ease-in-out infinite;
+}
+
+.animate-tachometer {
+  animation: tachometer-pulse 3s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Restricción de descarga, arrastre y guardado de imágenes (Web Pública)
+   (El panel /admin queda exento automáticamente)
+   ========================================================================== */
+body.protect-images img,
+body.protect-images picture,
+body.protect-images [role="img"] {
+  -webkit-touch-callout: none !important; /* Desactiva menú de guardado al mantener presionado en iOS/Android */
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+
+/* ==========================================================================
+   Barra de desplazamiento personalizada (Custom Scrollbar)
+   ========================================================================== */
+@supports (scrollbar-width: thin) {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(220, 38, 38, 0.4) transparent;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(220, 38, 38, 0.4);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 38, 38, 0.8);
+}
+
+/* ==========================================================================
+   Animaciones Festivas y Llamativas (Festive Effects)
+   ========================================================================== */
+@keyframes festive-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.festive-shimmer-sweep {
+  background-size: 200% auto;
+  animation: festive-shimmer 6s linear infinite;
+}
+
+@keyframes festive-wiggle {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  20% {
+    transform: rotate(-10deg) scale(1.1);
+  }
+  40% {
+    transform: rotate(10deg) scale(1.15);
+  }
+  60% {
+    transform: rotate(-8deg) scale(1.1);
+  }
+  80% {
+    transform: rotate(6deg) scale(1.05);
+  }
+}
+
+.animate-festive-wiggle {
+  display: inline-block;
+  animation: festive-wiggle 2.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes festive-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 35px rgba(255, 255, 255, 0.25);
+  }
+}
+
+.animate-festive-glow {
+  animation: festive-glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes festive-float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+.animate-festive-float {
+  animation: festive-float 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .festive-shimmer-sweep,
+  .animate-festive-wiggle,
+  .animate-festive-glow,
+  .animate-festive-float {
+    animation: none;
+  }
+}
+
+/* Panel admin: tokens de la marca (rojo #DC2626, tinta #141414, blanco) */
+html.admin-tone-light,
+html:not(.admin-tone-dark) .admin-layout-root {
+  --admin-canvas: #f3f4f6;
+  --admin-surface: #ffffff;
+  --admin-sidebar: #ffffff;
+  --admin-ink: #141414;
+  --admin-muted: #52525b;
+  --admin-faint: #71717a;
+  --admin-line: #e5e7eb;
+  --admin-input: #f4f4f5;
+  --admin-subtle: #f4f4f5;
+  --admin-accent: #dc2626;
+  --admin-accent-soft: rgba(220, 38, 38, 0.1);
+}
+
+html.admin-tone-dark {
+  --admin-canvas: #121212;
+  --admin-surface: #1c1c1c;
+  --admin-sidebar: #161616;
+  --admin-ink: #f4f4f5;
+  --admin-muted: #a1a1aa;
+  --admin-faint: #71717a;
+  --admin-line: rgba(255, 255, 255, 0.1);
+  --admin-input: #101010;
+  --admin-subtle: rgba(255, 255, 255, 0.06);
+  --admin-accent: #dc2626;
+  --admin-accent-soft: rgba(220, 38, 38, 0.18);
+}
+
+html.admin-tone-light .admin-layout-root,
+html.admin-tone-dark .admin-layout-root {
+  background: var(--admin-canvas);
+  color: var(--admin-ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html.admin-tone-light .admin-layout-root :is(h1, h2, h3, .font-heading),
+html.admin-tone-dark .admin-layout-root :is(h1, h2, h3, .font-heading) {
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Superficies que antes eran negro puro */
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"], [role="menu"]) :is(
+  [class~="bg-[#0E0E0E]"],
+  [class~="bg-[#111111]"],
+  [class~="bg-[#121212]"],
+  [class~="bg-[#141414]"],
+  [class~="bg-[#161616]"],
+  [class~="bg-[#181818]"],
+  [class~="bg-[#191919]"],
+  [class~="bg-[#1A160E]"],
+  [class~="bg-zinc-900"],
+  [class~="bg-zinc-950"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"], [role="menu"]) :is(
+  [class~="bg-[#0E0E0E]"],
+  [class~="bg-[#111111]"],
+  [class~="bg-[#121212]"],
+  [class~="bg-[#141414]"],
+  [class~="bg-[#161616]"],
+  [class~="bg-[#181818]"],
+  [class~="bg-[#1A160E]"]
+) {
+  background-color: var(--admin-surface);
+  color: var(--admin-ink);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-black/20"],
+  [class~="bg-black/40"],
+  [class~="bg-black/50"],
+  [class~="bg-black/60"],
+  [class~="bg-black/70"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-black/20"],
+  [class~="bg-black/40"],
+  [class~="bg-black/50"],
+  [class~="bg-black/60"],
+  [class~="bg-black/70"]
+) {
+  background-color: var(--admin-input);
+  color: var(--admin-ink);
+}
+
+html.admin-tone-light .admin-layout-root,
+html.admin-tone-dark .admin-layout-root {
+  color-scheme: light;
+}
+
+html.admin-tone-dark .admin-layout-root {
+  color-scheme: dark;
+}
+
+/* Texto encima de fotos: más específico que el remap de formularios, también dentro de diálogos */
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"]) .admin-on-media :is(.text-white, .text-zinc-100, .text-zinc-200),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"]) .admin-on-media :is(.text-white, .text-zinc-100, .text-zinc-200) {
+  color: #ffffff;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"]) .admin-on-media :is(.text-zinc-300, .text-zinc-400),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"]) .admin-on-media :is(.text-zinc-300, .text-zinc-400) {
+  color: #e4e4e7;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"]) .admin-on-media :is(.text-amber-50, .text-amber-100),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"]) .admin-on-media :is(.text-amber-50, .text-amber-100) {
+  color: #fff7ed;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-white/5"],
+  [class~="bg-white/10"]
+) {
+  background-color: var(--admin-subtle);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-white/5"],
+  [class~="border-white/10"],
+  [class~="border-white/15"],
+  [class~="border-white/20"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-white/5"],
+  [class~="border-white/10"],
+  [class~="border-white/15"]
+) {
+  border-color: var(--admin-line);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-white,
+  .text-zinc-100,
+  .text-zinc-200
+) {
+  color: var(--admin-ink);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-zinc-300,
+  .text-zinc-400
+) {
+  color: var(--admin-muted);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-zinc-500,
+  .text-zinc-600
+) {
+  color: var(--admin-faint);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-orange-200,
+  .text-orange-300
+) {
+  color: #9a3412;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-emerald-200,
+  .text-emerald-300,
+  .text-emerald-400
+) {
+  color: #047857;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-red-300,
+  .text-red-400
+) {
+  color: #b91c1c;
+}
+
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  .text-zinc-400,
+  .text-zinc-500
+) {
+  color: var(--admin-muted);
+}
+
+/* El dorado del panel pasa al rojo de la marca */
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+) {
+  background-color: var(--admin-accent);
+  color: #ffffff;
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]/10"],
+  [class~="bg-[#C7940A]/15"],
+  [class~="bg-[#C7940A]/20"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-[#C7940A]/10"],
+  [class~="bg-[#C7940A]/15"],
+  [class~="bg-[#C7940A]/20"]
+) {
+  background-color: var(--admin-accent-soft);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="text-[#C7940A]"],
+  [class~="text-[#E4C36A]"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="text-[#C7940A]"],
+  [class~="text-[#E4C36A]"]
+) {
+  color: var(--admin-accent);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-[#C7940A]"],
+  [class~="border-[#E4C36A]"]
+),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="border-[#C7940A]"]
+) {
+  border-color: var(--admin-accent);
+}
+
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+) :is(.text-white, .text-black, .text-zinc-100),
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+) :is(.text-white, .text-black, .text-zinc-100),
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+).text-black,
+html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-primary"],
+  [class~="bg-[#C7940A]"],
+  [class~="bg-[#E4C36A]"]
+).text-black,
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+  [class~="bg-red-600"],
+  [class~="bg-red-700"],
+  [class~="bg-emerald-600"]
+).text-white {
+  color: #ffffff;
+}
+
+html.admin-tone-light .admin-layout-root svg :is([stroke="#E4C36A"], [stroke="#C7940A"]),
+html.admin-tone-dark .admin-layout-root svg :is([stroke="#E4C36A"], [stroke="#C7940A"]) {
+  stroke: var(--admin-accent);
+}
+
+html.admin-tone-light .admin-layout-root svg :is([fill="#E4C36A"], [fill="#C7940A"]),
+html.admin-tone-dark .admin-layout-root svg :is([fill="#E4C36A"], [fill="#C7940A"]) {
+  fill: var(--admin-accent);
+}
+
+html.admin-tone-light .admin-layout-root svg [fill="#d4d4d8"] {
+  fill: var(--admin-muted);
+}
+
+html.admin-tone-light .admin-layout-root svg [stroke="rgba(255,255,255,0.08)"] {
+  stroke: var(--admin-line);
+}
+
+html.admin-tone-light .admin-layout-root svg stop[stop-color="#E4C36A"],
+html.admin-tone-dark .admin-layout-root svg stop[stop-color="#E4C36A"] {
+  stop-color: #dc2626;
+}
+
+html.admin-tone-light .admin-layout-root [class*="outline-[#C7940A]"]:focus-visible,
+html.admin-tone-dark .admin-layout-root [class*="outline-[#C7940A]"]:focus-visible,
+html.admin-tone-light .admin-layout-root [class*="ring-[#C7940A]"]:focus-visible,
+html.admin-tone-dark .admin-layout-root [class*="ring-[#C7940A]"]:focus-visible {
+  outline-color: var(--admin-accent);
+}
+
+.admin-layout-root :focus-visible {
+  outline-color: var(--admin-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-layout-root *,
+  .admin-layout-root *::before,
+  .admin-layout-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

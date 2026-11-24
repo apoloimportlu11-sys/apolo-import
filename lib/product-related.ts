@@ -1,11 +1,15 @@
 import type { Product } from "@/lib/products-data";
 import { getProductLineCategory } from "@/lib/product-grouping";
+import { matchOfficialBrand, officialBrandRank } from "@/lib/catalog/display";
 
 export function normalizeProductKey(str?: string | null) {
   return (str || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function sameBrand(a: Product, b: Product) {
+  const left = matchOfficialBrand(a.brand);
+  const right = matchOfficialBrand(b.brand);
+  if (left && right) return left === right;
   return (a.brand || "").trim().toLowerCase() === (b.brand || "").trim().toLowerCase();
 }
 
@@ -72,9 +76,11 @@ export function getCrossBrandAlternatives(
   }
 
   return Array.from(byBrand.values())
-    .sort((a, b) =>
-      (a.brand || "").localeCompare(b.brand || "", "es", { sensitivity: "base" })
-    )
+    .sort((a, b) => {
+      const rankDiff = officialBrandRank(a.brand) - officialBrandRank(b.brand);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.brand || "").localeCompare(b.brand || "", "es", { sensitivity: "base" });
+    })
     .slice(0, limit);
 }
 
@@ -108,6 +114,81 @@ export function getSameBrandRelated(
   );
 
   return [...siblings, ...family, ...rest].slice(0, limit);
+}
+
+function replacementFamily(product: Product): string {
+  const blob = `${product.name || ""} ${product.type || ""} ${product.subcategory || ""} ${product.line || ""}`
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (blob.includes("GRASA")) return "grasas";
+  if (/\bMOTO\b|\b4T\b|\b2T\b/.test(`${product.name || ""} ${product.type || ""} ${product.viscosity || ""}`)) {
+    return "motos";
+  }
+  const line = getProductLineCategory(product).trim().toLowerCase();
+  if (!line || line === "general / otros") return "";
+  return line;
+}
+
+function replacementScore(current: Product, candidate: Product): number {
+  const tokens = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length > 2 && !["para", "con", "los", "las", "del", "por"].includes(token));
+
+  let score = Number(candidate.stock) > 0 ? 40 : 0;
+  const currentTokens = new Set(tokens(`${current.name} ${current.viscosity || ""}`));
+  for (const token of tokens(`${candidate.name} ${candidate.viscosity || ""}`)) {
+    if (currentTokens.has(token)) score += 12;
+  }
+
+  const viscosity = (current.viscosity || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const candidateText = `${candidate.viscosity || ""} ${candidate.name}`.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  if (viscosity && candidateText.includes(viscosity)) score += 28;
+  return score;
+}
+
+/**
+ * Si el producto está agotado: primero el mismo nombre en otra marca.
+ * Si no existe, el equivalente más cercano de la misma familia (grasa, moto, línea)
+ * en otra marca. Overts, Apolo y Valtrom van primero.
+ */
+export function getStockReplacements(
+  product: Product,
+  catalog: Product[],
+  limit = 3
+): Product[] {
+  const exact = getCrossBrandAlternatives(product, catalog, limit);
+  if (exact.length > 0) return exact;
+
+  const family = replacementFamily(product);
+  if (!family) return [];
+
+  const byBrand = new Map<string, Product>();
+
+  for (const item of catalog) {
+    if (item.id === product.id || sameBrand(item, product)) continue;
+    if (replacementFamily(item) !== family) continue;
+
+    const key = brandKey(item);
+    const existing = byBrand.get(key);
+    if (!existing || replacementScore(product, item) > replacementScore(product, existing)) {
+      byBrand.set(key, item);
+    }
+  }
+
+  return Array.from(byBrand.values())
+    .sort((a, b) => {
+      const rankDiff = officialBrandRank(a.brand) - officialBrandRank(b.brand);
+      if (rankDiff !== 0) return rankDiff;
+      const scoreDiff = replacementScore(product, b) - replacementScore(product, a);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (a.brand || "").localeCompare(b.brand || "", "es", { sensitivity: "base" });
+    })
+    .slice(0, limit);
 }
 
 /**

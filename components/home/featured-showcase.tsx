@@ -10,10 +10,10 @@ import type { CarouselItemData } from "@/lib/carousel-items";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
 import {
   getBrandChipVisual,
-  getOfficialBrandLogo,
   isOfficialBrand,
   OFFICIAL_BRANDS,
 } from "@/lib/catalog/display";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 
 export type ShowcaseLane = {
   kicker: string;
@@ -30,10 +30,10 @@ const GLOW = {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-function BrandMarks({ brand }: { brand?: string }) {
+function BrandMarks({ brand, logoSrc }: { brand?: string; logoSrc?: string | null }) {
   const label = (brand || "Apolo").trim() || "Apolo";
   const official = isOfficialBrand(label);
-  const logo = getOfficialBrandLogo(label);
+  const logo = logoSrc || null;
   const visual = getBrandChipVisual(label);
 
   return (
@@ -125,11 +125,13 @@ function ShowcaseCard({
   index,
   paused,
   reduce,
+  getLogo,
 }: {
   lane: ShowcaseLane;
   index: number;
   paused: boolean;
   reduce: boolean;
+  getLogo: (brand?: string | null) => string | null;
 }) {
   const list = lane.items.filter((item) => item.url);
   const [active, setActive] = useState(0);
@@ -137,7 +139,7 @@ function ShowcaseCard({
   const brand = product?.brand || "Apolo";
   const official = isOfficialBrand(brand);
   const visual = getBrandChipVisual(brand);
-  const brandLogo = getOfficialBrandLogo(brand);
+  const brandLogo = getLogo(brand);
 
   useEffect(() => {
     if (reduce || paused || list.length < 2) return;
@@ -198,7 +200,7 @@ function ShowcaseCard({
         <div className="lane-shadow pointer-events-none absolute bottom-4 left-1/2 h-3 w-28 -translate-x-1/2 rounded-[100%] bg-black/80" />
         <div className="pointer-events-none absolute bottom-1 left-1/2 h-2 w-36 -translate-x-1/2 rounded-[100%] border border-white/20 bg-white/10" />
 
-        <BrandMarks brand={brand} />
+        <BrandMarks brand={brand} logoSrc={brandLogo} />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -294,6 +296,7 @@ function ShowcaseCard({
 export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
   const reduce = useReducedMotion();
   const [paused, setPaused] = useState(false);
+  const { logos: houseLogos, getLogo } = useHouseBrandLogos();
 
   return (
     <section
@@ -318,7 +321,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             {OFFICIAL_BRANDS.map((key) => {
-              const logo = getOfficialBrandLogo(key);
+              const logo = houseLogos[key];
               const visual = getBrandChipVisual(key);
               const label = key.charAt(0).toUpperCase() + key.slice(1);
               return (
@@ -333,7 +336,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
                 >
                   {logo ? (
                     <span className="relative h-8 w-8 overflow-hidden rounded-full bg-black/60 sm:h-9 sm:w-9">
-                      <Image src={logo} alt="" fill sizes="36px" className="object-contain p-1" />
+                      <Image src={logo} alt="" fill sizes="36px" className="object-contain p-1" unoptimized={logo.includes("supabase") || logo.startsWith("http")} />
                     </span>
                   ) : null}
                   {label}
@@ -351,6 +354,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
               index={index}
               paused={paused}
               reduce={Boolean(reduce)}
+              getLogo={getLogo}
             />
           ))}
         </div>

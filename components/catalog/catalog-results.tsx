@@ -114,14 +114,14 @@ export function CatalogResults({
           return (
             <section key={group.brand} className="space-y-4">
               <div className="flex flex-wrap items-center gap-3 border-b border-border/60 pb-2.5">
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                <div className="flex h-14 w-[4.75rem] items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40 p-1.5 sm:h-16 sm:w-[5.5rem]">
                   {logo ? (
                     <Image
                       src={logo}
                       alt={group.brand}
-                      width={28}
-                      height={28}
-                      className="object-contain"
+                      width={88}
+                      height={64}
+                      className="h-full w-full object-contain"
                     />
                   ) : (
                     <span
@@ -211,7 +211,7 @@ export function CatalogResults({
               alt=""
               width={140}
               height={44}
-              className="h-8 w-auto object-contain sm:h-9"
+              className="h-12 w-auto object-contain sm:h-14"
             />
           ) : (
             <span

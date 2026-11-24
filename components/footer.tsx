@@ -5,7 +5,11 @@ import Image from "next/image";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { MapPin, Phone, Mail, Clock, MessageCircle, Facebook, Instagram } from "lucide-react";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
-import { OFFICIAL_BRAND_LOGOS } from "@/lib/catalog/display";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
+import {
+  OFFICIAL_BRAND_LOGO_BOX,
+  OFFICIAL_BRAND_LOGO_IMG,
+} from "@/lib/catalog/display";
 
 const footerLinks = {
   productos: [
@@ -32,13 +36,14 @@ function TikTokIcon({ className }: { className?: string }) {
 
 export function Footer() {
   const { settings } = useBusinessSettings();
+  const { logos: houseLogos } = useHouseBrandLogos();
   const cleanPhone = (settings.whatsapp || settings.phone || "51958400028").replace(/[^0-9]/g, "");
   const name = settings.business_name || "Apolo Lubricantes";
   const houseBrands = [
-    { key: "apolo", name: "Apolo", href: "/productos?brand=Apolo", logo: OFFICIAL_BRAND_LOGOS.apolo },
-    { key: "overts", name: "Overts", href: "/productos?brand=Overts", logo: OFFICIAL_BRAND_LOGOS.overts },
-    { key: "valtrom", name: "Valtrom", href: "/productos?brand=Valtrom", logo: OFFICIAL_BRAND_LOGOS.valtrom },
-  ] as const;
+    { key: "apolo" as const, name: "Apolo", href: "/productos?brand=Apolo", logo: houseLogos.apolo },
+    { key: "overts" as const, name: "Overts", href: "/productos?brand=Overts", logo: houseLogos.overts },
+    { key: "valtrom" as const, name: "Valtrom", href: "/productos?brand=Valtrom", logo: houseLogos.valtrom },
+  ];
 
   const socials = [
     {
@@ -99,27 +104,46 @@ export function Footer() {
       <div className="relative z-10 mx-auto w-full px-4 py-14 lg:px-8 xl:px-12">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
+            {/* Triángulo: Apolo + Overts arriba, Valtrom abajo (logos desde Admin → Marcas) */}
             <div
-              className="flex flex-wrap items-center gap-3 sm:gap-4"
+              className="flex w-full max-w-[19rem] flex-col items-center gap-2.5"
               aria-label="Marcas Apolo, Overts y Valtrom"
             >
-              {houseBrands.map((brand) => (
-                <Link
-                  key={brand.key}
-                  href={brand.href}
-                  title={brand.name}
-                  className="inline-flex h-14 items-center justify-center transition-opacity hover:opacity-90 sm:h-16"
-                >
-                  <Image
-                    src={brand.logo}
-                    alt={brand.name}
-                    width={160}
-                    height={80}
-                    loading="lazy"
-                    className="h-full w-auto max-w-[7.5rem] object-contain"
-                  />
-                </Link>
-              ))}
+              <div className="flex w-full items-end justify-center gap-3 sm:gap-4">
+                {houseBrands.slice(0, 2).map((brand) => (
+                  <Link
+                    key={brand.key}
+                    href={brand.href}
+                    title={brand.name}
+                    className={`${OFFICIAL_BRAND_LOGO_BOX} transition-opacity hover:opacity-90`}
+                  >
+                    <Image
+                      src={brand.logo}
+                      alt={brand.name}
+                      width={160}
+                      height={96}
+                      loading="lazy"
+                      unoptimized={brand.logo.includes("supabase") || brand.logo.startsWith("http")}
+                      className={OFFICIAL_BRAND_LOGO_IMG}
+                    />
+                  </Link>
+                ))}
+              </div>
+              <Link
+                href={houseBrands[2].href}
+                title={houseBrands[2].name}
+                className={`${OFFICIAL_BRAND_LOGO_BOX} transition-opacity hover:opacity-90`}
+              >
+                <Image
+                  src={houseBrands[2].logo}
+                  alt={houseBrands[2].name}
+                  width={160}
+                  height={96}
+                  loading="lazy"
+                  unoptimized={houseBrands[2].logo.includes("supabase") || houseBrands[2].logo.startsWith("http")}
+                  className={OFFICIAL_BRAND_LOGO_IMG}
+                />
+              </Link>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               Apolo · Overts · Valtrom: tu socio en lubricantes y repuestos para talleres, flotas y distribuidores.

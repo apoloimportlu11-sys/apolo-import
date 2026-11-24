@@ -14,9 +14,9 @@ export const CAROUSEL_LOGOS_STORAGE_KEY = "apolo_carousel_row_logos";
 export const CAROUSEL_LOGOS_PAGE_SLUG = "home-carousel-logos";
 
 export const DEFAULT_CAROUSEL_LOGOS: CarouselRowLogos = {
-  vendidos: "/images/logo-apolo.png?v=2026-11-23",
-  populares: "/images/logo-apolo.png?v=2026-11-23",
-  recomendados: "/images/logo-apolo.png?v=2026-11-23",
+  vendidos: "/images/logo-apolo.jpg?v=2026-11-24",
+  populares: "/images/logo-apolo.jpg?v=2026-11-24",
+  recomendados: "/images/logo-apolo.jpg?v=2026-11-24",
 };
 
 export function getLocalCarouselLogos(): CarouselRowLogos {
@@ -157,3 +157,4 @@ export function useCarouselLogos() {
 
   return { logos, loading, saveLogos: saveCarouselLogos, refreshLogos: fetchRemoteLogos };
 }
+

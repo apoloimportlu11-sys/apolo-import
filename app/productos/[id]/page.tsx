@@ -34,7 +34,7 @@ export async function generateMetadata({
           data.description ||
           `${title} (${brand}${presentation}). Cotiza en Apolo Lubricantes.`
       ).slice(0, 160);
-      const image = data.image_url ? String(data.image_url) : "/images/logo-apolo.png?v=2026-11-23";
+      const image = data.image_url ? String(data.image_url) : "/images/logo-apolo.jpg?v=2026-11-24";
 
       return {
         title,
@@ -201,3 +201,4 @@ export default async function ProductPage({ params }: ProductPageProps) {
     <ProductDetailClient initialProduct={product} productId={id} />
   );
 }
+

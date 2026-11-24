@@ -151,9 +151,11 @@ function mapCategory(product) {
   if (printed === "Filtros") {
     const name = String(product.nombre || "");
     if (/cabina/i.test(name)) next.subcategory_id = "filtro-cabina";
-    else if (/combustible/i.test(name)) next.subcategory_id = "filtro-combustible";
-    else if (/hidr[aá]ul/i.test(name)) next.subcategory_id = "filtro-hidraulico";
-    else if (/aire/i.test(name)) next.subcategory_id = "filtro-aire";
+    else if (/gasolina|di[eé]sel|petr[oó]leo|combustible/i.test(name)) {
+      next.subcategory_id = "filtro-combustible";
+    } else if (/hidr[aá]ul|servicio pesado/i.test(name)) {
+      next.subcategory_id = "filtro-hidraulico";
+    } else if (/aire/i.test(name)) next.subcategory_id = "filtro-aire";
     else if (/aceite/i.test(name)) next.subcategory_id = "filtro-aceite";
   }
   if (printed === "Lubricantes de transmisión") {
@@ -524,6 +526,22 @@ async function fetchActiveIds(supabase) {
   return ids;
 }
 
+async function fetchCatalogIds(supabase) {
+  const ids = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id")
+      .like("id", "cat-%")
+      .range(from, from + 999);
+    if (error) throw error;
+    const rows = data || [];
+    ids.push(...rows.map((row) => row.id));
+    if (rows.length < 1000) break;
+  }
+  return ids;
+}
+
 async function setActive(supabase, ids, isActive) {
   const chunkSize = 80;
   let changed = 0;
@@ -657,26 +675,27 @@ async function main() {
     throw new Error(`${presentationWrite.failed.length} presentaciones no se guardaron. El catálogo anterior sigue activo.`);
   }
 
-  const storedProducts = await countQuery(supabase, "products", (query) => query.like("id", "cat-%"));
   const storedPresentations = await countQuery(supabase, "product_presentations", (query) =>
     query.like("product_id", "cat-%")
   );
-  report.productos_cat_en_db = storedProducts;
   report.presentaciones_cat_en_db = storedPresentations;
-  if (storedProducts !== catalog.products.length || storedPresentations !== catalog.presentations.length) {
+  if (storedPresentations !== catalog.presentations.length) {
     report.estado = "conteo_no_coincide";
     report.desactivados = 0;
     fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
     throw new Error(
-      `Conteo distinto antes de publicar: productos ${storedProducts}/${catalog.products.length}, presentaciones ${storedPresentations}/${catalog.presentations.length}`
+      `Conteo distinto antes de publicar: presentaciones ${storedPresentations}/${catalog.presentations.length}`
     );
   }
 
+  // Renombres (p. ej. Lys) dejan filas cat-* huérfanas: desactivarlas antes de publicar.
   const wanted = new Set(catalog.products.map((product) => product.id));
+  const catalogIds = await fetchCatalogIds(supabase);
   const activeIds = await fetchActiveIds(supabase);
-  const toDeactivate = activeIds.filter((id) => !wanted.has(id));
-  const activated = await setActive(supabase, [...wanted], true);
+  const orphanCatalog = catalogIds.filter((id) => !wanted.has(id));
+  const toDeactivate = [...new Set([...orphanCatalog, ...activeIds.filter((id) => !wanted.has(id))])];
   const deactivated = await setActive(supabase, toDeactivate, false);
+  const activated = await setActive(supabase, [...wanted], true);
 
   const activeCatalog = await countQuery(supabase, "products", (query) =>
     query.eq("is_active", true).like("id", "cat-%")
@@ -684,8 +703,19 @@ async function main() {
   const activeOther = await countQuery(supabase, "products", (query) =>
     query.eq("is_active", true).not("id", "like", "cat-%")
   );
+  report.productos_cat_en_db = activeCatalog;
 
-  report.estado = activeCatalog === catalog.products.length && activeOther === 0 ? "publicado" : "publicado_con_diferencias";
+  if (activeCatalog !== catalog.products.length) {
+    report.estado = "conteo_no_coincide";
+    report.desactivados = deactivated;
+    report.activados = activated;
+    fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
+    throw new Error(
+      `Conteo distinto tras publicar: productos activos ${activeCatalog}/${catalog.products.length}`
+    );
+  }
+
+  report.estado = activeOther === 0 ? "publicado" : "publicado_con_diferencias";
   report.importados = activeCatalog;
   report.activados = activated;
   report.desactivados = deactivated;

@@ -189,4 +189,20 @@ describe("getLineSortPriority / GRASAS al inicio", () => {
     expect(groups[0]?.lineName).toBe("GRASAS APOLO");
     expect(groups[0]?.products).toHaveLength(2);
   });
+
+  it("dentro de una línea pone Overts antes que Bosch y Frenosa", () => {
+    const groups = groupProductsByLine(
+      [
+        { name: "Líquido de frenos DOT 3", brand: "Bosch", line: "DOT 3", sort_order: 1 },
+        { name: "Líquido de frenos DOT 3", brand: "Frenosa", line: "DOT 3", sort_order: 2 },
+        { name: "Líquido de frenos DOT 3", brand: "Overts", line: "DOT 3", sort_order: 3 },
+      ],
+      "featured"
+    );
+    expect(groups[0]?.products.map((item) => item.brand)).toEqual([
+      "Overts",
+      "Bosch",
+      "Frenosa",
+    ]);
+  });
 });

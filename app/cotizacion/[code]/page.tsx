@@ -120,7 +120,7 @@ export default async function CotizacionPublicPage({
       <div className="mx-auto max-w-xl space-y-5">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo-apolo.png?v=2026-11-23" alt={business} className="h-12 w-auto" />
+          <img src="/images/logo-apolo.jpg?v=2026-11-24" alt={business} className="h-12 w-auto" />
           <div>
             <p className="text-sm font-semibold">{business}</p>
             <p className="text-xs text-[#71717a]">Detalle de tu pedido</p>
@@ -215,4 +215,5 @@ export default async function CotizacionPublicPage({
     </main>
   );
 }
+
 

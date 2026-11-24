@@ -15,21 +15,21 @@ export const CANONICAL_BRANDS: CanonicalBrandSeed[] = [
   {
     name: "Apolo",
     slug: "apolo",
-    logo_url: "/images/logo-apolo.png?v=2026-11-23",
+    logo_url: "/images/logo-apolo.jpg?v=2026-11-24",
     description:
       "Línea propia oficial de lubricantes de alto rendimiento para motores a gasolina, diésel, transmisiones e industria.",
   },
   {
     name: "Overts",
     slug: "overts",
-    logo_url: "/images/logo-overts.png?v=2026-11-23",
+    logo_url: "/images/logo-overts.jpg?v=2026-11-24",
     description:
       "Línea especializada de lubricantes, grasas, refrigerantes y fluidos automotrices Overts.",
   },
   {
     name: "Valtrom",
     slug: "valtrom",
-    logo_url: "/images/logo-valtrom.png?v=2026-11-23",
+    logo_url: "/images/logo-valtrom.jpg?v=2026-11-24",
     description:
       "Línea oficial de repuestos automotrices, autopartes y componentes de alta durabilidad Valtrom.",
   },
@@ -180,3 +180,4 @@ export function isCanonicalBrandName(name?: string | null) {
 
 /** Nombres para selects / heurísticas del admin. */
 export const CANONICAL_BRAND_NAMES = CANONICAL_BRANDS.map((brand) => brand.name);
+

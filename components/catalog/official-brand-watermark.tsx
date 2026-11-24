@@ -40,7 +40,12 @@ export function OfficialBrandWatermark({
             ? "(max-width: 768px) 100vw, 420px"
             : "(max-width: 768px) 50vw, 240px"
         }
-        className="object-cover object-center"
+        className="object-cover"
+        style={
+          intensity === "gallery"
+            ? { objectFit: "cover", objectPosition: "right bottom" }
+            : { objectFit: "cover", objectPosition: "center center" }
+        }
         priority={intensity === "gallery"}
       />
     </div>

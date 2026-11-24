@@ -3,6 +3,8 @@
 // admin (app/admin/productos/page.tsx) para que ambos usen exactamente la
 // misma definición de "línea de producto".
 
+import { officialBrandRank } from "@/lib/catalog/display";
+
 export interface LineCategorizable {
   name?: string | null;
   line?: string | null;
@@ -247,6 +249,7 @@ export const FILTER_SUBTYPE_LINES = [
   "Filtros de aire",
   "Filtros de combustible",
   "Filtros de cabina",
+  "Filtros hidráulicos",
   "Filtros varios",
 ] as const;
 
@@ -266,6 +269,9 @@ export function classifyFilterSubtype(
   if (/\bcabina\b|\bcabin\b|\bhabitaculo\b|\bpollen\b|\bacondicionado\b/.test(t)) {
     return "Filtros de cabina";
   }
+  if (/\bhidraul|\bhydraulic|\bservicio pesado\b/.test(t)) {
+    return "Filtros hidráulicos";
+  }
   if (/\baceite\b|\boil\b/.test(t)) return "Filtros de aceite";
   if (/\baire\b|\bair\b/.test(t)) return "Filtros de aire";
   if (
@@ -283,6 +289,7 @@ const CATALOG_CATEGORY_LINES = new Set([
   "filtros de aire",
   "filtros de combustible",
   "filtros de cabina",
+  "filtros hidráulicos",
   "filtros varios",
   "refrigerantes",
   "grasas automotrices",
@@ -479,6 +486,9 @@ export function groupProductsByLine<T extends LineCategorizable>(
           return (a.name || "").localeCompare(b.name || "");
         }
 
+        // Destacados / Marca: Apolo, Overts y Valtrom siempre primero.
+        const brandDiff = officialBrandRank(a.brand) - officialBrandRank(b.brand);
+        if (brandDiff !== 0) return brandDiff;
         const orderA = a.sort_order || 0;
         const orderB = b.sort_order || 0;
         if (orderA !== orderB) return orderA - orderB;

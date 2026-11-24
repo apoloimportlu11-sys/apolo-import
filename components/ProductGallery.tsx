@@ -61,7 +61,7 @@ export function ProductGallery({ name, brand, images, fallbackImage, compact = f
               fill
               className={cn(
                 "z-[1] object-contain object-center",
-                compact ? "p-6 sm:p-8" : "p-4"
+                compact ? "p-5 pb-16 sm:p-6 sm:pb-20" : "p-4 pb-16"
               )}
               style={{ objectFit: "contain", objectPosition: "center" }}
               priority

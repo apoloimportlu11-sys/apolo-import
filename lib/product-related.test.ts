@@ -6,6 +6,7 @@ import {
   getRelatedProducts,
   getRelatedProductsResult,
   getSameBrandRelated,
+  getStockReplacements,
 } from "@/lib/product-related";
 
 function makeProduct(partial: Partial<Product> & Pick<Product, "id" | "name" | "brand">): Product {
@@ -79,6 +80,12 @@ describe("getCrossBrandAlternatives", () => {
     expect(result.every((p) => p.brand !== "Apolo")).toBe(true);
   });
 
+  it("pone Apolo, Overts y Valtrom antes que el resto de marcas", () => {
+    const current = catalog[0];
+    const result = getCrossBrandAlternatives(current, catalog);
+    expect(result.map((p) => p.brand)).toEqual(["Overts", "Bosch"]);
+  });
+
   it("prioriza la misma presentación por marca", () => {
     const current = catalog[0];
     const overts = getCrossBrandAlternatives(current, catalog).find((p) => p.brand === "Overts");
@@ -110,6 +117,25 @@ describe("getCrossBrandAlternatives", () => {
     const siblings = getPresentationSiblings(catalog[0], catalog);
     expect(siblings).toHaveLength(1);
     expect(siblings[0]?.id).toBe("apolo-2");
+  });
+
+  it("si no hay el mismo nombre, sugiere la misma línea en otra marca", () => {
+    const current = makeProduct({
+      id: "apolo-calcio",
+      name: "Grasa calcio rojo 2",
+      brand: "Apolo",
+      line: "Grasas automotrices",
+      stock: 0,
+    });
+    const overts = makeProduct({
+      id: "overts-litio",
+      name: "Grasa Lithium H-2 Rojo",
+      brand: "Overts",
+      line: "Grasas automotrices",
+      stock: 12,
+    });
+    const result = getStockReplacements(current, [current, overts]);
+    expect(result.map((item) => item.id)).toEqual(["overts-litio"]);
   });
 
   it("getRelatedProducts expone la lista del resultado", () => {

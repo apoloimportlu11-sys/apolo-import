@@ -1,5 +1,5 @@
 {
-  "generado_en": "2026-11-20T17:52:50.056Z",
+  "generado_en": "2026-11-24T16:33:27.980Z",
   "fuente": "datos/catalogo_apolo_import.json",
   "excel_usado_como_fuente": false,
   "productos_en_json": 173,
@@ -250,32 +250,32 @@
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-de-aceite-lf-1616",
-      "nombre": "Filtro de aceite LF-1616",
+      "id": "cat-lys-filtros-filtro-de-gasolina-lfg-120",
+      "nombre": "Filtro de gasolina LFG-120",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-de-aceite-lf-3007",
-      "nombre": "Filtro de aceite LF-3007",
+      "id": "cat-lys-filtros-filtro-de-gasolina-lfg-2111",
+      "nombre": "Filtro de gasolina LFG-2111",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-de-aceite-lf-3008",
-      "nombre": "Filtro de aceite LF-3008",
+      "id": "cat-lys-filtros-filtro-diesel-lp-714",
+      "nombre": "Filtro diésel LP-714",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-de-aceite-lf-833",
-      "nombre": "Filtro de aceite LF-833",
+      "id": "cat-lys-filtros-filtro-diesel-lp-9010",
+      "nombre": "Filtro diésel LP-9010",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
@@ -290,24 +290,24 @@
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-de-aire-afl-9151g",
-      "nombre": "Filtro de aire AFL-9151G",
+      "id": "cat-lys-filtros-filtro-de-cabina-afl-9151g",
+      "nombre": "Filtro de cabina AFL-9151G",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-de-gasolina-lfg-120",
-      "nombre": "Filtro de gasolina LFG-120",
+      "id": "cat-lys-filtros-filtro-hidraulico-lfh-4825",
+      "nombre": "Filtro hidráulico LFH-4825",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
       ]
     },
     {
-      "id": "cat-lys-filtros-filtro-diesel-lp-714",
-      "nombre": "Filtro diésel LP-714",
+      "id": "cat-lys-filtros-filtro-hidraulico-lh-5618",
+      "nombre": "Filtro hidráulico LH-5618",
       "marca": "LYS Filtros",
       "motivos": [
         "sin_presentacion"
@@ -534,12 +534,12 @@
   "productos_fallidos": [],
   "presentaciones_insertadas": 252,
   "presentaciones_fallidas": [],
-  "productos_cat_en_db": 173,
   "presentaciones_cat_en_db": 252,
+  "productos_cat_en_db": 173,
   "estado": "publicado",
   "importados": 173,
   "activados": 173,
-  "desactivados": 0,
+  "desactivados": 5,
   "activos_fuera_del_json": 0,
   "omitidos": 0,
   "pendientes": 0

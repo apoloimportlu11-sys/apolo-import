@@ -101,7 +101,8 @@ export default function BrandsCarousel({
     if (dbBrands.length > 0) {
       return dbBrands.map((b) => ({
         name: b.name,
-        logo: getOfficialBrandLogo(b.name) || b.logo_url || OFFICIAL_BRAND_LOGOS.apolo,
+        // Admin → Marcas (logo_url) tiene prioridad; el archivo local es solo respaldo.
+        logo: b.logo_url?.trim() || getOfficialBrandLogo(b.name) || OFFICIAL_BRAND_LOGOS.apolo,
         href: `/productos?brand=${encodeURIComponent(b.name)}`,
       }));
     }

@@ -33,7 +33,7 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   address: "Las flores SJL, Lima, Perú",
   hours: "Lun - Vie: 9:00 AM - 6:30 PM",
   maps_url: "https://www.google.com/maps?q=Las+flores+SJL&output=embed",
-  logo_url: "/images/logo-apolo.png?v=2026-11-23",
+  logo_url: "/images/logo-apolo.jpg?v=2026-11-24",
   primary_color: "#C7940A",
   secondary_color: "#0E0E0E",
   accent_color: "#F5C542",
@@ -200,7 +200,7 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
         if (cached && Date.now() - lastTs < CACHE_TTL_MS) {
           const parsed = JSON.parse(cached);
           if (parsed && (!parsed.logo_url || String(parsed.logo_url).toLowerCase().includes("overts") || String(parsed.logo_url).toLowerCase().includes("live_site"))) {
-            parsed.logo_url = "/images/logo-apolo.png?v=2026-11-23";
+            parsed.logo_url = "/images/logo-apolo.jpg?v=2026-11-24";
             localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(parsed));
           }
           updateLocalSettings(parsed, "initial");
@@ -216,7 +216,7 @@ export function BusinessSettingsProvider({ children }: { children: React.ReactNo
 
       if (data && !error) {
         const cleanLogoUrl = (!data.logo_url || String(data.logo_url).toLowerCase().includes("overts") || String(data.logo_url).toLowerCase().includes("live_site"))
-          ? "/images/logo-apolo.png?v=2026-11-23"
+          ? "/images/logo-apolo.jpg?v=2026-11-24"
           : data.logo_url;
 
         const merged: BusinessSettings = {
@@ -398,3 +398,4 @@ export function useBusinessSettings() {
   }
   return context;
 }
+

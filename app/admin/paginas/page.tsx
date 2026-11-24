@@ -689,7 +689,7 @@ export default function PaginasPage() {
                             value={nosotrosForm.title}
                             onChange={(e) => setNosotrosForm({ ...nosotrosForm, title: e.target.value })}
                             className="w-full rounded-xl border border-white/10 bg-black/60 px-3.5 py-2 text-sm text-white focus:border-[#C7940A] focus:outline-none"
-                            placeholder="Apolo Lubricantes"
+                            placeholder="Apolo Import"
                           />
                         </div>
                       </div>

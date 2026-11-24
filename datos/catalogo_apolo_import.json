@@ -1519,9 +1519,9 @@
           "nombre": "Filtro de aceite L-1006",
           "categoria": "Filtros",
           "marca": "LYS Filtros",
-          "descripcion": "Filtro de aceite con código de referencia L-1006.",
-          "caracteristicas": [],
-          "aplicaciones": [],
+          "descripcion": "Diseñados con válvulas de sobrepresión y antirretorno para retener impurezas y reducir el desgaste del motor.",
+          "caracteristicas": ["Válvula de sobrepresión", "Válvula antirretorno", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Motor"],
           "variantes": [
             {
               "codigo": "L-1006"
@@ -1530,16 +1530,16 @@
           "presentaciones": [],
           "pagina_catalogo": 28,
           "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+            "Código de alta rotación Lys — filtros de aceite."
           ]
         },
         {
           "nombre": "Filtro de aceite L-1200",
           "categoria": "Filtros",
           "marca": "LYS Filtros",
-          "descripcion": "Filtro de aceite con código de referencia L-1200.",
-          "caracteristicas": [],
-          "aplicaciones": [],
+          "descripcion": "Diseñados con válvulas de sobrepresión y antirretorno para retener impurezas y reducir el desgaste del motor.",
+          "caracteristicas": ["Válvula de sobrepresión", "Válvula antirretorno", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Motor"],
           "variantes": [
             {
               "codigo": "L-1200"
@@ -1548,124 +1548,16 @@
           "presentaciones": [],
           "pagina_catalogo": 28,
           "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-          ]
-        },
-        {
-          "nombre": "Filtro de aceite LF-1616",
-          "categoria": "Filtros",
-          "marca": "LYS Filtros",
-          "descripcion": "Filtro de aceite con código de referencia LF-1616.",
-          "caracteristicas": [],
-          "aplicaciones": [],
-          "variantes": [
-            {
-              "codigo": "LF-1616"
-            }
-          ],
-          "presentaciones": [],
-          "pagina_catalogo": 28,
-          "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-          ]
-        },
-        {
-          "nombre": "Filtro de aceite LF-3007",
-          "categoria": "Filtros",
-          "marca": "LYS Filtros",
-          "descripcion": "Filtro de aceite con código de referencia LF-3007.",
-          "caracteristicas": [],
-          "aplicaciones": [],
-          "variantes": [
-            {
-              "codigo": "LF-3007"
-            }
-          ],
-          "presentaciones": [],
-          "pagina_catalogo": 28,
-          "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-          ]
-        },
-        {
-          "nombre": "Filtro de aceite LF-3008",
-          "categoria": "Filtros",
-          "marca": "LYS Filtros",
-          "descripcion": "Filtro de aceite con código de referencia LF-3008.",
-          "caracteristicas": [],
-          "aplicaciones": [],
-          "variantes": [
-            {
-              "codigo": "LF-3008"
-            }
-          ],
-          "presentaciones": [],
-          "pagina_catalogo": 28,
-          "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-          ]
-        },
-        {
-          "nombre": "Filtro de aceite LF-833",
-          "categoria": "Filtros",
-          "marca": "LYS Filtros",
-          "descripcion": "Filtro de aceite con código de referencia LF-833.",
-          "caracteristicas": [],
-          "aplicaciones": [],
-          "variantes": [
-            {
-              "codigo": "LF-833"
-            }
-          ],
-          "presentaciones": [],
-          "pagina_catalogo": 28,
-          "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-          ]
-        },
-        {
-          "nombre": "Filtro de aire AFL-9151",
-          "categoria": "Filtros",
-          "marca": "LYS Filtros",
-          "descripcion": "Filtro de aire con código de referencia AFL-9151.",
-          "caracteristicas": [],
-          "aplicaciones": [],
-          "variantes": [
-            {
-              "codigo": "AFL-9151"
-            }
-          ],
-          "presentaciones": [],
-          "pagina_catalogo": 29,
-          "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-          ]
-        },
-        {
-          "nombre": "Filtro de aire AFL-9151G",
-          "categoria": "Filtros",
-          "marca": "LYS Filtros",
-          "descripcion": "Filtro de aire con código de referencia AFL-9151G.",
-          "caracteristicas": [],
-          "aplicaciones": [],
-          "variantes": [
-            {
-              "codigo": "AFL-9151G"
-            }
-          ],
-          "presentaciones": [],
-          "pagina_catalogo": 29,
-          "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+            "Código de alta rotación Lys — filtros de aceite."
           ]
         },
         {
           "nombre": "Filtro de gasolina LFG-120",
           "categoria": "Filtros",
           "marca": "LYS Filtros",
-          "descripcion": "Filtro de gasolina con código de referencia LFG-120.",
-          "caracteristicas": [],
-          "aplicaciones": [],
+          "descripcion": "Incluyen modelos en línea (para sistemas de carburador e inyección) y sumergidos (in tank) para proteger inyectores y el sistema de combustible.",
+          "caracteristicas": ["En línea / in tank", "Protección de inyectores", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Sistema de combustible"],
           "variantes": [
             {
               "codigo": "LFG-120"
@@ -1674,16 +1566,34 @@
           "presentaciones": [],
           "pagina_catalogo": 29,
           "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+            "Código de alta rotación Lys — filtros de gasolina."
+          ]
+        },
+        {
+          "nombre": "Filtro de gasolina LFG-2111",
+          "categoria": "Filtros",
+          "marca": "LYS Filtros",
+          "descripcion": "Incluyen modelos en línea (para sistemas de carburador e inyección) y sumergidos (in tank) para proteger inyectores y el sistema de combustible.",
+          "caracteristicas": ["En línea / in tank", "Protección de inyectores", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Sistema de combustible"],
+          "variantes": [
+            {
+              "codigo": "LFG-2111"
+            }
+          ],
+          "presentaciones": [],
+          "pagina_catalogo": 29,
+          "observaciones": [
+            "Código de alta rotación Lys — filtros de gasolina."
           ]
         },
         {
           "nombre": "Filtro diésel LP-714",
           "categoria": "Filtros",
           "marca": "LYS Filtros",
-          "descripcion": "Filtro diésel con código de referencia LP-714.",
-          "caracteristicas": [],
-          "aplicaciones": [],
+          "descripcion": "Disponibles en distintos micronajes y versiones separadoras de agua para evitar el ingreso de humedad a bombas e inyectores.",
+          "caracteristicas": ["Separador de agua", "Distintos micronajes", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Sistema diésel"],
           "variantes": [
             {
               "codigo": "LP-714"
@@ -1692,7 +1602,97 @@
           "presentaciones": [],
           "pagina_catalogo": 29,
           "observaciones": [
-            "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+            "Código de alta rotación Lys — filtros diésel."
+          ]
+        },
+        {
+          "nombre": "Filtro diésel LP-9010",
+          "categoria": "Filtros",
+          "marca": "LYS Filtros",
+          "descripcion": "Disponibles en distintos micronajes y versiones separadoras de agua para evitar el ingreso de humedad a bombas e inyectores.",
+          "caracteristicas": ["Separador de agua", "Distintos micronajes", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Sistema diésel"],
+          "variantes": [
+            {
+              "codigo": "LP-9010"
+            }
+          ],
+          "presentaciones": [],
+          "pagina_catalogo": 29,
+          "observaciones": [
+            "Código de alta rotación Lys — filtros diésel."
+          ]
+        },
+        {
+          "nombre": "Filtro de aire AFL-9151",
+          "categoria": "Filtros",
+          "marca": "LYS Filtros",
+          "descripcion": "Ayudan a mantener el flujo de aire limpio hacia el motor y retienen polvo, polen o microorganismos en el habitáculo.",
+          "caracteristicas": ["Flujo de aire limpio", "Retención de polvo", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Admisión del motor"],
+          "variantes": [
+            {
+              "codigo": "AFL-9151"
+            }
+          ],
+          "presentaciones": [],
+          "pagina_catalogo": 29,
+          "observaciones": [
+            "Código de alta rotación Lys — filtros de aire y cabina."
+          ]
+        },
+        {
+          "nombre": "Filtro de cabina AFL-9151G",
+          "categoria": "Filtros",
+          "marca": "LYS Filtros",
+          "descripcion": "Ayudan a mantener el flujo de aire limpio hacia el motor y retienen polvo, polen o microorganismos en el habitáculo.",
+          "caracteristicas": ["Habitáculo", "Polen y microorganismos", "Alta rotación"],
+          "aplicaciones": ["Filtros automotrices", "Cabina / habitáculo"],
+          "variantes": [
+            {
+              "codigo": "AFL-9151G"
+            }
+          ],
+          "presentaciones": [],
+          "pagina_catalogo": 29,
+          "observaciones": [
+            "Código de alta rotación Lys — filtros de aire y cabina."
+          ]
+        },
+        {
+          "nombre": "Filtro hidráulico LFH-4825",
+          "categoria": "Filtros",
+          "marca": "LYS Filtros",
+          "descripcion": "Orientados a maquinaria y sistemas hidráulicos o de trabajo pesado.",
+          "caracteristicas": ["Servicio pesado", "Sistemas hidráulicos", "Alta rotación"],
+          "aplicaciones": ["Filtros industriales", "Maquinaria"],
+          "variantes": [
+            {
+              "codigo": "LFH-4825"
+            }
+          ],
+          "presentaciones": [],
+          "pagina_catalogo": 29,
+          "observaciones": [
+            "Código de alta rotación Lys — filtros hidráulicos y de servicio pesado."
+          ]
+        },
+        {
+          "nombre": "Filtro hidráulico LH-5618",
+          "categoria": "Filtros",
+          "marca": "LYS Filtros",
+          "descripcion": "Orientados a maquinaria y sistemas hidráulicos o de trabajo pesado.",
+          "caracteristicas": ["Servicio pesado", "Sistemas hidráulicos", "Alta rotación"],
+          "aplicaciones": ["Filtros industriales", "Maquinaria"],
+          "variantes": [
+            {
+              "codigo": "LH-5618"
+            }
+          ],
+          "presentaciones": [],
+          "pagina_catalogo": 29,
+          "observaciones": [
+            "Código de alta rotación Lys — filtros hidráulicos y de servicio pesado."
           ]
         }
       ]
@@ -5960,9 +5960,9 @@
       "nombre": "Filtro de aceite L-1006",
       "categoria": "Filtros",
       "marca": "LYS Filtros",
-      "descripcion": "Filtro de aceite con código de referencia L-1006.",
-      "caracteristicas": [],
-      "aplicaciones": [],
+      "descripcion": "Diseñados con válvulas de sobrepresión y antirretorno para retener impurezas y reducir el desgaste del motor.",
+      "caracteristicas": ["Válvula de sobrepresión", "Válvula antirretorno", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Motor"],
       "variantes": [
         {
           "codigo": "L-1006"
@@ -5971,16 +5971,16 @@
       "presentaciones": [],
       "pagina_catalogo": 28,
       "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+        "Código de alta rotación Lys — filtros de aceite."
       ]
     },
     {
       "nombre": "Filtro de aceite L-1200",
       "categoria": "Filtros",
       "marca": "LYS Filtros",
-      "descripcion": "Filtro de aceite con código de referencia L-1200.",
-      "caracteristicas": [],
-      "aplicaciones": [],
+      "descripcion": "Diseñados con válvulas de sobrepresión y antirretorno para retener impurezas y reducir el desgaste del motor.",
+      "caracteristicas": ["Válvula de sobrepresión", "Válvula antirretorno", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Motor"],
       "variantes": [
         {
           "codigo": "L-1200"
@@ -5989,124 +5989,16 @@
       "presentaciones": [],
       "pagina_catalogo": 28,
       "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-      ]
-    },
-    {
-      "nombre": "Filtro de aceite LF-1616",
-      "categoria": "Filtros",
-      "marca": "LYS Filtros",
-      "descripcion": "Filtro de aceite con código de referencia LF-1616.",
-      "caracteristicas": [],
-      "aplicaciones": [],
-      "variantes": [
-        {
-          "codigo": "LF-1616"
-        }
-      ],
-      "presentaciones": [],
-      "pagina_catalogo": 28,
-      "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-      ]
-    },
-    {
-      "nombre": "Filtro de aceite LF-3007",
-      "categoria": "Filtros",
-      "marca": "LYS Filtros",
-      "descripcion": "Filtro de aceite con código de referencia LF-3007.",
-      "caracteristicas": [],
-      "aplicaciones": [],
-      "variantes": [
-        {
-          "codigo": "LF-3007"
-        }
-      ],
-      "presentaciones": [],
-      "pagina_catalogo": 28,
-      "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-      ]
-    },
-    {
-      "nombre": "Filtro de aceite LF-3008",
-      "categoria": "Filtros",
-      "marca": "LYS Filtros",
-      "descripcion": "Filtro de aceite con código de referencia LF-3008.",
-      "caracteristicas": [],
-      "aplicaciones": [],
-      "variantes": [
-        {
-          "codigo": "LF-3008"
-        }
-      ],
-      "presentaciones": [],
-      "pagina_catalogo": 28,
-      "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-      ]
-    },
-    {
-      "nombre": "Filtro de aceite LF-833",
-      "categoria": "Filtros",
-      "marca": "LYS Filtros",
-      "descripcion": "Filtro de aceite con código de referencia LF-833.",
-      "caracteristicas": [],
-      "aplicaciones": [],
-      "variantes": [
-        {
-          "codigo": "LF-833"
-        }
-      ],
-      "presentaciones": [],
-      "pagina_catalogo": 28,
-      "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-      ]
-    },
-    {
-      "nombre": "Filtro de aire AFL-9151",
-      "categoria": "Filtros",
-      "marca": "LYS Filtros",
-      "descripcion": "Filtro de aire con código de referencia AFL-9151.",
-      "caracteristicas": [],
-      "aplicaciones": [],
-      "variantes": [
-        {
-          "codigo": "AFL-9151"
-        }
-      ],
-      "presentaciones": [],
-      "pagina_catalogo": 29,
-      "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
-      ]
-    },
-    {
-      "nombre": "Filtro de aire AFL-9151G",
-      "categoria": "Filtros",
-      "marca": "LYS Filtros",
-      "descripcion": "Filtro de aire con código de referencia AFL-9151G.",
-      "caracteristicas": [],
-      "aplicaciones": [],
-      "variantes": [
-        {
-          "codigo": "AFL-9151G"
-        }
-      ],
-      "presentaciones": [],
-      "pagina_catalogo": 29,
-      "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+        "Código de alta rotación Lys — filtros de aceite."
       ]
     },
     {
       "nombre": "Filtro de gasolina LFG-120",
       "categoria": "Filtros",
       "marca": "LYS Filtros",
-      "descripcion": "Filtro de gasolina con código de referencia LFG-120.",
-      "caracteristicas": [],
-      "aplicaciones": [],
+      "descripcion": "Incluyen modelos en línea (para sistemas de carburador e inyección) y sumergidos (in tank) para proteger inyectores y el sistema de combustible.",
+      "caracteristicas": ["En línea / in tank", "Protección de inyectores", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Sistema de combustible"],
       "variantes": [
         {
           "codigo": "LFG-120"
@@ -6115,16 +6007,34 @@
       "presentaciones": [],
       "pagina_catalogo": 29,
       "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+        "Código de alta rotación Lys — filtros de gasolina."
+      ]
+    },
+    {
+      "nombre": "Filtro de gasolina LFG-2111",
+      "categoria": "Filtros",
+      "marca": "LYS Filtros",
+      "descripcion": "Incluyen modelos en línea (para sistemas de carburador e inyección) y sumergidos (in tank) para proteger inyectores y el sistema de combustible.",
+      "caracteristicas": ["En línea / in tank", "Protección de inyectores", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Sistema de combustible"],
+      "variantes": [
+        {
+          "codigo": "LFG-2111"
+        }
+      ],
+      "presentaciones": [],
+      "pagina_catalogo": 29,
+      "observaciones": [
+        "Código de alta rotación Lys — filtros de gasolina."
       ]
     },
     {
       "nombre": "Filtro diésel LP-714",
       "categoria": "Filtros",
       "marca": "LYS Filtros",
-      "descripcion": "Filtro diésel con código de referencia LP-714.",
-      "caracteristicas": [],
-      "aplicaciones": [],
+      "descripcion": "Disponibles en distintos micronajes y versiones separadoras de agua para evitar el ingreso de humedad a bombas e inyectores.",
+      "caracteristicas": ["Separador de agua", "Distintos micronajes", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Sistema diésel"],
       "variantes": [
         {
           "codigo": "LP-714"
@@ -6133,7 +6043,97 @@
       "presentaciones": [],
       "pagina_catalogo": 29,
       "observaciones": [
-        "El catálogo no especifica marca fabricante, dimensiones, compatibilidad vehicular ni presentación."
+        "Código de alta rotación Lys — filtros diésel."
+      ]
+    },
+    {
+      "nombre": "Filtro diésel LP-9010",
+      "categoria": "Filtros",
+      "marca": "LYS Filtros",
+      "descripcion": "Disponibles en distintos micronajes y versiones separadoras de agua para evitar el ingreso de humedad a bombas e inyectores.",
+      "caracteristicas": ["Separador de agua", "Distintos micronajes", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Sistema diésel"],
+      "variantes": [
+        {
+          "codigo": "LP-9010"
+        }
+      ],
+      "presentaciones": [],
+      "pagina_catalogo": 29,
+      "observaciones": [
+        "Código de alta rotación Lys — filtros diésel."
+      ]
+    },
+    {
+      "nombre": "Filtro de aire AFL-9151",
+      "categoria": "Filtros",
+      "marca": "LYS Filtros",
+      "descripcion": "Ayudan a mantener el flujo de aire limpio hacia el motor y retienen polvo, polen o microorganismos en el habitáculo.",
+      "caracteristicas": ["Flujo de aire limpio", "Retención de polvo", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Admisión del motor"],
+      "variantes": [
+        {
+          "codigo": "AFL-9151"
+        }
+      ],
+      "presentaciones": [],
+      "pagina_catalogo": 29,
+      "observaciones": [
+        "Código de alta rotación Lys — filtros de aire y cabina."
+      ]
+    },
+    {
+      "nombre": "Filtro de cabina AFL-9151G",
+      "categoria": "Filtros",
+      "marca": "LYS Filtros",
+      "descripcion": "Ayudan a mantener el flujo de aire limpio hacia el motor y retienen polvo, polen o microorganismos en el habitáculo.",
+      "caracteristicas": ["Habitáculo", "Polen y microorganismos", "Alta rotación"],
+      "aplicaciones": ["Filtros automotrices", "Cabina / habitáculo"],
+      "variantes": [
+        {
+          "codigo": "AFL-9151G"
+        }
+      ],
+      "presentaciones": [],
+      "pagina_catalogo": 29,
+      "observaciones": [
+        "Código de alta rotación Lys — filtros de aire y cabina."
+      ]
+    },
+    {
+      "nombre": "Filtro hidráulico LFH-4825",
+      "categoria": "Filtros",
+      "marca": "LYS Filtros",
+      "descripcion": "Orientados a maquinaria y sistemas hidráulicos o de trabajo pesado.",
+      "caracteristicas": ["Servicio pesado", "Sistemas hidráulicos", "Alta rotación"],
+      "aplicaciones": ["Filtros industriales", "Maquinaria"],
+      "variantes": [
+        {
+          "codigo": "LFH-4825"
+        }
+      ],
+      "presentaciones": [],
+      "pagina_catalogo": 29,
+      "observaciones": [
+        "Código de alta rotación Lys — filtros hidráulicos y de servicio pesado."
+      ]
+    },
+    {
+      "nombre": "Filtro hidráulico LH-5618",
+      "categoria": "Filtros",
+      "marca": "LYS Filtros",
+      "descripcion": "Orientados a maquinaria y sistemas hidráulicos o de trabajo pesado.",
+      "caracteristicas": ["Servicio pesado", "Sistemas hidráulicos", "Alta rotación"],
+      "aplicaciones": ["Filtros industriales", "Maquinaria"],
+      "variantes": [
+        {
+          "codigo": "LH-5618"
+        }
+      ],
+      "presentaciones": [],
+      "pagina_catalogo": 29,
+      "observaciones": [
+        "Código de alta rotación Lys — filtros hidráulicos y de servicio pesado."
       ]
     },
     {

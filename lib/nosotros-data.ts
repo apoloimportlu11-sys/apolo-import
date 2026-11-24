@@ -35,10 +35,12 @@ export const NOSOTROS_PAGE_SLUG = "nosotros";
 
 export const DEFAULT_NOSOTROS_CONTENT: NosotrosContent = {
   badge: "Sobre Nosotros",
-  title: "Apolo Lubricantes",
+  title: "Apolo Import",
   highlight: "Creemos que un lubricante de calidad marca la diferencia en la eficiencia, seguridad y vida útil de los equipos.",
-  description1: "Somos una empresa dedicada a la importación y distribución de lubricantes de alto rendimiento para los sectores automotriz, industrial y maquinaria pesada, con cobertura a nivel nacional.",
-  description2: "Trabajamos con productos originales y certificados, brindando asesoría técnica especializada y un servicio confiable que protege la inversión de nuestros clientes.",
+  description1:
+    "Somos Apolo Import: importación y distribución de lubricantes, fluidos y repuestos de alto rendimiento para automotriz, flotas e industria, con cobertura nacional.",
+  description2:
+    "Trabajamos con calidad de procedencia americana y respaldo de años en el mercado. Apolo, Overts y Valtrom son nuestro núcleo: productos originales, asesoría técnica y un servicio confiable.",
   portadaImage: "/images/Portada/portada.png",
   stats: [
     { value: "15+", label: "Años de experiencia" },
@@ -48,7 +50,8 @@ export const DEFAULT_NOSOTROS_CONTENT: NosotrosContent = {
   ],
   historySubtitle: "Nuestra Historia",
   historyTitle: "Construyendo confianza con el tiempo",
-  historyDescription: "Apolo Lubricantes nace con la visión de ofrecer soluciones confiables y de alto desempeño en un mercado cada vez más exigente. A lo largo de los años hemos fortalecido nuestra red logística, consolidando relaciones duraderas con clientes y aliados estratégicos a nivel nacional.",
+  historyDescription:
+    "Apolo Import nace con la visión de ofrecer soluciones confiables y de alto desempeño en un mercado cada vez más exigente. A lo largo de los años hemos fortalecido nuestra red logística, consolidando relaciones duraderas con clientes y aliados estratégicos a nivel nacional.",
   misionSubtitle: "Nuestra Misión",
   misionTitle: "Compromiso con la calidad",
   misionDescription: "Brindar lubricantes de alto rendimiento que garanticen la eficiencia, seguridad y durabilidad de los equipos automotrices e industriales, ofreciendo asesoría técnica y un servicio confiable a nivel nacional.",
@@ -68,10 +71,16 @@ const LEGACY_NOSOTROS_IMAGES: Record<string, string> = {
 function normalizeNosotrosImages(content: NosotrosContent): NosotrosContent {
   const misionImage = LEGACY_NOSOTROS_IMAGES[content.misionImage] || content.misionImage;
   const visionImage = LEGACY_NOSOTROS_IMAGES[content.visionImage] || content.visionImage;
-  if (misionImage === content.misionImage && visionImage === content.visionImage) {
+  const legacyTitle = /^apolo\s+lubricantes$/i.test(content.title?.trim() || "");
+  const title = legacyTitle ? DEFAULT_NOSOTROS_CONTENT.title : content.title;
+  if (
+    misionImage === content.misionImage &&
+    visionImage === content.visionImage &&
+    title === content.title
+  ) {
     return content;
   }
-  return { ...content, misionImage, visionImage };
+  return { ...content, misionImage, visionImage, title };
 }
 
 export function getLocalNosotrosContent(): NosotrosContent {

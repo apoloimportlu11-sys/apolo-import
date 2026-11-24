@@ -33,11 +33,11 @@ export const LOCAL_MEDIA_ITEMS: LocalMediaItem[] = [
   { id: "prod-ovt-abrillantador", name: "Overts Abrillantador de Llanta 300ML", path: "/images/products/img/overts/ABRILLANTADOR DE LLANTA 300ML.png", category: "products", type: "image", previewUrl: "/images/products/img/overts/ABRILLANTADOR DE LLANTA 300ML.png" },
   { id: "prod-ovt-compresora-1l", name: "Overts Aceite Compresora 1L", path: "/images/products/img/overts/ACEITE DE COMPRESORA 1L.png", category: "products", type: "image", previewUrl: "/images/products/img/overts/ACEITE DE COMPRESORA 1L.png" },
   { id: "prod-ovt-compresora-18l", name: "Overts Aceite Compresora 1.8L", path: "/images/products/img/overts/ACEITE DE COMPRESORA 1,8L.png", category: "products", type: "image", previewUrl: "/images/products/img/overts/ACEITE DE COMPRESORA 1,8L.png" },
-  { id: "brand-apolo-emblem", name: "Apolo Lubricantes Logo Oficial", path: "/images/logo-apolo.png?v=2026-11-23", category: "brands", type: "image", previewUrl: "/images/logo-apolo.png?v=2026-11-23" },
-  { id: "brand-overts-emblem", name: "Overts Lubricantes Logo Oficial", path: "/images/logo-overts.png?v=2026-11-23", category: "brands", type: "image", previewUrl: "/images/logo-overts.png?v=2026-11-23" },
-  { id: "brand-logo-apolo", name: "Apolo Logo Oficial", path: "/images/logo-apolo.png?v=2026-11-23", category: "brands", type: "image", previewUrl: "/images/logo-apolo.png?v=2026-11-23" },
-  { id: "brand-logo-overts", name: "Overts Logo Escudo", path: "/images/logo-overts.png?v=2026-11-23", category: "brands", type: "image", previewUrl: "/images/logo-overts.png?v=2026-11-23" },
-  { id: "brand-logo-valtrom", name: "Valtrom Logo Oficial", path: "/images/logo-valtrom.png?v=2026-11-23", category: "brands", type: "image", previewUrl: "/images/logo-valtrom.png?v=2026-11-23" },
+  { id: "brand-apolo-emblem", name: "Apolo Lubricantes Logo Oficial", path: "/images/logo-apolo.jpg?v=2026-11-24", category: "brands", type: "image", previewUrl: "/images/logo-apolo.jpg?v=2026-11-24" },
+  { id: "brand-overts-emblem", name: "Overts Lubricantes Logo Oficial", path: "/images/logo-overts.jpg?v=2026-11-24", category: "brands", type: "image", previewUrl: "/images/logo-overts.jpg?v=2026-11-24" },
+  { id: "brand-logo-apolo", name: "Apolo Logo Oficial", path: "/images/logo-apolo.jpg?v=2026-11-24", category: "brands", type: "image", previewUrl: "/images/logo-apolo.jpg?v=2026-11-24" },
+  { id: "brand-logo-overts", name: "Overts Logo Escudo", path: "/images/logo-overts.jpg?v=2026-11-24", category: "brands", type: "image", previewUrl: "/images/logo-overts.jpg?v=2026-11-24" },
+  { id: "brand-logo-valtrom", name: "Valtrom Logo Oficial", path: "/images/logo-valtrom.jpg?v=2026-11-24", category: "brands", type: "image", previewUrl: "/images/logo-valtrom.jpg?v=2026-11-24" },
   { id: "brand-amalie", name: "Amalie Logo", path: "/images/about/marcas/amalie.png", category: "brands", type: "image", previewUrl: "/images/about/marcas/amalie.png" },
   { id: "brand-boil", name: "Boil Logo", path: "/images/about/marcas/boil.png", category: "brands", type: "image", previewUrl: "/images/about/marcas/boil.png" },
   { id: "brand-bosch", name: "Bosch Logo", path: "/images/about/marcas/bosch.png", category: "brands", type: "image", previewUrl: "/images/about/marcas/bosch.png" },
@@ -75,3 +75,4 @@ export function searchLocalMedia(query: string, category?: string): LocalMediaIt
     (item) => item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q)
   );
 }
+

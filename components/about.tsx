@@ -2,14 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Award, Globe2, ShieldCheck } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { useNosotrosContent } from "@/lib/nosotros-data";
 import { CANONICAL_BRANDS } from "@/lib/catalog/canonical-brands";
 import {
-  OFFICIAL_BRAND_LOGOS,
+  OFFICIAL_BRAND_LOGO_IMG,
   OFFICIAL_BRAND_STAGES,
   getBrandChipVisual,
 } from "@/lib/catalog/display";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import { cn } from "@/lib/utils";
 
 const HOUSE_BRANDS = [
@@ -49,8 +51,30 @@ const ALLIED_BRANDS = CANONICAL_BRANDS.filter(
   (brand) => !["apolo", "overts", "valtrom"].includes(brand.slug)
 );
 
+const PREAMBLE_PILLARS = [
+  {
+    icon: ShieldCheck,
+    title: "Calidad",
+    text: "Productos formulados para proteger el motor y la operación.",
+  },
+  {
+    icon: Globe2,
+    title: "Procedencia americana",
+    text: "Estándar de importación con respaldo técnico real.",
+  },
+  {
+    icon: Award,
+    title: "Trayectoria",
+    text: "Años en el mercado acompañando talleres, flotas y distribuidores.",
+  },
+] as const;
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
 export function About() {
+  const { logos: houseLogos } = useHouseBrandLogos();
   const { content } = useNosotrosContent();
+  const reduce = useReducedMotion();
 
   const statsList =
     content.stats && content.stats.length > 0
@@ -63,17 +87,15 @@ export function About() {
         ];
 
   const portada = content.portadaImage || "/images/Portada/portada.png";
+  const heroTitle = content.title || "Apolo Import";
   const heroLine =
-    (content.description1 || "")
-      .split(/(?<=\.)\s+/)
-      .map((part) => part.trim())
-      .find(Boolean) ||
-    "Importación y distribución de lubricantes de alto rendimiento para automotriz, flotas e industria.";
+    content.description1?.trim() ||
+    "Somos Apolo Import: importación y distribución de lubricantes, fluidos y repuestos de alto rendimiento para automotriz, flotas e industria, con cobertura nacional.";
 
   return (
     <section id="nosotros" className="relative bg-background text-foreground">
-      {/* HERO */}
-      <div className="relative isolate min-h-[min(88dvh,760px)] overflow-hidden">
+      {/* HERO — preámbulo a las 3 marcas */}
+      <div className="relative isolate min-h-[min(88dvh,820px)] overflow-hidden">
         <Image
           src={portada}
           alt=""
@@ -83,19 +105,153 @@ export function About() {
           unoptimized={portada.startsWith("data:")}
           className="object-cover object-center scale-[1.02]"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(8,8,10,0.88)_0%,rgba(8,8,10,0.62)_48%,rgba(8,8,10,0.35)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(8,8,10,0.75)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(8,8,10,0.92)_0%,rgba(8,8,10,0.78)_48%,rgba(8,8,10,0.55)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_28%,rgba(8,8,10,0.88)_100%)]" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.7) 1px, transparent 0)",
+            backgroundSize: "28px 28px",
+          }}
+        />
 
-        <div className="relative z-10 mx-auto flex min-h-[min(88dvh,760px)] max-w-6xl flex-col justify-end px-5 pb-14 pt-28 sm:px-8 sm:pb-16 lg:pb-20">
-          <p className="font-display text-sm font-semibold tracking-[0.28em] text-[color:var(--gold)]">
-            APOLO IMPORT
-          </p>
-          <h1 className="mt-4 max-w-3xl font-display text-[clamp(2.4rem,6vw,4.6rem)] font-semibold leading-[0.95] tracking-tight text-white">
-            {content.title || "Apolo Lubricantes"}
-          </h1>
-          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
+        <div className="relative z-10 mx-auto flex min-h-[min(88dvh,820px)] max-w-6xl flex-col justify-end px-5 pb-14 pt-28 sm:px-8 sm:pb-16 lg:pb-20">
+          <motion.p
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: EASE }}
+            className="font-display text-sm font-semibold tracking-[0.28em] text-[color:var(--gold)]"
+          >
+            {content.badge?.toUpperCase() || "SOBRE NOSOTROS"}
+          </motion.p>
+
+          <motion.h1
+            initial={reduce ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.06, ease: EASE }}
+            className="mt-4 max-w-3xl font-display text-[clamp(2.4rem,6vw,4.6rem)] font-semibold leading-[0.95] tracking-tight text-white"
+          >
+            {heroTitle}
+          </motion.h1>
+
+          <motion.p
+            initial={reduce ? false : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.12, ease: EASE }}
+            className="mt-5 max-w-2xl text-base leading-relaxed text-white/88 sm:text-lg"
+          >
             {heroLine}
-          </p>
+          </motion.p>
+
+          <motion.p
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.18, ease: EASE }}
+            className="mt-4 max-w-2xl text-sm leading-relaxed text-white/70 sm:text-base"
+          >
+            Tres marcas de casa — <span className="font-semibold text-white">Apolo</span>,{" "}
+            <span className="font-semibold text-white">Overts</span> y{" "}
+            <span className="font-semibold text-white">Valtrom</span> — con énfasis en calidad,
+            procedencia americana y años de respaldo en el mercado.
+          </motion.p>
+
+          {/* Franja de marcas — diseño limpio, sin cajas flotantes */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.22, ease: EASE }}
+            className="mt-8 max-w-2xl"
+          >
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              Marcas de casa
+            </p>
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {HOUSE_BRANDS.map((brand, index) => (
+                <Link
+                  key={brand.key}
+                  href="#marcas"
+                  className="group relative flex flex-col items-center gap-2.5"
+                >
+                  <motion.span
+                    className="relative flex h-[4.5rem] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white/[0.06] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-[border-color,background-color,box-shadow] duration-300 group-hover:border-white/28 group-hover:bg-white/[0.1] sm:h-[5.25rem]"
+                    style={{
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 ${brand.accent}00`,
+                    }}
+                    whileHover={
+                      reduce
+                        ? undefined
+                        : {
+                            y: -4,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 28px -12px ${brand.accent}66`,
+                          }
+                    }
+                    animate={
+                      reduce
+                        ? undefined
+                        : {
+                            y: [0, -3, 0],
+                          }
+                    }
+                    transition={
+                      reduce
+                        ? undefined
+                        : {
+                            y: {
+                              duration: 4.2 + index * 0.55,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                              delay: index * 0.35,
+                            },
+                          }
+                    }
+                  >
+                    <span
+                      className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-70"
+                      style={{
+                        background: `linear-gradient(90deg, transparent, ${brand.accent}, transparent)`,
+                      }}
+                    />
+                    <Image
+                      src={houseLogos[brand.key]}
+                      alt={brand.name}
+                      width={140}
+                      height={56}
+                      className={cn(OFFICIAL_BRAND_LOGO_IMG, "relative z-[1] max-h-10 sm:max-h-12")}
+                      unoptimized={
+                        houseLogos[brand.key].includes("supabase") ||
+                        houseLogos[brand.key].startsWith("http")
+                      }
+                    />
+                  </motion.span>
+                  <span className="text-[11px] font-semibold tracking-wide text-white/75 transition-colors group-hover:text-white sm:text-xs">
+                    {brand.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+
+          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+            {PREAMBLE_PILLARS.map((pillar, index) => {
+              const Icon = pillar.icon;
+              return (
+                <motion.div
+                  key={pillar.title}
+                  initial={reduce ? false : { opacity: 0, y: 14 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.5 }}
+                  transition={{ duration: 0.4, delay: 0.08 * index, ease: EASE }}
+                  className="rounded-2xl border border-white/12 bg-black/30 px-3.5 py-3 backdrop-blur-sm"
+                >
+                  <Icon className="h-4 w-4 text-[color:var(--gold)]" />
+                  <p className="mt-2 text-sm font-semibold text-white">{pillar.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/65">{pillar.text}</p>
+                </motion.div>
+              );
+            })}
+          </div>
+
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/productos"
@@ -114,16 +270,90 @@ export function About() {
         </div>
       </div>
 
-      {/* MARCAS PRINCIPALES */}
+      {/* CIFRAS — efecto de atención */}
+      <div className="relative overflow-hidden border-y border-border/70 bg-[#0c0d12]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 80% at 20% 50%, rgba(201,0,18,0.14), transparent 55%), radial-gradient(ellipse 50% 70% at 80% 40%, rgba(245,158,11,0.08), transparent 50%)",
+          }}
+        />
+        <div className="relative mx-auto grid max-w-6xl grid-cols-2 sm:grid-cols-4">
+          {statsList.map((stat, index) => (
+            <motion.div
+              key={`${stat.value}-${stat.label}`}
+              className={cn(
+                "group relative px-5 py-10 text-center sm:py-12",
+                index > 0 && "border-l border-white/10",
+                index === 2 && "border-t border-white/10 sm:border-t-0",
+                index === 3 && "border-t border-white/10 sm:border-t-0"
+              )}
+              initial={reduce ? false : { opacity: 0, y: 36, scale: 0.88 }}
+              whileInView={
+                reduce
+                  ? undefined
+                  : {
+                      opacity: 1,
+                      y: [36, -14, 0],
+                      scale: [0.88, 1.08, 1],
+                    }
+              }
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{
+                duration: 0.95,
+                delay: 0.12 * index,
+                ease: EASE,
+              }}
+            >
+              <motion.div
+                className="relative"
+                animate={
+                  reduce
+                    ? undefined
+                    : {
+                        y: [0, -5, 0],
+                      }
+                }
+                transition={
+                  reduce
+                    ? undefined
+                    : {
+                        duration: 3.4 + index * 0.4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: 1.1 + index * 0.2,
+                      }
+                }
+                whileHover={reduce ? undefined : { scale: 1.06, y: -4 }}
+              >
+                <span
+                  className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-2xl transition-opacity duration-300 group-hover:opacity-100 sm:h-20 sm:w-20"
+                  aria-hidden
+                />
+                <p className="relative font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl lg:text-5xl">
+                  {stat.value}
+                </p>
+                <p className="relative mt-2 text-xs text-white/60 sm:text-sm">{stat.label}</p>
+              </motion.div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* MARCAS PRINCIPALES — detalle por marca */}
       <div id="marcas" className="relative border-t border-border/60 bg-background">
         <div className="mx-auto max-w-6xl px-5 pb-8 pt-14 sm:px-8 sm:pb-10 sm:pt-16 lg:pt-20">
           <div className="max-w-2xl">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
-              Tres marcas. Una misma operación.
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--gold)]">
+              Marcas de casa
+            </p>
+            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
+              Tres marcas. Una misma exigencia.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Apolo, Overts y Valtrom son el núcleo de nuestro catálogo: lubricantes,
-              fluidos y repuestos con stock y asesoría desde Lima para todo el país.
+              Después del preámbulo, aquí va el detalle: qué aporta cada marca al taller, la flota
+              o el distribuidor — con logos editables desde Admin → Marcas.
             </p>
           </div>
         </div>
@@ -131,7 +361,7 @@ export function About() {
         <div className="space-y-4 px-0 pb-16 sm:space-y-5 sm:px-4 sm:pb-20 lg:px-6">
           {HOUSE_BRANDS.map((brand, index) => {
             const stage = OFFICIAL_BRAND_STAGES[brand.key];
-            const logo = OFFICIAL_BRAND_LOGOS[brand.key];
+            const logo = houseLogos[brand.key];
             const reverse = index % 2 === 1;
 
             return (
@@ -157,13 +387,16 @@ export function About() {
                     }}
                   />
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 sm:p-6">
-                    <Image
-                      src={logo}
-                      alt={brand.name}
-                      width={160}
-                      height={56}
-                      className="h-11 w-auto object-contain drop-shadow-lg sm:h-14"
-                    />
+                    <span className="inline-flex h-14 w-32 items-center justify-center overflow-hidden rounded-xl bg-black/40 p-2 sm:h-16 sm:w-36">
+                      <Image
+                        src={logo}
+                        alt={brand.name}
+                        width={160}
+                        height={64}
+                        className={OFFICIAL_BRAND_LOGO_IMG}
+                        unoptimized={logo.includes("supabase") || logo.startsWith("http")}
+                      />
+                    </span>
                     <span
                       className="rounded-full px-3 py-1 text-[11px] font-semibold text-zinc-950 sm:text-xs"
                       style={{ backgroundColor: brand.accent }}
@@ -174,10 +407,7 @@ export function About() {
                 </div>
 
                 <div className="flex flex-col justify-center px-6 py-9 sm:px-10 sm:py-12 lg:px-14">
-                  <p
-                    className="text-sm font-semibold tracking-wide"
-                    style={{ color: brand.accent }}
-                  >
+                  <p className="text-sm font-semibold tracking-wide" style={{ color: brand.accent }}>
                     {brand.tagline}
                   </p>
                   <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
@@ -201,51 +431,68 @@ export function About() {
         </div>
       </div>
 
-      {/* CIFRAS */}
-      <div className="border-y border-border/70 bg-muted/20">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px bg-border/50 sm:grid-cols-4">
-          {statsList.map((stat) => (
-            <div
-              key={`${stat.value}-${stat.label}`}
-              className="bg-background px-5 py-8 text-center sm:py-10"
-            >
-              <p className="font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
-                {stat.value}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* HISTORIA — auto de fondo */}
+      <div className="relative isolate min-h-[520px] overflow-hidden border-y border-white/5 bg-[#07080b]">
+        <motion.img
+          src="/images/about/historia-auto.jpg"
+          alt=""
+          aria-hidden
+          width={1600}
+          height={900}
+          className="pointer-events-none absolute right-[-18%] top-1/2 h-auto w-[140%] max-w-none select-none object-contain sm:right-[-6%] sm:w-[108%] lg:right-[-2%] lg:w-[78%]"
+          style={{
+            maskImage:
+              "linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%)",
+          }}
+          initial={false}
+          animate={
+            reduce
+              ? { x: 0, y: "-50%" }
+              : { x: [12, -8, 12], y: ["-50%", "-51.5%", "-50%"] }
+          }
+          transition={
+            reduce
+              ? undefined
+              : { duration: 18, repeat: Infinity, ease: "easeInOut" }
+          }
+        />
 
-      {/* HISTORIA + PROPÓSITO */}
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
-        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:items-end">
+        {/* El texto de la izquierda se lee sobre un velo; el auto queda al descubierto a la derecha */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden
+          style={{
+            background:
+              "linear-gradient(90deg, #07080b 0%, rgba(7,8,11,0.9) 24%, rgba(7,8,11,0.42) 46%, rgba(7,8,11,0.08) 68%, rgba(7,8,11,0.22) 100%)",
+          }}
+        />
+
+        <div className="relative z-10 mx-auto grid min-h-[520px] max-w-6xl items-center gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-24">
           <div>
-            <p className="text-sm font-semibold text-[color:var(--gold)]">
-              {content.historySubtitle || "Nuestra historia"}
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--gold)]">
+              {content.historySubtitle || "Nuestra Historia"}
             </p>
-            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+            <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold uppercase tracking-tight text-white text-balance sm:text-4xl lg:text-[2.65rem] lg:leading-[1.05]">
               {content.historyTitle || "Construyendo confianza con el tiempo"}
             </h2>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
               {content.historyDescription}
             </p>
+            {content.description2 ? (
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-white/65">
+                {content.description2}
+              </p>
+            ) : null}
           </div>
+
           {content.highlight ? (
-            <blockquote className="border-l-2 border-primary pl-5 text-lg font-medium leading-snug text-foreground sm:text-xl">
+            <blockquote className="relative max-w-md rounded-2xl border border-white/15 border-l-[3px] border-l-primary bg-black/75 px-5 py-4 text-lg font-semibold leading-snug text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:text-xl lg:mb-2">
               {content.highlight}
             </blockquote>
           ) : null}
         </div>
-
-        {(content.description2 || content.highlight) && content.description2 ? (
-          <p className="mt-10 max-w-3xl text-base leading-relaxed text-foreground/85">
-            {content.description2}
-          </p>
-        ) : null}
       </div>
 
       {/* MISIÓN / VISIÓN */}
@@ -255,19 +502,15 @@ export function About() {
             <div className="relative aspect-[16/10] bg-[#0b0b0d]">
               <Image
                 src={content.misionImage || "/images/about/mision.jpg"}
-                alt="Misión Apolo Lubricantes"
+                alt="Misión Apolo Import"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover object-center"
-                unoptimized={Boolean(
-                  content.misionImage && content.misionImage.startsWith("data:")
-                )}
+                unoptimized={Boolean(content.misionImage && content.misionImage.startsWith("data:"))}
               />
             </div>
             <div className="px-6 py-7 sm:px-8">
-              <p className="text-sm font-semibold text-primary">
-                {content.misionSubtitle || "Misión"}
-              </p>
+              <p className="text-sm font-semibold text-primary">{content.misionSubtitle || "Misión"}</p>
               <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight">
                 {content.misionTitle || "Compromiso con la calidad"}
               </h3>
@@ -281,13 +524,11 @@ export function About() {
             <div className="relative aspect-[16/10] bg-[#0b0b0d]">
               <Image
                 src={content.visionImage || "/images/about/vision.jpg"}
-                alt="Visión Apolo Lubricantes"
+                alt="Visión Apolo Import"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover object-center"
-                unoptimized={Boolean(
-                  content.visionImage && content.visionImage.startsWith("data:")
-                )}
+                unoptimized={Boolean(content.visionImage && content.visionImage.startsWith("data:"))}
               />
             </div>
             <div className="px-6 py-7 sm:px-8">
@@ -313,8 +554,8 @@ export function About() {
               Marcas aliadas
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              Además de nuestras líneas oficiales, distribuimos marcas reconocidas
-              en lubricantes, filtros, refrigerantes y fluidos.
+              Además de nuestras líneas oficiales, distribuimos marcas reconocidas en lubricantes,
+              filtros, refrigerantes y fluidos.
             </p>
           </div>
 
@@ -345,9 +586,7 @@ export function About() {
                         </span>
                       )}
                     </span>
-                    <span className="text-xs font-semibold text-foreground sm:text-sm">
-                      {brand.name}
-                    </span>
+                    <span className="text-xs font-semibold text-foreground sm:text-sm">{brand.name}</span>
                   </Link>
                 </li>
               );
@@ -360,8 +599,7 @@ export function About() {
                 ¿Buscas una marca o presentación?
               </h3>
               <p className="mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-                Filtra el catálogo por marca o escríbenos por WhatsApp para cotizar
-                stock y alternativas.
+                Filtra el catálogo por marca o escríbenos por WhatsApp para cotizar stock y alternativas.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

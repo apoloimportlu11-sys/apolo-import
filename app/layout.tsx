@@ -94,7 +94,7 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: [
       {
-        url: '/images/logo-apolo.png?v=2026-11-23',
+        url: '/images/logo-apolo.jpg?v=2026-11-24',
         width: 512,
         height: 512,
         alt: siteName,
@@ -105,7 +105,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteTitle,
     description: siteDescription,
-    images: ['/images/logo-apolo.png?v=2026-11-23'],
+    images: ['/images/logo-apolo.jpg?v=2026-11-24'],
   },
   robots: {
     index: true,
@@ -171,7 +171,7 @@ export default function RootLayout({
             '@type': 'Organization',
             name: siteName,
             url: siteUrl,
-            logo: `${siteUrl}/images/logo-apolo.png?v=2026-11-23`,
+            logo: `${siteUrl}/images/logo-apolo.jpg?v=2026-11-24`,
             email: 'apoloimportlu11@gmail.com',
             telephone: '+51958400028',
             address: {
@@ -205,3 +205,4 @@ export default function RootLayout({
     </html>
   )
 }
+

@@ -10,6 +10,7 @@ import { useQuote } from "@/lib/quote-context";
 import type { Product } from "@/lib/products-data";
 import {
   getRelatedProductsResult,
+  getStockReplacements,
   normalizeProductKey,
 } from "@/lib/product-related";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ import {
   getOfficialBrandLogo,
   getPresentationVisual,
 } from "@/lib/catalog/display";
+import { productAromas } from "@/lib/catalog/aromas";
 import { presentationsOfProduct } from "@/lib/catalog/presentations";
 import { ProductKnowledge } from "@/components/catalog/product-detail-info";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
@@ -80,15 +82,26 @@ export function ProductDetailBody({
   );
   const related = relatedResult.items;
   const relatedMode = relatedResult.mode;
+  const replacements = useMemo(
+    () => getStockReplacements(product, catalog, compact ? 4 : 3),
+    [product, catalog, compact]
+  );
+  const aromas = useMemo(() => productAromas(product), [product]);
+  const [aroma, setAroma] = useState("");
+  useEffect(() => {
+    setAroma(aromas[0] || "");
+  }, [product.id, aromas]);
 
   const addToQuote = (thenWhatsApp: boolean) => {
     addItem(
       {
-        id: product.id,
-        name: product.name,
+        id: aroma ? `${product.id}::${aroma}` : product.id,
+        name: aroma ? `${product.name} · ${aroma}` : product.name,
         brand: product.brand || "Apolo",
         line: product.line,
-        presentation: selected?.label || product.presentation || "Estándar",
+        presentation: [selected?.label || product.presentation || "Estándar", aroma]
+          .filter(Boolean)
+          .join(" · "),
         presentationId: selected && !selected.virtual ? selected.id : undefined,
         image: selectedImage,
         viscosity: product.viscosity,
@@ -114,6 +127,10 @@ export function ProductDetailBody({
     stock: product.stock,
     stockMin: product.stockMin,
   });
+  const outOfStock = selectedLevel === "out" || productLevel === "out";
+  const railItems = outOfStock && replacements.length > 0 ? replacements : related;
+  const railMode =
+    outOfStock && replacements.length > 0 ? "cross-brand" : relatedMode;
   const availability = stockLabel(selectedLevel);
   const offerLabel = [availability, selected?.sku ? `SKU ${selected.sku}` : null]
     .filter(Boolean)
@@ -143,25 +160,51 @@ export function ProductDetailBody({
       })}
     </div>
   );
+  const aromaChoices =
+    aromas.length > 0 ? (
+      <div className="mt-2.5">
+        <p className="mb-1.5 text-[11px] text-muted-foreground">Sabor</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {aromas.map((item) => {
+            const active = item === aroma;
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setAroma(item)}
+                aria-pressed={active}
+                className={
+                  active
+                    ? "flex min-h-10 items-center justify-center rounded-lg border border-[color:color-mix(in_oklab,var(--gold)_55%,transparent)] bg-[color:var(--gold-soft)] px-2 py-1.5 text-center text-xs font-semibold leading-tight text-foreground"
+                    : "flex min-h-10 items-center justify-center rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-center text-xs font-medium leading-tight text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                }
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
 
   if (compact) {
     const relatedRail =
-      related.length > 0 ? (
+      railItems.length > 0 ? (
         <aside
           className="flex min-h-0 min-w-0 flex-col border-t border-border/70 bg-card lg:order-1 lg:border-t-0 lg:border-b-0 lg:border-r lg:border-border/60"
           data-catalog-related="true"
-          data-related-mode={relatedMode}
+          data-related-mode={railMode}
         >
           <p className="shrink-0 px-2.5 pb-1.5 pt-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground lg:pt-3">
-            {relatedMode === "cross-brand"
-              ? "Otras marcas"
+            {railMode === "cross-brand"
+              ? "Reemplazar por"
               : `También de ${product.brand}`}
           </p>
           <div className="custom-scrollbar flex min-h-0 flex-1 flex-row gap-2 overflow-x-auto px-2.5 pb-3 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-3">
-            {related.map((item) => {
+            {railItems.map((item) => {
               const tone = getBrandChipVisual(item.brand);
               const logo =
-                relatedMode === "cross-brand"
+                railMode === "cross-brand"
                   ? getOfficialBrandLogo(item.brand)
                   : null;
               const imageOk = hasValidImage(item.image);
@@ -169,7 +212,7 @@ export function ProductDetailBody({
                 normalizeProductKey(item.name) ===
                 normalizeProductKey(product.name);
               const primaryLabel =
-                relatedMode === "cross-brand"
+                railMode === "cross-brand"
                   ? item.brand || item.name
                   : item.name;
               const secondaryLabel =
@@ -181,14 +224,14 @@ export function ProductDetailBody({
                   onClick={() => onSelectProduct?.(item)}
                   className={cn(
                     "w-[7.25rem] shrink-0 rounded-lg border bg-background p-2 text-left transition-colors duration-200 hover:border-primary/40 lg:w-full",
-                    relatedMode === "same-brand" && isSibling
+                    railMode === "same-brand" && isSibling
                       ? "border-[color:color-mix(in_oklab,var(--gold)_50%,transparent)]"
                       : "border-border"
                   )}
                   title={[primaryLabel, secondaryLabel].filter(Boolean).join(" · ")}
                 >
                   <div className="relative mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md bg-muted/40 px-1">
-                    {relatedMode === "cross-brand" && logo ? (
+                    {railMode === "cross-brand" && logo ? (
                       <Image
                         src={logo}
                         alt=""
@@ -196,7 +239,7 @@ export function ProductDetailBody({
                         height={32}
                         className="h-7 w-auto object-contain"
                       />
-                    ) : relatedMode === "cross-brand" ? (
+                    ) : railMode === "cross-brand" ? (
                       <span
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: tone.accent }}
@@ -236,7 +279,7 @@ export function ProductDetailBody({
         <div
           className={cn(
             "grid min-h-0 flex-1",
-            related.length > 0
+            railItems.length > 0
               ? "grid-rows-[auto_minmax(0,1fr)_auto] lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[7.75rem_minmax(220px,34%)_1fr]"
               : "grid-rows-[auto_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[minmax(240px,38%)_1fr]"
           )}
@@ -279,8 +322,54 @@ export function ProductDetailBody({
               <div className="mt-3">
                 <p className="mb-1.5 text-[11px] text-muted-foreground">Presentación</p>
                 {presentationChoices}
+                {aromaChoices}
                 <p className="mt-2 text-xs font-medium text-foreground">{offerLabel}</p>
                 <StockStatusBadge level={selectedLevel} variant="banner" className="mt-2.5" />
+                {selectedLevel === "out" && replacements.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      Misma línea en otra marca
+                    </p>
+                    {replacements.map((item) => {
+                      const logo = getOfficialBrandLogo(item.brand);
+                      const tone = getBrandChipVisual(item.brand);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => onSelectProduct?.(item)}
+                          className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-2.5 py-2 text-left transition-colors hover:border-primary/40"
+                        >
+                          <span className="flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white p-1">
+                            {logo ? (
+                              <Image
+                                src={logo}
+                                alt={item.brand || ""}
+                                width={64}
+                                height={28}
+                                className="h-full w-full object-contain"
+                              />
+                            ) : (
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: tone.accent }}
+                              />
+                            )}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-semibold text-foreground">
+                              Reemplazar por {item.brand}
+                            </span>
+                            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                              {item.name}
+                              {item.presentation ? ` · ${item.presentation}` : ""}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -362,6 +451,7 @@ export function ProductDetailBody({
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Presentación</p>
             {presentationChoices}
+            {aromaChoices}
             <p className="text-sm font-medium">{offerLabel}</p>
             <StockStatusBadge level={selectedLevel !== "ok" ? selectedLevel : productLevel} variant="banner" />
           </div>
