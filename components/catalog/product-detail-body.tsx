@@ -87,16 +87,24 @@ export function ProductDetailBody({
     [product, catalog, compact]
   );
   const aromas = useMemo(() => productAromas(product), [product]);
-  const [aroma, setAroma] = useState("");
+  const [aroma, setAroma] = useState(product.aroma || "");
   useEffect(() => {
-    setAroma(aromas[0] || "");
-  }, [product.id, aromas]);
+    setAroma(product.aroma || aromas[0] || "");
+  }, [product.id, product.aroma, aromas]);
 
   const addToQuote = (thenWhatsApp: boolean) => {
+    const alreadyLabeled = Boolean(product.aroma && product.name.includes(product.aroma));
     addItem(
       {
-        id: aroma ? `${product.id}::${aroma}` : product.id,
-        name: aroma ? `${product.name} · ${aroma}` : product.name,
+        id: product.id.includes("::")
+          ? product.id
+          : aroma
+            ? `${product.id}::${aroma}`
+            : product.id,
+        name:
+          alreadyLabeled || !aroma
+            ? product.name
+            : `${product.name} · ${aroma}`,
         brand: product.brand || "Apolo",
         line: product.line,
         presentation: [selected?.label || product.presentation || "Estándar", aroma]
@@ -161,7 +169,7 @@ export function ProductDetailBody({
     </div>
   );
   const aromaChoices =
-    aromas.length > 0 ? (
+    aromas.length > 1 ? (
       <div className="mt-2.5">
         <p className="mb-1.5 text-[11px] text-muted-foreground">Sabor</p>
         <div className="grid grid-cols-2 gap-1.5">

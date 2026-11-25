@@ -38,6 +38,7 @@ import { CatalogToolbar } from "@/components/catalog/catalog-toolbar";
 import { CatalogFiltersSidebar } from "@/components/catalog/catalog-filters-sidebar";
 import { ProductQuickView } from "@/components/catalog/product-quick-view";
 import { scrollCatalogIntoView } from "@/lib/lenis-lock";
+import { expandCatalogProductsByAroma } from "@/lib/catalog/aromas";
 import { filterAndSortCatalogProducts, sliceCatalogPage } from "@/lib/catalog/filter-products";
 
 import {
@@ -448,7 +449,7 @@ export function Products({
       }
     });
 
-    return merged;
+    return expandCatalogProductsByAroma(merged);
   }, [dbProducts, mounted, catalogStatus, dbInactiveKeys, adminCacheVersion]);
 
   // Solo marcas de la tabla `brands` (admin). No inventar marcas desde product.brand.

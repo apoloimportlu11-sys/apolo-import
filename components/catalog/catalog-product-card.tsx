@@ -28,7 +28,6 @@ import {
   presentationRangeLabel,
   presentationsOfProduct,
 } from "@/lib/catalog/presentations";
-import { productAromas } from "@/lib/catalog/aromas";
 import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
 import { stockLevel } from "@/lib/catalog/stock-status";
@@ -79,7 +78,6 @@ function CatalogProductCardInner({
   const packOptions = presentationsOfProduct(product);
   const primaryPack = activePresentations(packOptions)[0];
   const packRange = presentationRangeLabel(packOptions, product.presentation);
-  const aromas = productAromas(product);
   const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
   const imageScale = cardImageScale(product.presentation);
   const tone = getBrandChipVisual(product.brand);
@@ -106,13 +104,14 @@ function CatalogProductCardInner({
         setUnavailableOpen(true);
         return;
       }
+      const pack = primaryPack?.label || product.presentation || "Estándar";
       addItem(
         {
           id: product.id,
           name: product.name,
           brand: product.brand || "Apolo",
           line: lineLabel || product.line,
-          presentation: primaryPack?.label || product.presentation || "Estándar",
+          presentation: product.aroma ? `${pack} · ${product.aroma}` : pack,
           presentationId:
             primaryPack && !primaryPack.virtual ? primaryPack.id : undefined,
           image: product.image,
@@ -126,13 +125,14 @@ function CatalogProductCardInner({
   );
 
   const confirmConsult = useCallback(() => {
+    const pack = primaryPack?.label || product.presentation || "Estándar";
     addItem(
       {
         id: product.id,
         name: product.name,
         brand: product.brand || "Apolo",
         line: lineLabel || product.line,
-        presentation: primaryPack?.label || product.presentation || "Estándar",
+        presentation: product.aroma ? `${pack} · ${product.aroma}` : pack,
         presentationId: primaryPack && !primaryPack.virtual ? primaryPack.id : undefined,
         image: product.image,
         viscosity: product.viscosity,
@@ -332,7 +332,6 @@ function CatalogProductCardInner({
                 {packRange ? (
                   <p className="mt-1 truncate text-xs text-muted-foreground">{packRange}</p>
                 ) : null}
-                {aromas.length > 0 ? <AromaBoxes aromas={aromas} /> : null}
                 {(product.type || product.description) ? (
                   <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted-foreground">
                     {product.type || product.description}
@@ -451,7 +450,6 @@ function CatalogProductCardInner({
             {packRange ? (
               <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{packRange}</p>
             ) : null}
-            {aromas.length > 0 ? <AromaBoxes aromas={aromas} /> : null}
             {(product.type || product.description) ? (
               <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
                 {product.type || product.description}
@@ -489,21 +487,6 @@ function CatalogProductCardInner({
     </article>
     {unavailableDialog}
     </>
-  );
-}
-
-function AromaBoxes({ aromas }: { aromas: string[] }) {
-  return (
-    <div className="mt-1.5 grid grid-cols-2 gap-1">
-      {aromas.map((aroma) => (
-        <span
-          key={aroma}
-          className="flex min-h-8 items-center justify-center rounded-lg border border-border bg-muted/70 px-1.5 py-1 text-center text-[10px] font-semibold leading-tight text-foreground"
-        >
-          {aroma}
-        </span>
-      ))}
-    </div>
   );
 }
 

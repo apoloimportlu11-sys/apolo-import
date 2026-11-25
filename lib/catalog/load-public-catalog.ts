@@ -1,3 +1,4 @@
+import { expandCatalogProductsByAroma } from "@/lib/catalog/aromas";
 import { mapRowToProduct } from "@/lib/catalog/map-product";
 import type { Product } from "@/lib/products-data";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase-env";
@@ -73,7 +74,7 @@ export async function loadPublicCatalog(): Promise<Product[]> {
     rows = await restGet<Record<string, unknown>>(`products?${params}`);
   }
   if (!rows) return [];
-  return rows.map((row) => mapRowToProduct(row));
+  return expandCatalogProductsByAroma(rows.map((row) => mapRowToProduct(row)));
 }
 
 /** Marcas activas para los filtros, en el mismo orden comercial. */

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { realtimeBus } from "@/lib/realtime-bus";
 import type { Product } from "@/lib/products-data";
+import { expandCatalogProductsByAroma } from "@/lib/catalog/aromas";
 import { mapRowToProduct } from "@/lib/catalog/map-product";
 import {
   ADMIN_DELETED_PRODUCTS_KEY,
@@ -21,16 +22,21 @@ const PRODUCT_SELECT_EXTENDED = `${PRODUCT_SELECT}, price, family, attributes, c
 /**
  * Carga el catálogo público desde Supabase + suscripciones realtime/cache.
  */
+function asCatalogProducts(rows: Product[]) {
+  return expandCatalogProductsByAroma(rows);
+}
+
 export function usePublicCatalog(initialProducts: Product[] = []) {
   const supabase = createBrowserSupabase();
-  const [dbProducts, setDbProducts] = useState<Product[]>(initialProducts);
+  const seeded = asCatalogProducts(initialProducts);
+  const [dbProducts, setDbProducts] = useState<Product[]>(seeded);
   const [dbInactiveKeys] = useState<string[]>([]);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>(
-    initialProducts.length > 0 ? "ready" : "loading"
+    seeded.length > 0 ? "ready" : "loading"
   );
   const [adminCacheVersion, setAdminCacheVersion] = useState(0);
   const hasWarnedFetchError = useRef(false);
-  const lastGoodSupabaseProducts = useRef<Product[]>(initialProducts);
+  const lastGoodSupabaseProducts = useRef<Product[]>(seeded);
 
   const fetchDbProducts = useCallback(async () => {
     const hadProducts = lastGoodSupabaseProducts.current.length > 0;
@@ -61,7 +67,9 @@ export function usePublicCatalog(initialProducts: Product[] = []) {
       }
       if (error) throw error;
 
-      lastGoodSupabaseProducts.current = (data || []).map((row) => mapRowToProduct(row));
+      lastGoodSupabaseProducts.current = asCatalogProducts(
+        (data || []).map((row) => mapRowToProduct(row))
+      );
       setCatalogStatus("ready");
     } catch (e) {
       console.error("Error fetching db products:", e);

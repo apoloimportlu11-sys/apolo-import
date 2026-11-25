@@ -23,13 +23,16 @@ function aromaKey(value: string) {
     .replace(/\s+/g, " ");
 }
 
+function aromaSlug(value: string) {
+  return aromaKey(value).replace(/\s+/g, "-");
+}
+
 function isDashboardSilicone(name?: string | null) {
   const text = aromaKey(name || "");
   return text.includes("silicona") && text.includes("tablero");
 }
 
-/** Un recuadro por aroma. D&G se muestra como Dolce Gabbana. */
-export function productAromas(product: Pick<Product, "name" | "aroma" | "attributes">): string[] {
+function parseAromaLabels(product: Pick<Product, "name" | "aroma" | "attributes">): string[] {
   const raw = [product.aroma, product.attributes?.aroma, product.attributes?.sabor]
     .filter(Boolean)
     .join(" · ");
@@ -46,7 +49,68 @@ export function productAromas(product: Pick<Product, "name" | "aroma" | "attribu
     labels.push(label);
   }
 
-  if (labels.length > 0) return labels;
+  return labels;
+}
+
+/** Aromas declarados en el producto (sin inventar la lista de siliconas). */
+export function productAromas(product: Pick<Product, "name" | "aroma" | "attributes">): string[] {
+  return parseAromaLabels(product);
+}
+
+function aromasForExpansion(product: Pick<Product, "name" | "aroma" | "attributes">): string[] {
+  const fromFields = parseAromaLabels(product);
+  if (fromFields.length > 0) return fromFields;
   if (isDashboardSilicone(product.name)) return [...DASHBOARD_SILICONE_AROMAS];
   return [];
+}
+
+function baseProductId(id: string) {
+  const idx = id.indexOf("::");
+  return idx === -1 ? id : id.slice(0, idx);
+}
+
+function baseProductName(name: string) {
+  return name.replace(/\s*[·•]\s*(Fresa|Chicle|Dolce Gabbana|New Car)\s*$/i, "").trim();
+}
+
+function withSingleAroma(product: Product, aroma: string): Product {
+  const baseId = baseProductId(product.id);
+  const baseName = baseProductName(product.name);
+  return {
+    ...product,
+    id: `${baseId}::${aromaSlug(aroma)}`,
+    name: `${baseName} · ${aroma}`,
+    aroma,
+    attributes: {
+      ...(product.attributes || {}),
+      aroma,
+    },
+  };
+}
+
+/**
+ * Un producto por sabor: siliconas de tablero (o ítems con varios aromas)
+ * dejan de mostrarse como una sola tarjeta con recuadros.
+ */
+export function expandCatalogProductsByAroma(products: Product[]): Product[] {
+  const out: Product[] = [];
+
+  for (const product of products) {
+    if (product.id.includes("::") && parseAromaLabels(product).length === 1) {
+      out.push(product);
+      continue;
+    }
+
+    const aromas = aromasForExpansion(product);
+    if (aromas.length <= 1) {
+      out.push(product);
+      continue;
+    }
+
+    for (const aroma of aromas) {
+      out.push(withSingleAroma(product, aroma));
+    }
+  }
+
+  return out;
 }
