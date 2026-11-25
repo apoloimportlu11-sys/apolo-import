@@ -26,9 +26,8 @@ yarn-error.log*
 .env
 .env.local*
 
-# generated catalog import dump (source of truth: Excel en datos/)
-/datos/multimarcas-2026-parsed.json
-
+# local import dumps (DB lives in Supabase)
+/datos/
 
 # vercel
 .vercel
@@ -37,9 +36,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# playwright
+# test artifacts
 /test-results/
-/e2e/screenshots/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
