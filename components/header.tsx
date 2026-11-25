@@ -7,7 +7,6 @@ import {
   Menu,
   Search,
   ChevronDown,
-  User,
   Sun,
   Moon,
   FileText,
@@ -17,7 +16,6 @@ import Image from "next/image";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import LoginModal from "@/components/LoginModal";
 import { useQuote } from "@/lib/quote-context";
 import FestiveTopBanner from "@/components/FestiveTopBanner";
 import { useProductLineGroups } from "@/lib/product-line-groups";
@@ -40,7 +38,6 @@ export function Header() {
   const currentTheme = mounted ? resolvedTheme || theme || "dark" : "dark";
   const isDark = currentTheme === "dark";
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showMegaMenu, setShowMegaMenu] = useState(false);
   const { lineGroups } = useProductLineGroups();
   const activeLineGroups = lineGroups
@@ -240,17 +237,6 @@ export function Header() {
               </Button>
               <Button
                 type="button"
-                onClick={() => setIsLoginModalOpen(true)}
-                variant="outline"
-                size="sm"
-                className="h-10 shrink-0 cursor-pointer rounded-full border-border bg-white/70 px-3 text-zinc-800 hover:border-zinc-400 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:border-white/30 dark:hover:bg-white/10"
-                aria-label="Ingresar"
-              >
-                <User className="h-4 w-4" />
-                <span className="sr-only">Ingresar</span>
-              </Button>
-              <Button
-                type="button"
                 onClick={() => setTheme(isDark ? "light" : "dark")}
                 variant="outline"
                 size="icon"
@@ -354,35 +340,23 @@ export function Header() {
                           )}
                         </button>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsOpen(false);
-                              setIsLoginModalOpen(true);
-                            }}
-                            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold transition-all hover:border-primary hover:bg-primary hover:text-white sm:text-sm"
-                          >
-                            <User className="h-4 w-4" />
-                            <span>Ingresar</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTheme(isDark ? "light" : "dark")}
-                            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-card transition-all hover:border-primary hover:bg-primary hover:text-white"
-                            aria-label={
-                              isDark
-                                ? "Cambiar a modo claro"
-                                : "Cambiar a modo oscuro"
-                            }
-                          >
-                            {isDark ? (
-                              <Sun className="h-4 w-4 text-amber-500" />
-                            ) : (
-                              <Moon className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setTheme(isDark ? "light" : "dark")}
+                          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold transition-all hover:border-primary hover:bg-primary hover:text-white sm:text-sm"
+                          aria-label={
+                            isDark
+                              ? "Cambiar a modo claro"
+                              : "Cambiar a modo oscuro"
+                          }
+                        >
+                          {isDark ? (
+                            <Sun className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <Moon className="h-4 w-4" />
+                          )}
+                          <span>{isDark ? "Modo claro" : "Modo oscuro"}</span>
+                        </button>
                       </div>
 
                       <nav className="flex flex-col px-2">
@@ -568,11 +542,6 @@ export function Header() {
             </div>
           </div>
         )}
-
-        <LoginModal
-          isOpen={isLoginModalOpen}
-          onClose={() => setIsLoginModalOpen(false)}
-        />
       </header>
     </>
   );
