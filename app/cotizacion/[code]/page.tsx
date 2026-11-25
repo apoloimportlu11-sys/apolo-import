@@ -120,7 +120,7 @@ export default async function CotizacionPublicPage({
       <div className="site-container mx-auto max-w-xl space-y-5">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo-apolo.png?v=2026-11-25-pdf" alt={business} className="h-12 w-auto" />
+          <img src="/images/logo-apolo.png?v=2026-11-25-lg" alt={business} className="h-12 w-auto" />
           <div>
             <p className="text-sm font-semibold">{business}</p>
             <p className="text-xs text-muted-foreground">Detalle de tu pedido</p>

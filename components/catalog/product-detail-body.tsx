@@ -16,7 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   getBrandChipVisual,
-  getOfficialBrandLogo,
   getPresentationVisual,
 } from "@/lib/catalog/display";
 import { productAromas } from "@/lib/catalog/aromas";
@@ -24,6 +23,7 @@ import { presentationsOfProduct } from "@/lib/catalog/presentations";
 import { ProductKnowledge } from "@/components/catalog/product-detail-info";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
 import { stockLabel, stockLevel } from "@/lib/catalog/stock-status";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 
 type ProductDetailBodyProps = {
   product: Product;
@@ -54,6 +54,7 @@ export function ProductDetailBody({
   compact = false,
 }: ProductDetailBodyProps) {
   const { addItem, openDrawer } = useQuote();
+  const { getLogo } = useHouseBrandLogos();
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const options = useMemo(() => presentationsOfProduct(product), [product]);
@@ -213,7 +214,7 @@ export function ProductDetailBody({
               const tone = getBrandChipVisual(item.brand);
               const logo =
                 railMode === "cross-brand"
-                  ? getOfficialBrandLogo(item.brand)
+                  ? getLogo(item.brand)
                   : null;
               const imageOk = hasValidImage(item.image);
               const isSibling =
@@ -339,7 +340,7 @@ export function ProductDetailBody({
                       Misma línea en otra marca
                     </p>
                     {replacements.map((item) => {
-                      const logo = getOfficialBrandLogo(item.brand);
+                      const logo = getLogo(item.brand);
                       const tone = getBrandChipVisual(item.brand);
                       return (
                         <button
@@ -572,7 +573,7 @@ export function ProductDetailBody({
               const tone = getBrandChipVisual(item.brand);
               const logo =
                 relatedMode === "cross-brand"
-                  ? getOfficialBrandLogo(item.brand)
+                  ? getLogo(item.brand)
                   : null;
               const isSibling =
                 normalizeProductKey(item.name) === normalizeProductKey(product.name);

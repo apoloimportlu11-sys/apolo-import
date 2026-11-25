@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useNosotrosContent } from "@/lib/nosotros-data";
 import { CANONICAL_BRANDS } from "@/lib/catalog/canonical-brands";
 import {
-  OFFICIAL_BRAND_LOGO_IMG,
+  OFFICIAL_BRAND_LOGO_IMG_BY_KEY,
   OFFICIAL_BRAND_STAGES,
   getBrandChipVisual,
 } from "@/lib/catalog/display";
@@ -217,7 +217,7 @@ export function About() {
                       alt={brand.name}
                       width={140}
                       height={56}
-                      className={cn(OFFICIAL_BRAND_LOGO_IMG, "relative z-[1] max-h-10 sm:max-h-12")}
+                      className={cn(OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key], "relative z-[1] max-h-12 sm:max-h-14")}
                       unoptimized
                     />
                   </motion.span>
@@ -390,7 +390,7 @@ export function About() {
                         alt={brand.name}
                         width={160}
                         height={64}
-                        className={OFFICIAL_BRAND_LOGO_IMG}
+                        className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
                         unoptimized
                       />
                     </span>

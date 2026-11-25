@@ -44,7 +44,6 @@ import { filterAndSortCatalogProducts, sliceCatalogPage } from "@/lib/catalog/fi
 import {
   brandEquals,
   getBrandChipVisual,
-  getOfficialBrandLogo,
   isOfficialBrand,
   normalizeViscosityLabel,
   OFFICIAL_BRANDS,
@@ -62,6 +61,7 @@ import {
 } from "@/lib/catalog/deleted-keys";
 import { usePublicCatalog } from "@/hooks/use-public-catalog";
 import { usePublicBrands, type PublicBrand } from "@/hooks/use-public-brands";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 
 export function Products({
   initialProducts = [],
@@ -72,6 +72,7 @@ export function Products({
 }) {
   const searchParams = useSearchParams();
   const { lineGroupsById } = useProductLineGroups();
+  const { getLogo } = useHouseBrandLogos();
   const {
     dbProducts,
     dbInactiveKeys,
@@ -1542,7 +1543,7 @@ export function Products({
     !searchQuery.trim() &&
     selectedLines.length === 0 &&
     selectedBrands.length === 1
-      ? getOfficialBrandLogo(selectedBrands[0])
+      ? getLogo(selectedBrands[0])
       : null;
 
   return (

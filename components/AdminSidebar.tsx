@@ -139,7 +139,7 @@ export default function AdminSidebar({
           aria-label="Apolo, ir al dashboard"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo-apolo.png?v=2026-11-25-pdf" alt="" className="h-12 w-12 shrink-0 object-contain" />
+          <img src="/images/logo-apolo.png?v=2026-11-25-lg" alt="" className="h-12 w-12 shrink-0 object-contain" />
           {!compact && (
             <span className="min-w-0">
               <span className="block font-heading text-sm font-semibold leading-tight text-[var(--admin-ink)]">Apolo</span>

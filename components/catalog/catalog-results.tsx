@@ -10,9 +10,9 @@ import {
 } from "@/components/catalog/catalog-product-card";
 import {
   getBrandChipVisual,
-  getOfficialBrandLogo,
   isOfficialBrand,
 } from "@/lib/catalog/display";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import Image from "next/image";
 
 export type BrandGroup = {
@@ -47,6 +47,7 @@ export function CatalogResults({
   onClearFilters,
   selectedBrand,
 }: CatalogResultsProps) {
+  const { getLogo } = useHouseBrandLogos();
   if (loading) {
     return (
       <div
@@ -69,7 +70,7 @@ export function CatalogResults({
 
   if (!hasProducts) {
     const officialEmpty = selectedBrand && isOfficialBrand(selectedBrand);
-    const logo = officialEmpty ? getOfficialBrandLogo(selectedBrand) : null;
+    const logo = officialEmpty ? getLogo(selectedBrand) : null;
     return (
       <div className="card-surface px-6 py-16 text-center">
         <div className="mx-auto max-w-md space-y-4">
@@ -107,7 +108,7 @@ export function CatalogResults({
       <div className="space-y-10">
         {productsGroupedByBrand.map((group) => {
           const tone = getBrandChipVisual(group.brand);
-          const logo = getOfficialBrandLogo(group.brand);
+          const logo = getLogo(group.brand);
           const isEmptyOfficial =
             group.products.length === 0 && isOfficialBrand(group.brand);
 
@@ -191,7 +192,7 @@ export function CatalogResults({
   }
 
   const selectedTone = selectedBrand ? getBrandChipVisual(selectedBrand) : null;
-  const selectedLogo = selectedBrand ? getOfficialBrandLogo(selectedBrand) : null;
+  const selectedLogo = selectedBrand ? getLogo(selectedBrand) : null;
   const pageCount = lineGroups.reduce((sum, group) => sum + group.products.length, 0);
 
   return (

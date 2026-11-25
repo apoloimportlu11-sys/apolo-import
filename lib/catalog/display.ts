@@ -8,13 +8,12 @@ export type OfficialBrandKey = (typeof OFFICIAL_BRANDS)[number];
 
 /**
  * Respaldo local si Admin → Marcas aún no tiene logo_url.
- * En runtime preferimos el logo editable de Supabase (`brands.logo_url`).
+ * En runtime se prefieren los logos subidos en Admin → Marcas (`brands.logo_url`).
  */
-/** Logos de casa extraídos del PDF oficial; siempre locales en /public. */
 export const OFFICIAL_BRAND_LOGOS: Record<OfficialBrandKey, string> = {
-  apolo: "/images/logo-apolo.png?v=2026-11-25-pdf",
-  overts: "/images/logo-overts.png?v=2026-11-25-pdf",
-  valtrom: "/images/logo-valtrom.png?v=2026-11-25-valtrom",
+  apolo: "/images/logo-apolo.png?v=2026-11-25-lg",
+  overts: "/images/logo-overts.png?v=2026-11-25-lg",
+  valtrom: "/images/logo-valtrom.png?v=2026-11-25-lg",
 };
 
 /** Rutas locales viejas (PNG borrados) → JPG oficiales. */
@@ -53,12 +52,23 @@ export function sanitizeOfficialBrandLogoUrl(
   return raw;
 }
 
-/** Caja fija para que las 3 marcas midan igual. */
+/** Caja cuadrada idéntica para Apolo / Overts / Valtrom. */
 export const OFFICIAL_BRAND_LOGO_BOX =
-  "inline-flex h-14 w-[7.5rem] shrink-0 items-center justify-center overflow-hidden sm:h-16 sm:w-32";
+  "inline-flex aspect-square h-[4.75rem] w-[4.75rem] shrink-0 items-center justify-center overflow-visible sm:h-[5.25rem] sm:w-[5.25rem] lg:h-[5.75rem] lg:w-[5.75rem]";
+
+/** Variante compacta (header al hacer scroll). */
+export const OFFICIAL_BRAND_LOGO_BOX_COMPACT =
+  "inline-flex aspect-square h-14 w-14 shrink-0 items-center justify-center overflow-visible sm:h-16 sm:w-16";
 
 export const OFFICIAL_BRAND_LOGO_IMG =
-  "h-full w-full object-contain object-center";
+  "h-[98%] w-[98%] object-contain object-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.28)]";
+
+/** Valtrom es más ancho: escala extra para igualar presencia visual. */
+export const OFFICIAL_BRAND_LOGO_IMG_BY_KEY: Record<OfficialBrandKey, string> = {
+  apolo: OFFICIAL_BRAND_LOGO_IMG,
+  overts: OFFICIAL_BRAND_LOGO_IMG,
+  valtrom: `${OFFICIAL_BRAND_LOGO_IMG} scale-[1.32]`,
+};
 
 /** Fondos de escena (marca de agua + esquinas) para priorizar Apolo / Overts / Valtrom. */
 export const OFFICIAL_BRAND_STAGES: Record<OfficialBrandKey, string> = {
@@ -99,13 +109,15 @@ export function officialBrandRank(brand?: string | null): number {
  */
 export function resolveOfficialBrandLogo(
   brand?: string | null,
-  _liveLogos?: Partial<Record<string, string | null | undefined>>
+  liveLogos?: Partial<Record<string, string | null | undefined>>
 ): string | null {
   const key = matchOfficialBrand(brand);
   if (!key) return null;
-  // Apolo / Overts / Valtrom siempre usan los PNG locales del repo
-  // para que no dependan de logo_url rotos en Admin → Marcas.
-  return OFFICIAL_BRAND_LOGOS[key] ?? null;
+  const fromAdmin =
+    liveLogos?.[key] ??
+    liveLogos?.[brand || ""] ??
+    null;
+  return sanitizeOfficialBrandLogoUrl(key, fromAdmin);
 }
 
 /** Respaldo estático (sin admin). Preferir `resolveOfficialBrandLogo` + hook en cliente. */

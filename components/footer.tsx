@@ -8,7 +8,7 @@ import { LightAtmosphere } from "@/components/home/light-atmosphere";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import {
   OFFICIAL_BRAND_LOGO_BOX,
-  OFFICIAL_BRAND_LOGO_IMG,
+  OFFICIAL_BRAND_LOGO_IMG_BY_KEY,
 } from "@/lib/catalog/display";
 
 const footerLinks = {
@@ -121,10 +121,10 @@ export function Footer() {
                       src={brand.logo}
                       alt={brand.name}
                       width={160}
-                      height={96}
+                      height={160}
                       loading="lazy"
                       unoptimized
-                      className={OFFICIAL_BRAND_LOGO_IMG}
+                      className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
                     />
                   </Link>
                 ))}
@@ -138,10 +138,10 @@ export function Footer() {
                   src={houseBrands[2].logo}
                   alt={houseBrands[2].name}
                   width={160}
-                  height={96}
+                  height={160}
                   loading="lazy"
                   unoptimized
-                  className={OFFICIAL_BRAND_LOGO_IMG}
+                  className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY.valtrom}
                 />
               </Link>
             </div>

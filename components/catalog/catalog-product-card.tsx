@@ -20,7 +20,6 @@ import {
   cardImageScale,
   formatViscosityBadge,
   getBrandChipVisual,
-  getOfficialBrandLogo,
   getPresentationVisual,
 } from "@/lib/catalog/display";
 import {
@@ -31,6 +30,7 @@ import {
 import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
 import { stockLevel } from "@/lib/catalog/stock-status";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import { cn } from "@/lib/utils";
 
 export type CatalogViewMode = "grid" | "grid5" | "list";
@@ -63,6 +63,7 @@ function CatalogProductCardInner({
   onOpenQuickView,
 }: CatalogProductCardProps) {
   const { addItem, items, openDrawer } = useQuote();
+  const { getLogo } = useHouseBrandLogos();
   // Evita mismatch SSR/cliente: la cotización vive en localStorage y puede
   // hidratarse en el layout antes que estas tarjetas.
   const [quoteReady, setQuoteReady] = useState(false);
@@ -81,7 +82,7 @@ function CatalogProductCardInner({
   const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
   const imageScale = cardImageScale(product.presentation);
   const tone = getBrandChipVisual(product.brand);
-  const brandLogo = getOfficialBrandLogo(product.brand);
+  const brandLogo = getLogo(product.brand);
   const brandName = product.brand || "Apolo";
   const lineLabel = getProductLineCategory(product, lineGroupsById);
   const level = stockLevel({

@@ -20,7 +20,11 @@ import { useQuote } from "@/lib/quote-context";
 import FestiveTopBanner from "@/components/FestiveTopBanner";
 import { useProductLineGroups } from "@/lib/product-line-groups";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
-import { OFFICIAL_BRAND_LOGO_IMG } from "@/lib/catalog/display";
+import {
+  OFFICIAL_BRAND_LOGO_BOX,
+  OFFICIAL_BRAND_LOGO_BOX_COMPACT,
+  OFFICIAL_BRAND_LOGO_IMG_BY_KEY,
+} from "@/lib/catalog/display";
 import { cn } from "@/lib/utils";
 
 const HEADER_BRANDS = [
@@ -107,10 +111,8 @@ export function Header() {
 
   const compact = mounted && scrolled;
   const brandBoxClass = cn(
-    "inline-flex shrink-0 items-center justify-center overflow-hidden transition-[height,width,opacity] duration-500 hover:opacity-90",
-    compact
-      ? "h-10 w-[5.75rem] sm:h-11 sm:w-[6.5rem]"
-      : "h-11 w-[6.5rem] sm:h-14 sm:w-[7.75rem] lg:h-16 lg:w-[8.5rem]"
+    "transition-[height,width,opacity] duration-500 hover:opacity-90",
+    compact ? OFFICIAL_BRAND_LOGO_BOX_COMPACT : OFFICIAL_BRAND_LOGO_BOX
   );
 
   return (
@@ -147,11 +149,11 @@ export function Header() {
                     <Image
                       src={houseLogos[brand.key]}
                       alt={brand.name}
-                      width={200}
-                      height={120}
+                      width={160}
+                      height={160}
                       priority={brand.key === "apolo"}
                       unoptimized
-                      className={OFFICIAL_BRAND_LOGO_IMG}
+                      className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
                     />
                   </Link>
                 </div>
@@ -296,14 +298,14 @@ export function Header() {
                       {HEADER_BRANDS.map((brand, index) => (
                         <div key={brand.key} className="flex items-center gap-2">
                           {index > 0 ? <span className="h-7 w-px bg-border" aria-hidden /> : null}
-                          <span className="inline-flex h-10 w-[5.5rem] items-center justify-center overflow-hidden">
+                          <span className={OFFICIAL_BRAND_LOGO_BOX_COMPACT}>
                             <Image
                               src={houseLogos[brand.key]}
                               alt={brand.name}
-                              width={120}
-                              height={72}
+                              width={112}
+                              height={112}
                               unoptimized
-                              className={OFFICIAL_BRAND_LOGO_IMG}
+                              className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
                             />
                           </span>
                         </div>
@@ -481,15 +483,15 @@ export function Header() {
                   className="flex min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                   title={brand.name}
                 >
-                  <span className="inline-flex h-10 w-full max-w-[6.5rem] items-center justify-center overflow-hidden">
+                  <span className={cn(OFFICIAL_BRAND_LOGO_BOX_COMPACT, "mx-auto")}>
                     <Image
                       src={houseLogos[brand.key]}
                       alt={brand.name}
-                      width={150}
-                      height={60}
+                      width={112}
+                      height={112}
                       priority={brand.key === "apolo"}
                       unoptimized
-                      className={OFFICIAL_BRAND_LOGO_IMG}
+                      className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
                     />
                   </span>
                 </Link>

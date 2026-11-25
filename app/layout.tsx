@@ -8,6 +8,7 @@ import { BusinessSettingsProvider } from '@/lib/realtime-context'
 import { Toaster } from '@/components/ui/sonner'
 import FloatingWhatsApp from '@/components/FloatingWhatsApp'
 import { QuoteProvider } from '@/lib/quote-context'
+import { HouseBrandLogosProvider } from '@/hooks/use-house-brand-logos'
 import QuoteDrawer from '@/components/QuoteDrawer'
 import FloatingQuoteButton from '@/components/FloatingQuoteButton'
 import ImageProtection from '@/components/ImageProtection'
@@ -94,7 +95,7 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: [
       {
-        url: '/images/logo-apolo.png?v=2026-11-25-pdf',
+        url: '/images/logo-apolo.png?v=2026-11-25-lg',
         width: 512,
         height: 512,
         alt: siteName,
@@ -105,7 +106,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteTitle,
     description: siteDescription,
-    images: ['/images/logo-apolo.png?v=2026-11-25-pdf'],
+    images: ['/images/logo-apolo.png?v=2026-11-25-lg'],
   },
   robots: {
     index: true,
@@ -171,7 +172,7 @@ export default function RootLayout({
             '@type': 'Organization',
             name: siteName,
             url: siteUrl,
-            logo: `${siteUrl}/images/logo-apolo.png?v=2026-11-25-pdf`,
+            logo: `${siteUrl}/images/logo-apolo.png?v=2026-11-25-lg`,
             email: 'apoloimportlu11@gmail.com',
             telephone: '+51958400028',
             address: {
@@ -189,15 +190,17 @@ export default function RootLayout({
           <ImageProtection />
           <FestiveEffects />
           <BusinessSettingsProvider>
-            <QuoteProvider>
-              <SmoothScroll />
-              {children}
-              <FloatingWhatsApp />
-              <FloatingQuoteButton />
-              <QuoteDrawer />
-              <CookieConsent />
-              <Toaster />
-            </QuoteProvider>
+            <HouseBrandLogosProvider>
+              <QuoteProvider>
+                <SmoothScroll />
+                {children}
+                <FloatingWhatsApp />
+                <FloatingQuoteButton />
+                <QuoteDrawer />
+                <CookieConsent />
+                <Toaster />
+              </QuoteProvider>
+            </HouseBrandLogosProvider>
           </BusinessSettingsProvider>
           <ConsentAnalytics />
         </ThemeProvider>

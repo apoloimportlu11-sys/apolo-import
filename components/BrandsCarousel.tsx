@@ -5,7 +5,8 @@ import Link from "next/link";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import { useHomeContent } from "@/lib/home-content";
 import { usePublicBrands } from "@/hooks/use-public-brands";
-import { getOfficialBrandLogo, OFFICIAL_BRAND_LOGOS } from "@/lib/catalog/display";
+import { OFFICIAL_BRAND_LOGOS } from "@/lib/catalog/display";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import styles from "./brands-stage.module.css";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +92,7 @@ export default function BrandsCarousel({
 }: BrandsCarouselProps) {
   const { content: homeContent } = useHomeContent();
   const { brands: dbBrands, status } = usePublicBrands();
+  const { getLogo } = useHouseBrandLogos();
   const [activeBrand, setActiveBrand] = useState<BrandItem | null>(null);
   const [marqueePaused, setMarqueePaused] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -102,12 +104,12 @@ export default function BrandsCarousel({
       return dbBrands.map((b) => ({
         name: b.name,
         // Admin → Marcas (logo_url) tiene prioridad; el archivo local es solo respaldo.
-        logo: b.logo_url?.trim() || getOfficialBrandLogo(b.name) || OFFICIAL_BRAND_LOGOS.apolo,
+        logo: b.logo_url?.trim() || getLogo(b.name) || OFFICIAL_BRAND_LOGOS.apolo,
         href: `/productos?brand=${encodeURIComponent(b.name)}`,
       }));
     }
     return brands;
-  }, [dbBrands]);
+  }, [dbBrands, getLogo]);
 
   const durationSec = Math.max(36, displayBrands.length * 3.2);
 
