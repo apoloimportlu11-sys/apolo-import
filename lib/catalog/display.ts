@@ -10,10 +10,11 @@ export type OfficialBrandKey = (typeof OFFICIAL_BRANDS)[number];
  * Respaldo local si Admin → Marcas aún no tiene logo_url.
  * En runtime preferimos el logo editable de Supabase (`brands.logo_url`).
  */
+/** Logos de casa extraídos del PDF oficial; siempre locales en /public. */
 export const OFFICIAL_BRAND_LOGOS: Record<OfficialBrandKey, string> = {
-  apolo: "/images/logo-apolo.jpg?v=2026-11-25",
-  overts: "/images/logo-overts.jpg?v=2026-11-25",
-  valtrom: "/images/logo-valtrom.jpg?v=2026-11-25",
+  apolo: "/images/logo-apolo.png?v=2026-11-25-pdf",
+  overts: "/images/logo-overts.png?v=2026-11-25-pdf",
+  valtrom: "/images/logo-valtrom.png?v=2026-11-25-valtrom",
 };
 
 /** Rutas locales viejas (PNG borrados) → JPG oficiales. */
@@ -98,12 +99,12 @@ export function officialBrandRank(brand?: string | null): number {
  */
 export function resolveOfficialBrandLogo(
   brand?: string | null,
-  liveLogos?: Partial<Record<string, string | null | undefined>>
+  _liveLogos?: Partial<Record<string, string | null | undefined>>
 ): string | null {
   const key = matchOfficialBrand(brand);
   if (!key) return null;
-  const live = liveLogos?.[key]?.trim();
-  if (live) return sanitizeOfficialBrandLogoUrl(key, live);
+  // Apolo / Overts / Valtrom siempre usan los PNG locales del repo
+  // para que no dependan de logo_url rotos en Admin → Marcas.
   return OFFICIAL_BRAND_LOGOS[key] ?? null;
 }
 

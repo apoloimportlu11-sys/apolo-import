@@ -15,21 +15,21 @@ export const CANONICAL_BRANDS: CanonicalBrandSeed[] = [
   {
     name: "Apolo",
     slug: "apolo",
-    logo_url: "/images/logo-apolo.jpg?v=2026-11-24",
+    logo_url: "/images/logo-apolo.png?v=2026-11-25-pdf",
     description:
       "Línea propia oficial de lubricantes de alto rendimiento para motores a gasolina, diésel, transmisiones e industria.",
   },
   {
     name: "Overts",
     slug: "overts",
-    logo_url: "/images/logo-overts.jpg?v=2026-11-24",
+    logo_url: "/images/logo-overts.png?v=2026-11-25-pdf",
     description:
       "Línea especializada de lubricantes, grasas, refrigerantes y fluidos automotrices Overts.",
   },
   {
     name: "Valtrom",
     slug: "valtrom",
-    logo_url: "/images/logo-valtrom.jpg?v=2026-11-24",
+    logo_url: "/images/logo-valtrom.png?v=2026-11-25-valtrom",
     description:
       "Línea oficial de repuestos automotrices, autopartes y componentes de alta durabilidad Valtrom.",
   },

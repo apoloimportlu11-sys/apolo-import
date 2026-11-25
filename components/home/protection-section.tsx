@@ -92,7 +92,7 @@ export function ProtectionSection() {
                 >
                   {logo ? (
                     <span className="relative h-8 w-8 overflow-hidden rounded-full bg-black/50">
-                      <Image src={logo} alt="" fill sizes="32px" className="object-contain p-1" />
+                      <Image src={logo} alt="" fill sizes="32px" className="object-contain p-1" unoptimized />
                     </span>
                   ) : null}
                   {label}

@@ -123,7 +123,7 @@ export function Footer() {
                       width={160}
                       height={96}
                       loading="lazy"
-                      unoptimized={brand.logo.includes("supabase") || brand.logo.startsWith("http")}
+                      unoptimized
                       className={OFFICIAL_BRAND_LOGO_IMG}
                     />
                   </Link>
@@ -140,7 +140,7 @@ export function Footer() {
                   width={160}
                   height={96}
                   loading="lazy"
-                  unoptimized={houseBrands[2].logo.includes("supabase") || houseBrands[2].logo.startsWith("http")}
+                  unoptimized
                   className={OFFICIAL_BRAND_LOGO_IMG}
                 />
               </Link>

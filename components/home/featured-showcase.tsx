@@ -336,7 +336,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
                 >
                   {logo ? (
                     <span className="relative h-8 w-8 overflow-hidden rounded-full bg-black/60 sm:h-9 sm:w-9">
-                      <Image src={logo} alt="" fill sizes="36px" className="object-contain p-1" unoptimized={logo.includes("supabase") || logo.startsWith("http")} />
+                      <Image src={logo} alt="" fill sizes="36px" className="object-contain p-1" unoptimized />
                     </span>
                   ) : null}
                   {label}

@@ -218,10 +218,7 @@ export function About() {
                       width={140}
                       height={56}
                       className={cn(OFFICIAL_BRAND_LOGO_IMG, "relative z-[1] max-h-10 sm:max-h-12")}
-                      unoptimized={
-                        houseLogos[brand.key].includes("supabase") ||
-                        houseLogos[brand.key].startsWith("http")
-                      }
+                      unoptimized
                     />
                   </motion.span>
                   <span className="text-[11px] font-semibold tracking-wide text-white/75 transition-colors group-hover:text-white sm:text-xs">
@@ -394,7 +391,7 @@ export function About() {
                         width={160}
                         height={64}
                         className={OFFICIAL_BRAND_LOGO_IMG}
-                        unoptimized={logo.includes("supabase") || logo.startsWith("http")}
+                        unoptimized
                       />
                     </span>
                     <span

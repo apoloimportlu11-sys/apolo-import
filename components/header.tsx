@@ -150,7 +150,7 @@ export function Header() {
                       width={200}
                       height={120}
                       priority={brand.key === "apolo"}
-                      unoptimized={houseLogos[brand.key].includes("supabase") || houseLogos[brand.key].startsWith("http")}
+                      unoptimized
                       className={OFFICIAL_BRAND_LOGO_IMG}
                     />
                   </Link>
@@ -302,7 +302,7 @@ export function Header() {
                               alt={brand.name}
                               width={120}
                               height={72}
-                              unoptimized={houseLogos[brand.key].includes("supabase") || houseLogos[brand.key].startsWith("http")}
+                              unoptimized
                               className={OFFICIAL_BRAND_LOGO_IMG}
                             />
                           </span>
@@ -488,7 +488,7 @@ export function Header() {
                       width={150}
                       height={60}
                       priority={brand.key === "apolo"}
-                      unoptimized={houseLogos[brand.key].includes("supabase") || houseLogos[brand.key].startsWith("http")}
+                      unoptimized
                       className={OFFICIAL_BRAND_LOGO_IMG}
                     />
                   </span>
