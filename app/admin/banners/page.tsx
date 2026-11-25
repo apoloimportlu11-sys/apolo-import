@@ -793,8 +793,8 @@ export default function AdminBannersPage() {
                 label={formData.type === "video" ? "Video" : "Imagen"}
                 description={
                   formData.type === "video"
-                    ? "Elige un MP4 de la galería, súbelo o pega un enlace."
-                    : "Elige una imagen de la galería, súbela o pega un enlace."
+                    ? "Sube un MP4 o pega un enlace."
+                    : "Sube una imagen o pega un enlace."
                 }
                 acceptVideo={formData.type === "video"}
               />

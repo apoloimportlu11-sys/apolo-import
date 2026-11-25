@@ -2492,10 +2492,9 @@ export default function ProductosPage() {
             <form onSubmit={handleSaveImageModal} className="space-y-4">
               <MediaSelector
                 label="Seleccionar o Subir Imagen"
-                description="Elige de la galería interna, pega un enlace o sube un archivo directamente a Supabase Storage."
+                description="Sube un archivo a Supabase Storage o pega un enlace directo."
                 value={modalImageUrl}
                 onChange={(url) => setModalImageUrl(url)}
-                categoryFilter="products"
               />
 
               <div className="flex justify-end gap-3 pt-3 border-t border-white/10">

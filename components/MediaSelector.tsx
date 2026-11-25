@@ -2,19 +2,14 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  FolderArchive,
   Globe,
   UploadCloud,
-  Check,
-  Search,
   Trash2,
   Info,
   Loader2,
   Box,
 } from "lucide-react";
 import { toast } from "sonner";
-import { LocalMediaItem, searchLocalMedia } from "@/lib/local-media-catalog";
-import { createBrowserSupabase } from "@/lib/supabase-client";
 
 interface MediaSelectorProps {
   value: string;
@@ -23,6 +18,7 @@ interface MediaSelectorProps {
   description?: string;
   acceptVideo?: boolean;
   allowedExtensions?: string[]; // e.g. ['.png', '.gltf', '.glb']
+  /** @deprecated La galería local hardcodeada se eliminó; se ignora. */
   categoryFilter?: "products" | "brands" | "hero" | "about" | "categories" | "inicio" | "all";
   className?: string;
   compact?: boolean;
@@ -36,27 +32,25 @@ export default function MediaSelector({
   description,
   acceptVideo = false,
   allowedExtensions,
-  categoryFilter = "all",
   className = "",
   compact = false,
   onUploadingChange,
 }: MediaSelectorProps) {
-  const supabase = createBrowserSupabase();
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
 
-  // Detect mode based on current value
-  const detectMode = (val: string): "internal" | "external" | "upload" => {
-    if (val.startsWith("data:")) return "upload";
-    if (val.includes("supabase.co/storage") || val.startsWith("http://") || val.startsWith("https://")) {
+  const detectMode = (val: string): "external" | "upload" => {
+    if (
+      val.includes("supabase.co/storage") ||
+      val.startsWith("http://") ||
+      val.startsWith("https://")
+    ) {
       return "external";
     }
-    return "internal";
+    return "upload";
   };
 
-  const [storageType, setStorageType] = useState<"internal" | "external" | "upload">(() => detectMode(value));
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>(categoryFilter);
+  const [storageType, setStorageType] = useState<"external" | "upload">(() => detectMode(value));
   const [externalUrl, setExternalUrl] = useState(
     value.startsWith("http") || value.includes("supabase.co") ? value : ""
   );
@@ -73,7 +67,6 @@ export default function MediaSelector({
     return () => onUploadingChange?.(false);
   }, [onUploadingChange]);
 
-  // Sync externalUrl when value prop changes externally
   useEffect(() => {
     if (value.startsWith("http") || value.includes("supabase.co")) {
       setExternalUrl(value);
@@ -105,21 +98,6 @@ export default function MediaSelector({
     return acceptVideo ? "image/*,video/*" : "image/*";
   }, [allowedExtensions, acceptVideo]);
 
-  const filteredItems = useMemo(() => {
-    let items = searchLocalMedia(searchQuery, activeCategory === "all" ? undefined : activeCategory);
-    if (allowedExtensions && allowedExtensions.length > 0) {
-      items = items.filter((it) =>
-        allowedExtensions.some((ext) => it.path.toLowerCase().endsWith(ext.toLowerCase()))
-      );
-    }
-    return items;
-  }, [searchQuery, activeCategory, allowedExtensions]);
-
-  function handleSelectInternal(item: LocalMediaItem) {
-    setImageError(false);
-    onChange(item.path);
-  }
-
   function handleExternalChange(url: string) {
     setExternalUrl(url);
     setImageError(false);
@@ -131,7 +109,6 @@ export default function MediaSelector({
 
     const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
 
-    // Validar extensión si se especificó allowedExtensions
     if (allowedExtensions && allowedExtensions.length > 0) {
       const isAllowed = allowedExtensions.some((e) => e.toLowerCase() === ext);
       if (!isAllowed) {
@@ -160,22 +137,6 @@ export default function MediaSelector({
     setImageError(false);
 
     try {
-      const cleanExt = ext.replace(".", "") || "png";
-      const cleanName = file.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "_")
-        .slice(0, 20);
-      const filePath = `prod_${Date.now()}_${cleanName}.${cleanExt}`;
-
-      let contentType = file.type;
-      if (!contentType) {
-        if (cleanExt === "glb") contentType = "model/gltf-binary";
-        else if (cleanExt === "gltf") contentType = "model/gltf+json";
-        else if (cleanExt === "png") contentType = "image/png";
-        else contentType = "application/octet-stream";
-      }
-
-      // Subida vía API staff (service role) para evitar RLS del bucket en el browser
       const body = new FormData();
       body.append("file", file, file.name);
       const res = await fetch("/api/admin/upload", { method: "POST", body });
@@ -190,6 +151,7 @@ export default function MediaSelector({
       }
 
       onChangeRef.current(String(payload.url));
+      setStorageType("upload");
     } catch (err: unknown) {
       toast.error("No se pudo subir la foto", {
         description: (err instanceof Error ? err.message : undefined) || "Error de red al subir la imagen.",
@@ -309,206 +271,69 @@ export default function MediaSelector({
           placeholder="https://…/foto.jpg"
           className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] focus:border-[var(--admin-accent)] focus:outline-none"
         />
-        <div className="mt-3 space-y-2">
-          <label className="block text-sm text-[var(--admin-muted)]">Fotos del catálogo</label>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nombre"
-            className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] focus:border-[var(--admin-accent)] focus:outline-none"
-          />
-          <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
-            {filteredItems.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSelectInternal(item)}
-                className={`overflow-hidden rounded-lg border text-left ${
-                  value === item.path ? "border-[var(--admin-accent)] ring-1 ring-[var(--admin-accent)]" : "border-[var(--admin-line)]"
-                }`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={encodeURI(item.previewUrl || item.path)}
-                  alt={item.name}
-                  className="h-20 w-full bg-white object-contain p-1 dark:bg-zinc-100"
-                />
-                <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--admin-ink)]">{item.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     );
   }
 
   return (
     <div className={`space-y-3.5 ${className}`}>
-      {/* Label and description */}
       <div>
         {label && (
-          <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--admin-muted)]">
             {label}
           </label>
         )}
-        {description && <p className="text-[11px] text-zinc-400 mb-2">{description}</p>}
+        {description && <p className="mb-2 text-[11px] text-[var(--admin-faint)]">{description}</p>}
       </div>
 
-      {/* Origin Mode Switcher Tabs */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/60 border border-white/10">
-        <button
-          type="button"
-          onClick={() => setStorageType("internal")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            storageType === "internal"
-              ? "bg-[#C7940A] text-black shadow-md shadow-[#C7940A]/20"
-              : "text-zinc-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          <FolderArchive className="w-3.5 h-3.5" />
-          <span>Galería Interna</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStorageType("external")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            storageType === "external"
-              ? "bg-[#C7940A] text-black shadow-md shadow-[#C7940A]/20"
-              : "text-zinc-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5" />
-          <span>Enlace Web (URL)</span>
-        </button>
-
+      <div className="flex items-center gap-1.5 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-1">
         <button
           type="button"
           onClick={() => setStorageType("upload")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
             storageType === "upload"
-              ? "bg-[#C7940A] text-black shadow-md shadow-[#C7940A]/20"
-              : "text-zinc-400 hover:text-white hover:bg-white/5"
+              ? "bg-[var(--admin-accent)] text-white shadow-sm"
+              : "text-[var(--admin-muted)] hover:bg-[var(--admin-surface)] hover:text-[var(--admin-ink)]"
           }`}
         >
           <UploadCloud className="w-3.5 h-3.5" />
           <span>Subir Archivo</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setStorageType("external")}
+          className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+            storageType === "external"
+              ? "bg-[var(--admin-accent)] text-white shadow-sm"
+              : "text-[var(--admin-muted)] hover:bg-[var(--admin-surface)] hover:text-[var(--admin-ink)]"
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>Enlace Web (URL)</span>
+        </button>
       </div>
 
-      {/* Mode 1: Internal Local Gallery */}
-      {storageType === "internal" && (
-        <div className="rounded-xl border border-white/10 bg-black/40 p-3.5 space-y-3 animate-in fade-in duration-150">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar imágenes (ej: 15W40, Silicona, Litio, Overts)..."
-                className="w-full rounded-lg border border-white/10 bg-black/60 pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-[#C7940A] focus:outline-none"
-              />
-            </div>
-
-            {/* Category Pills */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 text-[11px]">
-              {[
-                { id: "all", label: "Todos" },
-                { id: "products", label: "Productos" },
-                { id: "brands", label: "Marcas" },
-                { id: "inicio", label: "Inicio / Populares" },
-                { id: "categories", label: "Categorías" },
-              ].map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-2.5 py-1 rounded-md transition-colors whitespace-nowrap cursor-pointer ${
-                    activeCategory === cat.id
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Gallery Grid — celdas rectangulares adaptables */}
-          <div className="custom-scrollbar grid max-h-64 grid-cols-2 gap-2.5 overflow-y-auto rounded-lg border border-white/10 bg-zinc-950/40 p-1.5 sm:max-h-72 sm:grid-cols-3 lg:grid-cols-4">
-            {filteredItems.map((item) => {
-              const isSelected = value === item.path;
-              const previewSrc = encodeURI(item.previewUrl || item.path);
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelectInternal(item)}
-                  className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-all ${
-                    isSelected
-                      ? "border-[#C7940A] bg-[#C7940A]/15 shadow-md ring-1 ring-[#C7940A]"
-                      : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10"
-                  }`}
-                >
-                  <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-white p-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={previewSrc}
-                      alt={item.name}
-                      className="max-h-full max-w-full object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.18)]"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.opacity = "0.25";
-                      }}
-                    />
-                  </div>
-                  <span className="line-clamp-2 w-full bg-zinc-950/80 px-1.5 py-1.5 text-center text-[10px] font-medium leading-tight text-zinc-200 group-hover:text-white">
-                    {item.name}
-                  </span>
-
-                  {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#C7940A] text-black flex items-center justify-center shadow-lg">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-
-            {filteredItems.length === 0 && (
-              <div className="col-span-full py-8 text-center text-xs text-zinc-500">
-                No se encontraron imágenes en el catálogo para &quot;{searchQuery}&quot;.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Mode 2: External Direct URL */}
       {storageType === "external" && (
-        <div className="rounded-xl border border-white/10 bg-black/40 p-3.5 space-y-3 animate-in fade-in duration-150">
+        <div className="space-y-3 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3.5 animate-in fade-in duration-150">
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-300 mb-1.5">
-              Enlace Directo (URL de Imagen en CDN, Supabase, Cloudinary o Servidor)
+            <label className="mb-1.5 block text-[11px] font-semibold text-[var(--admin-ink)]">
+              Enlace directo de imagen
             </label>
             <div className="relative">
-              <Globe className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-faint)]" />
               <input
                 type="url"
                 value={externalUrl}
                 onChange={(e) => handleExternalChange(e.target.value)}
                 placeholder="https://ejemplo.com/imagenes/mi-producto.jpg"
-                className="w-full rounded-xl border border-white/10 bg-black/60 pl-9 pr-3.5 py-2.5 text-xs text-white font-mono placeholder-zinc-500 focus:border-[#C7940A] focus:outline-none"
+                className="w-full rounded-xl border border-[var(--admin-line)] bg-[var(--admin-input)] py-2.5 pl-9 pr-3.5 font-mono text-xs text-[var(--admin-ink)] placeholder:text-[var(--admin-faint)] focus:border-[var(--admin-accent)] focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-zinc-400 bg-white/5 border border-white/5 p-2.5 rounded-lg">
-            <Info className="w-4 h-4 text-[#C7940A] shrink-0" />
+          <div className="flex items-center gap-2 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)] p-2.5 text-[11px] text-[var(--admin-muted)]">
+            <Info className="h-4 w-4 shrink-0 text-[var(--admin-accent)]" />
             <span>
               Admite formatos de imagen (<strong>.png, .jpg, .webp, .svg</strong>) y enlaces públicos directos.
             </span>
@@ -516,10 +341,9 @@ export default function MediaSelector({
         </div>
       )}
 
-      {/* Mode 3: Direct Upload to Supabase Storage */}
       {storageType === "upload" && (
         <div
-          className="rounded-xl border border-white/10 bg-black/40 p-3.5 space-y-3 animate-in fade-in duration-150"
+          className="space-y-3 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3.5 animate-in fade-in duration-150"
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -539,43 +363,36 @@ export default function MediaSelector({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 select-none ${
+            className={`relative flex cursor-pointer select-none flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200 ${
               isDragging
-                ? "border-[#C7940A] bg-[#C7940A]/15 ring-4 ring-[#C7940A]/20 scale-[1.01] shadow-lg shadow-[#C7940A]/20"
-                : "border-white/20 hover:border-[#C7940A]/60 bg-black/60 hover:bg-black/80"
+                ? "scale-[1.01] border-[var(--admin-accent)] bg-[var(--admin-accent-soft)] ring-4 ring-[var(--admin-accent-soft)]"
+                : "border-[var(--admin-line)] bg-[var(--admin-input)] hover:border-[var(--admin-accent)]"
             }`}
           >
             {uploading ? (
-              <div className="flex flex-col items-center justify-center gap-2 text-zinc-300">
-                <Loader2 className="w-8 h-8 text-[#C7940A] animate-spin" />
-                <span className="text-xs font-bold text-white">Subiendo imagen a la nube...</span>
-                <span className="text-[11px] text-zinc-400">Guardando en Supabase Storage de alta velocidad</span>
+              <div className="flex flex-col items-center justify-center gap-2 text-[var(--admin-muted)]">
+                <Loader2 className="h-8 w-8 animate-spin text-[var(--admin-accent)]" />
+                <span className="text-xs font-bold text-[var(--admin-ink)]">Subiendo imagen a la nube...</span>
+                <span className="text-[11px] text-[var(--admin-muted)]">Guardando en Supabase Storage</span>
               </div>
             ) : isDragging ? (
-              <div className="flex flex-col items-center justify-center pointer-events-none py-1 animate-in zoom-in-95 duration-150">
-                <UploadCloud className="w-10 h-10 text-[#C7940A] mb-2 animate-bounce drop-shadow-[0_0_10px_rgba(199,148,10,0.6)]" />
-                <span className="text-sm font-black text-[#C7940A] mb-1">
-                  ¡Suelta tu imagen aquí!
-                </span>
-                <span className="text-xs text-zinc-300 font-medium">
-                  Se procesará y subirá de inmediato
-                </span>
+              <div className="pointer-events-none flex flex-col items-center justify-center py-1 animate-in zoom-in-95 duration-150">
+                <UploadCloud className="mb-2 h-10 w-10 animate-bounce text-[var(--admin-accent)]" />
+                <span className="mb-1 text-sm font-black text-[var(--admin-accent)]">¡Suelta tu imagen aquí!</span>
+                <span className="text-xs font-medium text-[var(--admin-muted)]">Se procesará y subirá de inmediato</span>
               </div>
             ) : (
               <>
-                <UploadCloud className="w-8 h-8 text-[#C7940A] mb-2" />
-                <span className="text-xs font-bold text-white mb-1">
-                  Haz clic para seleccionar o arrastra una foto de producto
+                <UploadCloud className="mb-2 h-8 w-8 text-[var(--admin-accent)]" />
+                <span className="mb-1 text-xs font-bold text-[var(--admin-ink)]">
+                  Haz clic para seleccionar o arrastra una imagen
                 </span>
-                <span className="text-[11px] text-zinc-400">
+                <span className="text-[11px] text-[var(--admin-muted)]">
                   {allowedExtensions
                     ? `Formatos aceptados: ${allowedExtensions.map((e) => e.toUpperCase().replace(".", "")).join(", ")} (hasta 20MB)`
                     : acceptVideo
                     ? "Imágenes (PNG, JPG, WEBP, SVG) o Videos (MP4, WEBM) hasta 20MB"
                     : "Imágenes (PNG, JPG, WEBP, SVG) hasta 20MB"}
-                </span>
-                <span className="text-[10px] text-amber-400/80 mt-1 font-medium">
-                  Se sube directamente a Supabase Storage y genera una URL permanente
                 </span>
               </>
             )}
@@ -592,12 +409,11 @@ export default function MediaSelector({
         </div>
       )}
 
-      {/* Live Preview Box */}
       {value ? (
-        <div className="rounded-xl border border-white/10 bg-[#141414] p-3 space-y-2">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2">
+        <div className="space-y-2 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-3">
+          <div className="flex items-center justify-between border-b border-[var(--admin-line)] pb-2">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--admin-ink)]">
                 Vista Previa Activa
               </span>
               <span
@@ -617,7 +433,7 @@ export default function MediaSelector({
                   ? "🌐 Enlace Web"
                   : value.startsWith("data:")
                   ? "📄 Archivo Local"
-                  : "📁 Galería Interna"}
+                  : "📁 Archivo del sitio"}
               </span>
             </div>
 
@@ -631,15 +447,12 @@ export default function MediaSelector({
             </button>
           </div>
 
-          <div className="relative rounded-lg overflow-hidden bg-black/60 border border-white/5 flex items-center justify-center min-h-[90px] max-h-[160px] p-2">
+          <div className="relative flex min-h-[90px] max-h-[160px] items-center justify-center overflow-hidden rounded-lg border border-[var(--admin-line)] bg-white p-2">
             {is3DModel ? (
-              <div className="flex flex-col items-center justify-center py-4 px-3 gap-2 text-center">
-                <Box className="w-10 h-10 text-[#C7940A] animate-pulse drop-shadow-[0_0_12px_rgba(199,148,10,0.5)]" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">
+              <div className="flex flex-col items-center justify-center gap-2 px-3 py-4 text-center">
+                <Box className="h-10 w-10 animate-pulse text-[var(--admin-accent)]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--admin-ink)]">
                   Modelo 3D ({value.toLowerCase().split("?")[0].endsWith(".glb") ? "GLB" : "glTF"})
-                </span>
-                <span className="text-[11px] text-zinc-400">
-                  Formato compatible para visualización 3D interactiva en carrusel
                 </span>
               </div>
             ) : isVideo ? (
@@ -649,11 +462,11 @@ export default function MediaSelector({
                 autoPlay
                 muted
                 loop
-                className="max-h-[140px] w-full object-contain rounded"
+                className="max-h-[140px] w-full rounded object-contain"
               />
             ) : imageError ? (
-              <div className="text-center py-4 text-xs text-red-400 flex flex-col items-center gap-1">
-                <Info className="w-5 h-5" />
+              <div className="flex flex-col items-center gap-1 py-4 text-center text-xs text-red-600">
+                <Info className="h-5 w-5" />
                 <span>No se pudo cargar la imagen desde la ruta especificada.</span>
               </div>
             ) : (
@@ -661,20 +474,20 @@ export default function MediaSelector({
               <img
                 src={value}
                 alt="Vista previa"
-                className="max-h-[140px] max-w-full object-contain rounded"
+                className="max-h-[140px] max-w-full rounded object-contain"
                 onError={() => setImageError(true)}
               />
             )}
           </div>
 
-          <div className="text-[10px] font-mono text-zinc-500 truncate" title={value}>
+          <div className="truncate font-mono text-[10px] text-[var(--admin-faint)]" title={value}>
             Ruta/URL: {value}
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/5 bg-black/20 p-3 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
-          <Info className="w-4 h-4 text-zinc-600" />
-          <span>Sin archivo seleccionado. Elige una opción arriba para agregar una imagen.</span>
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3 text-center text-xs text-[var(--admin-muted)]">
+          <Info className="h-4 w-4 text-[var(--admin-faint)]" />
+          <span>Sin archivo. Sube una imagen o pega un enlace.</span>
         </div>
       )}
     </div>

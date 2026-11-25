@@ -29,6 +29,8 @@ import { ADMIN_SIDEBAR_KEY } from "@/lib/admin-theme";
 import { useQuoteInbox } from "@/components/QuoteInboxProvider";
 import { useAdminRole } from "@/hooks/use-admin-role";
 import { navAllowedForRole, ROLE_LABELS } from "@/lib/admin-permissions";
+import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
+import { OFFICIAL_BRAND_LOGOS } from "@/lib/catalog/display";
 
 type NavItem = {
   href: string;
@@ -94,6 +96,8 @@ export default function AdminSidebar({
   const supabase = createBrowserSupabase();
   const { count: newQuotes } = useQuoteInbox();
   const { role } = useAdminRole();
+  const { logos } = useHouseBrandLogos();
+  const apoloLogo = logos.apolo || OFFICIAL_BRAND_LOGOS.apolo;
   const [collapsed, setCollapsed] = useState(false);
 
   useLayoutEffect(() => {
@@ -138,8 +142,10 @@ export default function AdminSidebar({
           className="flex min-w-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-accent)]"
           aria-label="Apolo, ir al dashboard"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo-apolo.png?v=2026-11-25-lg" alt="" className="h-12 w-12 shrink-0 object-contain" />
+          <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[var(--admin-subtle)] p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={apoloLogo} alt="" className="h-full w-full object-contain" />
+          </span>
           {!compact && (
             <span className="min-w-0">
               <span className="block font-heading text-sm font-semibold leading-tight text-[var(--admin-ink)]">Apolo</span>

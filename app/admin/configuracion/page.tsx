@@ -113,13 +113,17 @@ function FileField({
   const [open, setOpen] = useState(false);
   const fileName = value ? value.split("/").pop() || value : "Sin archivo";
   return (
-    <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+    <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm text-zinc-200">{label}</p>
-          <p className="truncate text-xs text-zinc-400">{fileName}</p>
+          <p className="text-sm text-[var(--admin-ink)]">{label}</p>
+          <p className="truncate text-xs text-[var(--admin-muted)]">{fileName}</p>
         </div>
-        <button type="button" onClick={() => setOpen((current) => !current)} className="h-9 shrink-0 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="h-9 shrink-0 rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface)] px-3 text-sm font-medium text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)]"
+        >
           {open ? "Cerrar" : "Cambiar"}
         </button>
       </div>

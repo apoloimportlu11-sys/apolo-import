@@ -98,21 +98,32 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
+const fieldClass =
+  "mt-1.5 w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] placeholder:text-[var(--admin-faint)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--admin-accent)]";
+
 function LogoField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const [open, setOpen] = useState(false);
   const fileName = value ? decodeURI(value.split("/").pop() || value) : "Sin logo";
   return (
-    <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+    <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3">
       <div className="flex items-center gap-3">
-        <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-black">
+        <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-[var(--admin-line)] bg-white p-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {value ? <img src={encodeURI(value)} alt="" className="max-h-full max-w-full object-contain" /> : <ImageIcon className="size-5 text-zinc-400" />}
+          {value ? (
+            <img src={encodeURI(value)} alt="" className="max-h-full max-w-full object-contain" />
+          ) : (
+            <ImageIcon className="size-5 text-[var(--admin-faint)]" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-zinc-200">Logo</p>
-          <p className="truncate text-xs text-zinc-400">{fileName}</p>
+          <p className="text-sm text-[var(--admin-ink)]">Logo</p>
+          <p className="truncate text-xs text-[var(--admin-muted)]">{fileName}</p>
         </div>
-        <button type="button" onClick={() => setOpen((current) => !current)} className="h-9 shrink-0 rounded-full border border-white/15 px-3 text-sm text-zinc-100">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="h-9 shrink-0 rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface)] px-3 text-sm font-medium text-[var(--admin-ink)] hover:bg-[var(--admin-canvas)]"
+        >
           {open ? "Cerrar" : value ? "Cambiar" : "Elegir"}
         </button>
       </div>
@@ -120,9 +131,8 @@ function LogoField({ value, onChange }: { value: string; onChange: (url: string)
         <div className="mt-3">
           <MediaSelector
             label="Logo"
-            description="Galería, enlace o archivo."
+            description="Sube un archivo o pega el enlace del logo."
             value={value}
-            categoryFilter="brands"
             onChange={(url) => {
               onChange(url);
               setOpen(false);
@@ -752,12 +762,14 @@ export default function MarcasPage() {
       )}
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#141414] text-zinc-100 sm:max-w-xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)] sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl text-white">{isEditing ? "Editar marca" : "Nueva marca"}</DialogTitle>
+            <DialogTitle className="font-heading text-xl text-[var(--admin-ink)]">
+              {isEditing ? "Editar marca" : "Nueva marca"}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={(event) => void handleSave(event)} className="space-y-4">
-            <label className="block text-sm text-zinc-200">
+            <label className="block text-sm text-[var(--admin-ink)]">
               Nombre
               <input
                 required
@@ -766,11 +778,13 @@ export default function MarcasPage() {
                   const name = event.target.value;
                   setCurrentBrand((prev) => ({ ...prev, name, slug: slugTouched ? prev.slug : toSlug(name) }));
                 }}
-                className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
+                className={fieldClass}
               />
-              <span className="mt-1 block text-xs text-zinc-400">Así aparece en el producto y en el filtro de la tienda.</span>
+              <span className="mt-1 block text-xs text-[var(--admin-muted)]">
+                Así aparece en el producto y en el filtro de la tienda.
+              </span>
             </label>
-            <label className="block text-sm text-zinc-200">
+            <label className="block text-sm text-[var(--admin-ink)]">
               Identificador
               <input
                 value={currentBrand.slug || ""}
@@ -778,40 +792,50 @@ export default function MarcasPage() {
                   setSlugTouched(true);
                   setCurrentBrand((prev) => ({ ...prev, slug: toSlug(event.target.value) }));
                 }}
-                className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 font-mono text-sm text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
+                className={`${fieldClass} font-mono`}
               />
-              <span className="mt-1 block text-xs text-zinc-400">Evita dos marcas con el mismo nombre interno.</span>
+              <span className="mt-1 block text-xs text-[var(--admin-muted)]">
+                Evita dos marcas con el mismo nombre interno.
+              </span>
             </label>
             <LogoField value={currentBrand.logo_url || ""} onChange={(url) => setCurrentBrand((prev) => ({ ...prev, logo_url: url }))} />
             {catalogPreset?.logo_url && catalogPreset.logo_url !== currentBrand.logo_url && (
               <button
                 type="button"
                 onClick={() => setCurrentBrand((prev) => ({ ...prev, logo_url: catalogPreset.logo_url }))}
-                className="text-sm text-[#E4C36A]"
+                className="text-sm font-medium text-[var(--admin-accent)] hover:underline"
               >
                 Usar el logo original de {catalogPreset.name}
               </button>
             )}
-            <label className="block text-sm text-zinc-200">
+            <label className="block text-sm text-[var(--admin-ink)]">
               Descripción
               <textarea
                 value={currentBrand.description || ""}
                 onChange={(event) => setCurrentBrand((prev) => ({ ...prev, description: event.target.value }))}
-                className="mt-1.5 h-24 w-full resize-none rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C7940A]"
+                className={`${fieldClass} h-24 resize-none`}
               />
             </label>
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 px-3 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] px-3 py-3">
               <div>
-                <p className="text-sm text-zinc-100">Disponible al crear productos</p>
-                <p className="text-xs text-zinc-400">Si la pausas, deja de salir en esa lista.</p>
+                <p className="text-sm text-[var(--admin-ink)]">Disponible al crear productos</p>
+                <p className="text-xs text-[var(--admin-muted)]">Si la pausas, deja de salir en esa lista.</p>
               </div>
               <Switch checked={currentBrand.is_active !== false} onCheckedChange={(checked) => setCurrentBrand((prev) => ({ ...prev, is_active: checked }))} />
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowModal(false)} className="h-10 rounded-full border border-white/15 px-4 text-sm text-zinc-100">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="h-10 rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface)] px-4 text-sm text-[var(--admin-ink)]"
+              >
                 Cancelar
               </button>
-              <button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-full bg-[#C7940A] px-4 text-sm font-semibold text-black disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-semibold text-white disabled:opacity-50"
+              >
                 {saving && <Loader2 className="size-4 animate-spin" />}
                 Guardar
               </button>
@@ -821,10 +845,10 @@ export default function MarcasPage() {
       </Dialog>
 
       <AlertDialog open={confirmCatalog} onOpenChange={setConfirmCatalog}>
-        <AlertDialogContent className="border-white/10 bg-[#141414] text-zinc-100">
+        <AlertDialogContent className="border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Alinear catálogo oficial</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-300">
+            <AlertDialogTitle className="text-[var(--admin-ink)]">Alinear catálogo oficial</AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--admin-muted)]">
               {missingCatalog.length > 0
                 ? `Se agregarán ${missingCatalog.length} marca${missingCatalog.length === 1 ? "" : "s"} oficial${missingCatalog.length === 1 ? "" : "es"}. `
                 : ""}
@@ -844,18 +868,23 @@ export default function MarcasPage() {
       </AlertDialog>
 
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <AlertDialogContent className="border-white/10 bg-[#141414] text-zinc-100">
+        <AlertDialogContent className="border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Quitar {pendingDelete?.name}</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-300">
+            <AlertDialogTitle className="text-[var(--admin-ink)]">Quitar {pendingDelete?.name}</AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--admin-muted)]">
               {deleteCount > 0
                 ? `${deleteCount === 1 ? "Hay 1 producto" : `Hay ${deleteCount} productos`} con este nombre. Seguirán publicados. La marca deja de ofrecerse al crear productos.`
                 : "Ningún producto usa este nombre. La marca deja de ofrecerse al crear productos."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/15 bg-transparent text-zinc-100">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmDelete()} className="bg-[#C7940A] text-black hover:bg-[#E4C36A]">
+            <AlertDialogCancel className="border-[var(--admin-line)] bg-transparent text-[var(--admin-ink)]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void confirmDelete()}
+              className="bg-[var(--admin-accent)] text-white hover:opacity-90"
+            >
               Quitar
             </AlertDialogAction>
           </AlertDialogFooter>
