@@ -167,41 +167,51 @@ export function FeaturedProductsCarousel() {
   // 1. Fetch featured products from Supabase
   const fetchDbFeatured = useCallback(async () => {
     try {
-      // 1. Fetch active featured products
-      const { data, error } = await supabase
+      const selectCols =
+        "id, name, slug, brand, short_description, description, presentation, stock, is_featured, is_active, category_id, image_url";
+      let { data, error } = await supabase
         .from("products")
-        .select(
-          "id, name, slug, brand, short_description, description, presentation, stock, is_featured, is_active, category_id, image_url"
-        )
+        .select(selectCols)
         .eq("is_active", true)
         .eq("is_featured", true)
-        .order("updated_at", { ascending: false });
+        .order("name", { ascending: true });
 
-      if (data && !error) {
-        const formatted: FeaturedProductItem[] = data.map((item) => ({
-          id: String(item.id),
-          name: item.name,
-          slug: item.slug,
-          code: item.slug,
-          brand: item.brand || "Apolo",
-          line:
-            item.short_description
-            || defaultCatalogLine(item.brand || "Apolo", null),
-          presentation: item.presentation || "",
-          description: item.description || item.short_description || "",
-          image: item.image_url || "",
-          image_url: item.image_url || "",
-          stock: typeof item.stock === "number" ? item.stock : undefined,
-          is_featured: true,
-          is_active: true,
-          category_id: item.category_id,
-        }));
-        setDbFeatured(formatted);
+      // Reintento si el orden falla por columna ausente en algún entorno.
+      if (error) {
+        const retry = await supabase
+          .from("products")
+          .select(selectCols)
+          .eq("is_active", true)
+          .eq("is_featured", true);
+        data = retry.data;
+        error = retry.error;
       }
 
+      if (error) throw error;
+
+      const formatted: FeaturedProductItem[] = (data || []).map((item) => ({
+        id: String(item.id),
+        name: item.name,
+        slug: item.slug,
+        code: item.slug,
+        brand: item.brand || "Apolo",
+        line:
+          item.short_description
+          || defaultCatalogLine(item.brand || "Apolo", null),
+        presentation: item.presentation || "",
+        description: item.description || item.short_description || "",
+        image: item.image_url || "",
+        image_url: item.image_url || "",
+        stock: typeof item.stock === "number" ? item.stock : undefined,
+        is_featured: true,
+        is_active: true,
+        category_id: item.category_id,
+      }));
+      setDbFeatured(formatted);
       setIsDbLoaded(true);
     } catch (err) {
       console.warn("FeaturedProductsCarousel: Error fetching from Supabase", err);
+      setIsDbLoaded(true);
     }
   }, [supabase]);
 
@@ -312,17 +322,68 @@ export function FeaturedProductsCarousel() {
       });
     };
 
-    if (isDbLoaded && dbFeatured.length > 0) {
-      return uniqueByKey(
-        dbFeatured
-          .filter((p) => !isDeleted(p.id, p.slug, p.code) && p.is_active !== false)
-          .map((p) => ({
-            ...p,
-            image: p.image_url || p.image || "",
-            image_url: p.image_url || p.image || "",
-            is_featured: true,
-          }))
-      );
+    const fromDb = dbFeatured
+      .filter((p) => !isDeleted(p.id, p.slug, p.code) && p.is_active !== false)
+      .map((p) => ({
+        ...p,
+        image: p.image_url || p.image || "",
+        image_url: p.image_url || p.image || "",
+        is_featured: true,
+      }));
+
+    if (isDbLoaded && fromDb.length > 0) {
+      return uniqueByKey(fromDb);
+    }
+
+    // Respaldo: lo marcado como destacado en el admin de este navegador
+    // (por si el update a Supabase falló por RLS).
+    let fromAdminCache: FeaturedProductItem[] = [];
+    if (mounted && typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            fromAdminCache = parsed
+              .filter(
+                (p: Record<string, unknown>) =>
+                  Boolean(p?.is_featured) &&
+                  p?.is_active !== false &&
+                  !isDeleted(
+                    p?.id != null ? String(p.id) : null,
+                    p?.slug != null ? String(p.slug) : null,
+                    p?.code != null ? String(p.code) : null
+                  )
+              )
+              .map((p: Record<string, unknown>, idx: number) => ({
+                id: String(p.id || `admin-featured-${idx}`),
+                name: String(p.name || "Producto"),
+                slug: p.slug != null ? String(p.slug) : undefined,
+                code: p.code != null ? String(p.code) : undefined,
+                brand: String(p.brand || "Apolo"),
+                line:
+                  String(p.short_description || p.line || "") ||
+                  defaultCatalogLine(String(p.brand || "Apolo"), null),
+                presentation: String(p.presentation || ""),
+                description: String(p.description || p.short_description || ""),
+                viscosity: p.viscosity != null ? String(p.viscosity) : "",
+                image: String(p.image_url || p.image || ""),
+                image_url: String(p.image_url || p.image || ""),
+                stock: typeof p.stock === "number" ? p.stock : undefined,
+                is_featured: true,
+                is_active: true,
+                category_id:
+                  p.category_id != null ? String(p.category_id) : undefined,
+              }));
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (fromAdminCache.length > 0) {
+      return uniqueByKey(fromAdminCache);
     }
 
     if (isDbLoaded) return [];

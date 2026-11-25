@@ -1293,25 +1293,44 @@ export default function ProductosPage() {
     }
 
     try {
-      const payload = {
-        id: updatedProduct.id,
-        name: updatedProduct.name,
-        slug: updatedProduct.slug,
-        brand: updatedProduct.brand || "Apolo",
-        short_description: updatedProduct.short_description,
-        presentation: updatedProduct.presentation,
-        description: updatedProduct.description,
-        stock: updatedProduct.stock,
-        is_featured: !current,
-        is_active: updatedProduct.is_active,
-        category_id: updatedProduct.category_id,
-        image_url: updatedProduct.image_url || null,
-        updated_at: new Date().toISOString(),
-      };
-      await supabase.from("products").upsert([payload], { onConflict: "id" });
-      toast.success(!current ? "Marcado como destacado" : "Quitado de destacados", { duration: 1800 });
+      const res = await fetch("/api/admin/featured", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, is_featured: !current }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        throw new Error(payload.message || `Error ${res.status}`);
+      }
+      toast.success(!current ? "Marcado como destacado" : "Quitado de destacados", {
+        duration: 1800,
+      });
     } catch (err) {
-      console.warn("Supabase background featured sync note:", err);
+      // Fallback: update directo (sesión staff) si el API falla.
+      try {
+        const { error } = await supabase
+          .from("products")
+          .update({
+            is_featured: !current,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id);
+        if (error) throw error;
+        toast.success(!current ? "Marcado como destacado" : "Quitado de destacados", {
+          duration: 1800,
+        });
+      } catch (fallbackErr) {
+        const message =
+          fallbackErr instanceof Error
+            ? fallbackErr.message
+            : err instanceof Error
+              ? err.message
+              : "No se pudo sincronizar con Supabase.";
+        console.warn("Supabase featured sync error:", fallbackErr || err);
+        toast.error("Destacado solo quedó en este navegador", {
+          description: message,
+        });
+      }
     }
   }
 

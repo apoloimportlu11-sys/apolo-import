@@ -11,10 +11,46 @@ export type OfficialBrandKey = (typeof OFFICIAL_BRANDS)[number];
  * En runtime preferimos el logo editable de Supabase (`brands.logo_url`).
  */
 export const OFFICIAL_BRAND_LOGOS: Record<OfficialBrandKey, string> = {
-  apolo: "/images/logo-apolo.jpg?v=2026-11-24",
-  overts: "/images/logo-overts.jpg?v=2026-11-24",
-  valtrom: "/images/logo-valtrom.jpg?v=2026-11-24",
+  apolo: "/images/logo-apolo.jpg?v=2026-11-25",
+  overts: "/images/logo-overts.jpg?v=2026-11-25",
+  valtrom: "/images/logo-valtrom.jpg?v=2026-11-25",
 };
+
+/** Rutas locales viejas (PNG borrados) → JPG oficiales. */
+const LEGACY_HOUSE_LOGO_PATHS: Record<string, OfficialBrandKey> = {
+  "/images/logoapolo.png": "apolo",
+  "/images/logo-apolo.png": "apolo",
+  "/images/logo overts.png": "overts",
+  "/images/logooverts.png": "overts",
+  "/images/logo-overts.png": "overts",
+  "/images/live_site_logo.png": "overts",
+  "/images/logo valtrom ter.png": "valtrom",
+  "/images/logo-valtrom.png": "valtrom",
+};
+
+function normalizeLocalLogoPath(url: string) {
+  try {
+    const pathOnly = url.includes("://")
+      ? new URL(url).pathname
+      : url.split("?")[0];
+    return decodeURIComponent(pathOnly).trim().toLowerCase().replace(/\\/g, "/");
+  } catch {
+    return url.split("?")[0].trim().toLowerCase();
+  }
+}
+
+/** Si el logo_url apunta a un archivo eliminado, usa el JPG local. */
+export function sanitizeOfficialBrandLogoUrl(
+  brand: OfficialBrandKey,
+  url?: string | null
+): string {
+  const raw = String(url || "").trim();
+  if (!raw) return OFFICIAL_BRAND_LOGOS[brand];
+  const path = normalizeLocalLogoPath(raw);
+  const legacy = LEGACY_HOUSE_LOGO_PATHS[path];
+  if (legacy) return OFFICIAL_BRAND_LOGOS[legacy];
+  return raw;
+}
 
 /** Caja fija para que las 3 marcas midan igual. */
 export const OFFICIAL_BRAND_LOGO_BOX =
@@ -67,7 +103,7 @@ export function resolveOfficialBrandLogo(
   const key = matchOfficialBrand(brand);
   if (!key) return null;
   const live = liveLogos?.[key]?.trim();
-  if (live) return live;
+  if (live) return sanitizeOfficialBrandLogoUrl(key, live);
   return OFFICIAL_BRAND_LOGOS[key] ?? null;
 }
 
