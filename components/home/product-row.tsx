@@ -32,12 +32,6 @@ const GLOW = {
   graphite: "bg-[radial-gradient(circle_at_50%_70%,rgba(255,255,255,0.14),transparent_62%)]",
 } as const;
 
-const WATERMARK = {
-  red: "/images/Animacion/GEAR1.png",
-  gold: "/images/Animacion/LIQUID.png",
-  graphite: "/images/Animacion/GEAR2.png",
-} as const;
-
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function ProductRow({
@@ -82,11 +76,6 @@ export function ProductRow({
     >
       <div className="carbon-grain pointer-events-none absolute inset-0 opacity-[0.06] dark:opacity-15" />
       <div className="speed-divider absolute inset-x-0 top-0" />
-      <div className="pointer-events-none absolute -right-8 top-1/2 h-[280px] w-[280px] -translate-y-1/2 opacity-[0.07] lg:h-[340px] lg:w-[340px]">
-        <div className={cn("relative h-full w-full", reduce ? "" : tone === "gold" ? "animate-product-float" : "watermark-spin")}>
-          <Image src={WATERMARK[tone]} alt="" fill sizes="340px" className="object-contain" />
-        </div>
-      </div>
       {logoSrc ? (
         <div className="pointer-events-none absolute -left-6 bottom-8 hidden h-24 w-24 opacity-[0.08] lg:block">
           <Image src={logoSrc} alt="" fill sizes="96px" className="object-contain" />
