@@ -21,6 +21,7 @@ import {
   History,
   Trash2,
   Sparkles,
+  Barcode,
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
@@ -69,6 +70,7 @@ import {
   suggestFromName,
   type CatalogBlock,
 } from "@/lib/admin/product-heuristics";
+import { printInventoryBarcodes } from "@/lib/admin/print-inventory-barcodes";
 import {
   DndContext,
   closestCenter,
@@ -1836,6 +1838,21 @@ export default function ProductosPage() {
     }
   }
 
+  function handlePrintInventoryBarcodes() {
+    if (!products.length) {
+      toast.error("No hay productos en el inventario para imprimir.");
+      return;
+    }
+
+    const result = printInventoryBarcodes(products);
+    if (!result.ok) {
+      toast.error(result.error || "No se pudo abrir la impresión.");
+      return;
+    }
+
+    toast.success(`Lista de ${result.count} códigos de barras lista para imprimir.`);
+  }
+
   // 1-Click Sync all initial products to Supabase
   async function syncAllCatalogToSupabase() {
     setSyncingAll(true);
@@ -1992,6 +2009,17 @@ export default function ProductosPage() {
           >
             <FolderSync className={`w-4 h-4 text-[#C7940A] ${syncingAll ? "animate-spin" : ""}`} />
             <span>Guardar catálogo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintInventoryBarcodes}
+            disabled={loading || !products.length}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-50"
+            title="Abre una hoja imprimible con el código de barras CODE128 de cada producto del inventario"
+          >
+            <Barcode className="w-4 h-4 text-emerald-300" />
+            <span>Imprimir códigos de barras</span>
           </button>
 
           <button

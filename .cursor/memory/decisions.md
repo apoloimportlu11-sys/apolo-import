@@ -32,6 +32,14 @@
 - **Trade-offs**: Hay que mantener docs al día
 - **Files affected**: `AGENTS.md`, `docs/*`, `.cursor/**`
 
+## [DEC-006] Códigos de barras sin dependencia npm
+- **Date**: 2026-11-26
+- **Choice**: Generador CODE128B SVG propio + ventana de impresión HTML
+- **Reason**: Imprimir inventario desde admin sin añadir paquetes ni CDN
+- **Alternatives**: JsBarcode/bwip-js npm, servicio externo
+- **Trade-offs**: Solo CODE128B (ASCII imprimible); valor = slug del producto
+- **Files affected**: `lib/admin/barcode-code128.ts`, `lib/admin/print-inventory-barcodes.ts`, `app/admin/productos/page.tsx`
+
 ## [DEC-005] Sync 2026-11-09 por fast-forward
 - **Date**: 2026-11-09
 - **Choice**: `git pull --ff-only` de `0634990` a `4368cc6`. No se reintrodujo Nodemailer.
