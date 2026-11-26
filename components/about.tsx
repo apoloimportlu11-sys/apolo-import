@@ -1,17 +1,22 @@
 "use client";
 
+import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Award, Globe2, ShieldCheck } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useNosotrosContent } from "@/lib/nosotros-data";
-import { CANONICAL_BRANDS } from "@/lib/catalog/canonical-brands";
+import {
+  isHouseBrandName,
+  resolveCanonicalBrandLogo,
+} from "@/lib/catalog/canonical-brands";
 import {
   OFFICIAL_BRAND_LOGO_IMG_BY_KEY,
   OFFICIAL_BRAND_STAGES,
-  getBrandChipVisual,
 } from "@/lib/catalog/display";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
+import { usePublicBrands } from "@/hooks/use-public-brands";
+import { AlliedBrandsWall } from "@/components/allied-brands-wall";
 import { cn } from "@/lib/utils";
 
 const HOUSE_BRANDS = [
@@ -47,10 +52,6 @@ const HOUSE_BRANDS = [
   },
 ];
 
-const ALLIED_BRANDS = CANONICAL_BRANDS.filter(
-  (brand) => !["apolo", "overts", "valtrom"].includes(brand.slug)
-);
-
 const PREAMBLE_PILLARS = [
   {
     icon: ShieldCheck,
@@ -73,8 +74,19 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function About() {
   const { logos: houseLogos } = useHouseBrandLogos();
+  const { brands: liveBrands, status: brandsStatus } = usePublicBrands();
   const { content } = useNosotrosContent();
   const reduce = useReducedMotion();
+
+  const alliedBrands = useMemo(() => {
+    return liveBrands
+      .filter((brand) => brand.is_active && !isHouseBrandName(brand.name))
+      .map((brand) => ({
+        id: brand.id,
+        name: brand.name,
+        logo: brand.logo_url?.trim() || resolveCanonicalBrandLogo(brand.name),
+      }));
+  }, [liveBrands]);
 
   const statsList =
     content.stats && content.stats.length > 0
@@ -543,54 +555,50 @@ export function About() {
         </div>
       </div>
 
-      {/* MARCAS ALIADAS */}
+      {/* MARCAS ALIADAS — logos vivos desde Admin → Marcas */}
       <div className="border-t border-border/60">
         <div className="site-container section-y">
-          <div className="max-w-2xl">
-            <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              Marcas aliadas
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              Además de nuestras líneas oficiales, distribuimos marcas reconocidas en lubricantes,
-              filtros, refrigerantes y fluidos.
-            </p>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                Marcas aliadas
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+                Además de Apolo, Overts y Valtrom, distribuimos marcas activas del catálogo. Los logos
+                se actualizan desde Admin → Marcas.
+              </p>
+            </div>
+            {brandsStatus === "ready" && alliedBrands.length > 0 ? (
+              <p className="shrink-0 font-display text-sm tabular-nums text-muted-foreground">
+                <span className="text-2xl font-semibold text-foreground">{alliedBrands.length}</span>
+                {" "}
+                en distribución
+              </p>
+            ) : null}
           </div>
 
-          <ul className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {ALLIED_BRANDS.map((brand) => {
-              const tone = getBrandChipVisual(brand.name);
-              return (
-                <li key={brand.slug}>
-                  <Link
-                    href={`/productos?brand=${encodeURIComponent(brand.name)}`}
-                    className="group flex h-full flex-col items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/60 px-3 py-5 text-center transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card"
-                  >
-                    <span className="relative flex h-14 w-full items-center justify-center">
-                      {brand.logo_url ? (
-                        <Image
-                          src={brand.logo_url}
-                          alt={brand.name}
-                          width={120}
-                          height={48}
-                          className="max-h-12 w-auto object-contain opacity-90 transition-opacity group-hover:opacity-100"
-                        />
-                      ) : (
-                        <span
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: tone.accent }}
-                        >
-                          {brand.name.slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-xs font-semibold text-foreground sm:text-sm">{brand.name}</span>
-                  </Link>
+          {brandsStatus === "loading" && alliedBrands.length === 0 ? (
+            <ul
+              className="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/50 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+              aria-busy="true"
+              aria-label="Cargando marcas"
+            >
+              {Array.from({ length: 10 }).map((_, index) => (
+                <li key={`allied-skel-${index}`} className="bg-card px-4 py-8">
+                  <div className="mx-auto h-10 w-24 animate-pulse rounded-md bg-muted" />
+                  <div className="mx-auto mt-4 h-3 w-16 animate-pulse rounded bg-muted" />
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+            </ul>
+          ) : alliedBrands.length === 0 ? (
+            <p className="mt-12 rounded-2xl border border-dashed border-border/80 bg-card/40 px-6 py-10 text-center text-sm text-muted-foreground">
+              No hay marcas aliadas activas todavía. Actívalas o súbeles logo en Admin → Marcas.
+            </p>
+          ) : (
+            <AlliedBrandsWall brands={alliedBrands} />
+          )}
 
-          <div className="mt-14 flex flex-col items-start justify-between gap-6 rounded-3xl border border-border/70 bg-[linear-gradient(135deg,rgba(201,0,18,0.12),transparent_55%),var(--card)] px-6 py-8 sm:flex-row sm:items-center sm:px-10">
+          <div className="mt-14 flex flex-col items-start justify-between gap-6 rounded-3xl border border-border/70 bg-[linear-gradient(135deg,rgba(220,38,38,0.1),transparent_55%),var(--card)] px-6 py-8 sm:flex-row sm:items-center sm:px-10">
             <div>
               <h3 className="font-display text-2xl font-semibold tracking-tight">
                 ¿Buscas una marca o presentación?

@@ -3,12 +3,7 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { FileText, Package, PackageX } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Product } from "@/lib/products-data";
 import { getSubcategoryById } from "@/lib/products-data";
 import { useQuote } from "@/lib/quote-context";
@@ -29,7 +24,9 @@ import {
 } from "@/lib/catalog/presentations";
 import { OfficialBrandWatermark } from "@/components/catalog/official-brand-watermark";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
+import { ProductUnavailablePanel } from "@/components/catalog/product-unavailable-panel";
 import { stockLevel } from "@/lib/catalog/stock-status";
+import { setLenisLocked } from "@/lib/lenis-lock";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +35,7 @@ export type CatalogViewMode = "grid" | "grid5" | "list";
 type CatalogProductCardProps = {
   product: Product;
   viewMode: CatalogViewMode;
+  catalog?: Product[];
   lineGroupsById?: Map<string, ManagedLineGroup>;
   onOpenQuickView: (product: Product) => void;
 };
@@ -59,6 +57,7 @@ function hasUsableImage(src?: string | null) {
 function CatalogProductCardInner({
   product,
   viewMode,
+  catalog = [],
   lineGroupsById,
   onOpenQuickView,
 }: CatalogProductCardProps) {
@@ -71,6 +70,10 @@ function CatalogProductCardInner({
   useEffect(() => {
     setQuoteReady(true);
   }, []);
+  useEffect(() => {
+    setLenisLocked(unavailableOpen);
+    return () => setLenisLocked(false);
+  }, [unavailableOpen]);
   const subcategory = product.subcategoryId
     ? getSubcategoryById(product.subcategoryId)
     : null;
@@ -94,8 +97,12 @@ function CatalogProductCardInner({
   const isInQuote = quoteReady && items.some((it) => it.id === product.id);
 
   const openDetails = useCallback(() => {
+    if (outOfStock) {
+      setUnavailableOpen(true);
+      return;
+    }
     onOpenQuickView(product);
-  }, [onOpenQuickView, product]);
+  }, [onOpenQuickView, outOfStock, product]);
 
   const handleQuoteClick = useCallback(
     (e: React.MouseEvent) => {
@@ -125,90 +132,27 @@ function CatalogProductCardInner({
     [addItem, lineLabel, openDrawer, outOfStock, primaryPack, product]
   );
 
-  const confirmConsult = useCallback(() => {
-    const pack = primaryPack?.label || product.presentation || "Estándar";
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        brand: product.brand || "Apolo",
-        line: lineLabel || product.line,
-        presentation: product.aroma ? `${pack} · ${product.aroma}` : pack,
-        presentationId: primaryPack && !primaryPack.virtual ? primaryPack.id : undefined,
-        image: product.image,
-        viscosity: product.viscosity,
-      },
-      1
-    );
-    setUnavailableOpen(false);
-    openDrawer();
-  }, [addItem, lineLabel, openDrawer, primaryPack, product]);
+  const openAlternative = useCallback(
+    (item: Product) => {
+      setUnavailableOpen(false);
+      onOpenQuickView(item);
+    },
+    [onOpenQuickView]
+  );
 
   const unavailableDialog = (
     <Dialog open={unavailableOpen} onOpenChange={setUnavailableOpen}>
       <DialogContent
-        className="overflow-hidden border border-white/10 bg-[#0c0d12] p-0 text-white shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:max-w-md"
+        data-lenis-prevent
+        className="overflow-hidden overscroll-contain border border-white/10 bg-[#0c0d12] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:max-w-md [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/10 [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:opacity-100 hover:[&_[data-slot=dialog-close]]:bg-white/20"
         style={{ backgroundColor: "#0c0d12" }}
       >
-        <div className="h-1.5 w-full" style={{ backgroundColor: tone.accent }} />
-        <div className="px-6 pb-6 pt-5 text-center">
-          <div className="mx-auto flex items-center justify-center gap-3">
-            {brandLogo ? (
-              <span className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/40 p-1.5">
-                <Image
-                  src={brandLogo}
-                  alt={brandName}
-                  width={80}
-                  height={40}
-                  className="h-full w-full object-contain"
-                />
-              </span>
-            ) : (
-              <span
-                className="inline-flex h-10 items-center rounded-full px-3 text-xs font-bold uppercase tracking-[0.16em] text-white"
-                style={{ backgroundColor: tone.accent }}
-              >
-                {brandName}
-              </span>
-            )}
-            <span
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: tone.soft, color: tone.accent }}
-            >
-              <PackageX className="h-5 w-5" />
-            </span>
-          </div>
-          <p
-            className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em]"
-            style={{ color: tone.accent }}
-          >
-            {brandName}
-          </p>
-          <DialogTitle className="mt-2 text-balance font-display text-2xl font-semibold tracking-tight text-white">
-            No disponible por el momento
-          </DialogTitle>
-          <DialogDescription className="mt-3 text-sm leading-relaxed text-white/70">
-            {product.name ? `${product.name} ` : "Este producto "}
-            no tiene stock en {brandName}. Podemos confirmarte reposición o una alternativa de la misma línea.
-          </DialogDescription>
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <button
-              type="button"
-              onClick={confirmConsult}
-              className="inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold text-white"
-              style={{ backgroundColor: tone.accent }}
-            >
-              Consultar disponibilidad
-            </button>
-            <button
-              type="button"
-              onClick={() => setUnavailableOpen(false)}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white hover:bg-white/10"
-            >
-              Ver otras opciones
-            </button>
-          </div>
-        </div>
+        <ProductUnavailablePanel
+          product={product}
+          catalog={catalog}
+          onSelectAlternative={openAlternative}
+          onDismiss={() => setUnavailableOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

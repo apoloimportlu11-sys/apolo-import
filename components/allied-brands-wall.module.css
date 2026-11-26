@@ -1,0 +1,333 @@
+.stage {
+  position: relative;
+  margin-top: 3rem;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+  background:
+    radial-gradient(ellipse 90% 70% at 50% -10%, rgba(220, 38, 38, 0.14), transparent 58%),
+    linear-gradient(180deg, color-mix(in oklab, var(--card) 92%, #000) 0%, var(--card) 100%);
+}
+
+.spotlight {
+  position: relative;
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+  padding: 2rem 1.25rem 1.5rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .spotlight {
+    padding: 2.5rem 2rem 1.75rem;
+  }
+}
+
+.frame {
+  position: relative;
+  display: flex;
+  width: min(100%, 22rem);
+  aspect-ratio: 16 / 9;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background:
+    linear-gradient(145deg, #ffffff 0%, #f3f3f1 55%, #ecece8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.logo {
+  max-height: 58%;
+  max-width: 72%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.fallback {
+  display: inline-flex;
+  height: 4.5rem;
+  width: 4.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.fallbackCompact {
+  height: 2.35rem;
+  width: 2.35rem;
+  font-size: 0.7rem;
+}
+
+.meta {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: center;
+}
+
+.brandName {
+  margin: 0;
+  font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.35rem, 1rem + 1.4vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--primary) 45%, var(--border));
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  padding: 0.45rem 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cta:hover,
+.cta:focus-visible {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  height: 2.4rem;
+  width: 2.4rem;
+  translate: 0 -50%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  background: color-mix(in oklab, var(--background) 80%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.nav:hover,
+.nav:focus-visible {
+  border-color: color-mix(in oklab, var(--primary) 50%, var(--border));
+  background: var(--background);
+  outline: none;
+}
+
+.navPrev {
+  left: 0.75rem;
+}
+
+.navNext {
+  right: 0.75rem;
+}
+
+.progress {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  height: 0.35rem;
+  width: 0.35rem;
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  cursor: pointer;
+  transition:
+    width 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.dotActive {
+  width: 1.35rem;
+  background: var(--primary);
+}
+
+.railWrap {
+  border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  padding: 0.9rem 0.75rem 1.1rem;
+  background: color-mix(in oklab, var(--background) 35%, transparent);
+}
+
+.rail {
+  display: flex;
+  gap: 0.65rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding: 0.15rem 0.25rem 0.35rem;
+  scrollbar-width: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.thumb {
+  position: relative;
+  display: flex;
+  width: 5.6rem;
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.thumbPlate {
+  display: flex;
+  height: 3.4rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.8rem;
+  border: 1px solid transparent;
+  background: #f7f7f5;
+  padding: 0.35rem 0.45rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.thumbLogo {
+  max-height: 2.1rem;
+  max-width: 90%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.thumbName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.thumbActive .thumbPlate {
+  border-color: color-mix(in oklab, var(--primary) 70%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 25%, transparent);
+  transform: translateY(-2px);
+}
+
+.thumbActive .thumbName {
+  color: var(--foreground);
+}
+
+.thumb:focus-visible .thumbPlate {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.grid {
+  display: grid;
+  margin-top: 3rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  background: color-mix(in oklab, var(--border) 60%, transparent);
+}
+
+.gridItem {
+  background: var(--card);
+}
+
+.gridLink {
+  display: flex;
+  min-height: 8.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.gridPlate {
+  display: flex;
+  height: 3.5rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: #f7f7f5;
+  padding: 0.4rem;
+}
+
+.gridName {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .thumb {
+    width: 6.2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .navPrev {
+    left: 1.25rem;
+  }
+
+  .navNext {
+    right: 1.25rem;
+  }
+}

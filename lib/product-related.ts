@@ -151,18 +151,33 @@ function replacementScore(current: Product, candidate: Product): number {
   return score;
 }
 
+function sortStockReplacements(product: Product, items: Product[]): Product[] {
+  return [...items].sort((a, b) => {
+    const stockA = Number(a.stock) > 0 ? 0 : 1;
+    const stockB = Number(b.stock) > 0 ? 0 : 1;
+    if (stockA !== stockB) return stockA - stockB;
+    const rankDiff = officialBrandRank(a.brand) - officialBrandRank(b.brand);
+    if (rankDiff !== 0) return rankDiff;
+    const scoreDiff = replacementScore(product, b) - replacementScore(product, a);
+    if (scoreDiff !== 0) return scoreDiff;
+    return (a.brand || "").localeCompare(b.brand || "", "es", { sensitivity: "base" });
+  });
+}
+
 /**
  * Si el producto está agotado: primero el mismo nombre en otra marca.
  * Si no existe, el equivalente más cercano de la misma familia (grasa, moto, línea)
- * en otra marca. Overts, Apolo y Valtrom van primero.
+ * en otra marca. Prioriza stock > 0 y luego Apolo / Overts / Valtrom.
  */
 export function getStockReplacements(
   product: Product,
   catalog: Product[],
-  limit = 3
+  limit = 6
 ): Product[] {
-  const exact = getCrossBrandAlternatives(product, catalog, limit);
-  if (exact.length > 0) return exact;
+  const exact = getCrossBrandAlternatives(product, catalog, Math.max(limit * 2, 10));
+  if (exact.length > 0) {
+    return sortStockReplacements(product, exact).slice(0, limit);
+  }
 
   const family = replacementFamily(product);
   if (!family) return [];
@@ -180,15 +195,7 @@ export function getStockReplacements(
     }
   }
 
-  return Array.from(byBrand.values())
-    .sort((a, b) => {
-      const rankDiff = officialBrandRank(a.brand) - officialBrandRank(b.brand);
-      if (rankDiff !== 0) return rankDiff;
-      const scoreDiff = replacementScore(product, b) - replacementScore(product, a);
-      if (scoreDiff !== 0) return scoreDiff;
-      return (a.brand || "").localeCompare(b.brand || "", "es", { sensitivity: "base" });
-    })
-    .slice(0, limit);
+  return sortStockReplacements(product, Array.from(byBrand.values())).slice(0, limit);
 }
 
 /**

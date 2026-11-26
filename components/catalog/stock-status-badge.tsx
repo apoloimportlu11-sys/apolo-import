@@ -55,9 +55,9 @@ export function StockStatusBadge({ level, variant = "inline", className }: Props
             <PackageX className="h-4 w-4" />
           </span>
           <div>
-            <p className="font-semibold tracking-tight">Agotado por ahora</p>
+            <p className="font-semibold tracking-tight">Sin stock</p>
             <p className="mt-0.5 text-xs leading-relaxed opacity-90">
-              Puedes cotizarlo igual: te confirmamos reposición o una alternativa equivalente.
+              Esta presentación no está disponible. Elige otra o cotiza una alternativa similar.
             </p>
           </div>
         </div>

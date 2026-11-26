@@ -1952,6 +1952,7 @@ export function Products({
               productsGroupedByBrand={productsGroupedByBrand}
               lineGroups={groupProductsByLine(pagedProducts)}
               lineGroupsById={lineGroupsById}
+              catalog={allMergedProducts}
               onOpenQuickView={openQuickView}
               onClearFilters={clearFilters}
               selectedBrand={selectedBrands.length === 1 ? selectedBrands[0] : null}

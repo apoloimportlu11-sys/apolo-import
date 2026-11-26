@@ -2548,17 +2548,17 @@ export default function ProductosPage() {
           }
         }}
       >
-        <AlertDialogContent className="overflow-hidden border-white/10 bg-[#141414] p-0 text-[#F4F4F5] sm:max-w-md">
-          <div className="border-b border-white/10 bg-[linear-gradient(135deg,#1a1610,#141414_55%)] px-6 py-5">
+        <AlertDialogContent className="overflow-hidden p-0 sm:max-w-md">
+          <div className="border-b border-[var(--admin-line)] px-6 py-5">
             <AlertDialogHeader>
               <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-amber-500/15 ring-1 ring-amber-500/35">
-                <Sparkles className="h-5 w-5 text-amber-300" />
+                <Sparkles className="h-5 w-5 text-amber-600" />
               </div>
-              <AlertDialogTitle className="text-lg text-white">Completar fichas</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2 text-[13px] leading-relaxed text-zinc-400">
+              <AlertDialogTitle>Completar fichas</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2 text-[13px]">
                 <span className="block">
                   Se rellenarán{" "}
-                  <span className="font-medium text-zinc-200">
+                  <span className="font-medium">
                     {enrichPreview?.withChanges ?? 0} de {enrichPreview?.total ?? 0}
                   </span>{" "}
                   productos con datos aproximados ({enrichPreview?.fieldHits ?? 0} campos vacíos). No cambia precios ni stock.
@@ -2567,7 +2567,7 @@ export default function ProductosPage() {
                   Los textos y specs son orientativos, no certificado oficial. Luego puedes editar producto a producto.
                 </span>
                 {!enrichPreview?.extendedLikely ? (
-                  <span className="block text-amber-200/90">
+                  <span className="block text-amber-700">
                     Si aún no corriste supabase_product_presentations.sql, se guardarán al menos los campos clásicos (viscosidad, tipo, descripción…).
                   </span>
                 ) : null}
@@ -2575,10 +2575,7 @@ export default function ProductosPage() {
             </AlertDialogHeader>
           </div>
           <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
-            <AlertDialogCancel
-              disabled={enrichingAll}
-              className="rounded-xl border-white/10 bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
-            >
+            <AlertDialogCancel disabled={enrichingAll} className="rounded-xl">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
@@ -2587,7 +2584,7 @@ export default function ProductosPage() {
                 e.preventDefault();
                 void confirmEnrichAllProducts();
               }}
-              className="rounded-xl bg-[#C7940A] text-black hover:bg-[#d9a311]"
+              className="rounded-xl bg-[var(--admin-accent)] text-white hover:opacity-90"
             >
               {enrichingAll ? (
                 <span className="inline-flex items-center gap-2">
@@ -2608,16 +2605,16 @@ export default function ProductosPage() {
           if (!open && !deleting) setPendingDelete(null);
         }}
       >
-        <AlertDialogContent className="overflow-hidden border-white/10 bg-[#141414] p-0 text-[#F4F4F5] sm:max-w-md">
-          <div className="border-b border-white/10 bg-[linear-gradient(135deg,#1a1010,#141414_55%)] px-6 py-5">
+        <AlertDialogContent className="overflow-hidden p-0 sm:max-w-md">
+          <div className="border-b border-[var(--admin-line)] px-6 py-5">
             <AlertDialogHeader>
               <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-500/15 ring-1 ring-red-500/35">
-                <Trash2 className="h-5 w-5 text-red-400" />
+                <Trash2 className="h-5 w-5 text-red-600" />
               </div>
-              <AlertDialogTitle className="text-lg text-white">Eliminar producto</AlertDialogTitle>
-              <AlertDialogDescription className="text-[13px] leading-relaxed text-zinc-400">
+              <AlertDialogTitle>Eliminar producto</AlertDialogTitle>
+              <AlertDialogDescription className="text-[13px]">
                 Vas a quitar{" "}
-                <span className="font-medium text-zinc-200">
+                <span className="font-medium">
                   {pendingDelete?.name || "este producto"}
                 </span>{" "}
                 del catálogo. La tienda se actualizará de inmediato.
@@ -2625,10 +2622,7 @@ export default function ProductosPage() {
             </AlertDialogHeader>
           </div>
           <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
-            <AlertDialogCancel
-              disabled={deleting}
-              className="rounded-xl border-white/10 bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white"
-            >
+            <AlertDialogCancel disabled={deleting} className="rounded-xl">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction

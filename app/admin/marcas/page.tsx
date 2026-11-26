@@ -859,7 +859,9 @@ export default function MarcasPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/15 bg-transparent text-zinc-100">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-[var(--admin-line)] bg-transparent text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)]">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction onClick={() => void addMissingCatalog()} className="bg-[#C7940A] text-black hover:bg-[#E4C36A]">
               Alinear
             </AlertDialogAction>

@@ -27,8 +27,12 @@ export function applyAdminTheme(choice: AdminThemeChoice) {
   if (typeof document === "undefined") return;
   const resolved = resolveAdminTheme(choice);
   const root = document.documentElement;
-  root.classList.remove("admin-tone-light", "admin-tone-dark");
-  root.classList.add(resolved === "dark" ? "admin-tone-dark" : "admin-tone-light");
+  root.classList.remove("admin-tone-light", "admin-tone-dark", "dark", "light");
+  if (resolved === "dark") {
+    root.classList.add("admin-tone-dark", "dark");
+  } else {
+    root.classList.add("admin-tone-light", "light");
+  }
   root.setAttribute("data-admin-theme", choice);
   root.style.colorScheme = resolved;
 }
@@ -46,7 +50,7 @@ export function writeAdminTheme(choice: AdminThemeChoice) {
 export function releaseAdminTheme() {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.classList.remove("admin-tone-light", "admin-tone-dark");
+  root.classList.remove("admin-tone-light", "admin-tone-dark", "dark", "light");
   root.removeAttribute("data-admin-theme");
-  root.style.colorScheme = root.classList.contains("light") ? "light" : "dark";
+  root.style.colorScheme = "";
 }

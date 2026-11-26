@@ -1557,10 +1557,19 @@ body.protect-images [role="img"] {
 /* Panel admin: tokens de la marca (rojo #DC2626, tinta #141414, blanco) */
 html.admin-tone-light {
   --background: #FAFAF8;
+  --foreground: #141414;
+  --card: #ffffff;
+  --card-foreground: #141414;
+  --popover: #ffffff;
+  --popover-foreground: #141414;
   --secondary: #F4F4F5;
+  --secondary-foreground: #141414;
   --muted: #F3F1EE;
   --muted-foreground: #606060;
+  --accent: #f4f4f5;
+  --accent-foreground: #141414;
   --border: color-mix(in oklab, #DC2626 12%, #E5E7EB);
+  --input: #f4f4f5;
 }
 
 html.admin-tone-light,
@@ -1579,6 +1588,20 @@ html:not(.admin-tone-dark) .admin-layout-root {
 }
 
 html.admin-tone-dark {
+  --background: #1c1c1c;
+  --foreground: #f4f4f5;
+  --card: #1c1c1c;
+  --card-foreground: #f4f4f5;
+  --popover: #1c1c1c;
+  --popover-foreground: #f4f4f5;
+  --secondary: #161616;
+  --secondary-foreground: #f4f4f5;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: #a1a1aa;
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: #f4f4f5;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: #101010;
   --admin-canvas: #121212;
   --admin-surface: #1c1c1c;
   --admin-sidebar: #161616;
@@ -1597,6 +1620,83 @@ html.admin-tone-dark .admin-layout-root {
   background: var(--admin-canvas);
   color: var(--admin-ink);
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Confirmaciones portaleadas: colores literales + !important.
+ * Evita que text-muted-foreground / remaps de text-white ganen el cascada.
+ */
+html.admin-tone-light .admin-alert-dialog,
+html.admin-tone-light [role="alertdialog"] {
+  background-color: #ffffff !important;
+  color: #141414 !important;
+  border-color: #e5e7eb !important;
+}
+
+html.admin-tone-dark .admin-alert-dialog,
+html.admin-tone-dark [role="alertdialog"] {
+  background-color: #1c1c1c !important;
+  color: #f4f4f5 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-title"],
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-title"] {
+  color: #141414 !important;
+}
+
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-title"],
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-title"] {
+  color: #f4f4f5 !important;
+}
+
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-description"],
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-description"] *,
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-description"],
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-description"] * {
+  color: #52525b !important;
+}
+
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-description"],
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-description"] *,
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-description"],
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-description"] * {
+  color: #d4d4d8 !important;
+}
+
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-description"] .font-medium,
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-description"] .font-medium {
+  color: #141414 !important;
+}
+
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-description"] .font-medium,
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-description"] .font-medium {
+  color: #fafafa !important;
+}
+
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-cancel"],
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-cancel"] {
+  color: #141414 !important;
+  background-color: transparent !important;
+  border-color: #e5e7eb !important;
+}
+
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-cancel"],
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-cancel"] {
+  color: #f4f4f5 !important;
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-action"].bg-red-600,
+html.admin-tone-light .admin-alert-dialog [data-slot="alert-dialog-action"].bg-red-700,
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-action"].bg-red-600,
+html.admin-tone-dark .admin-alert-dialog [data-slot="alert-dialog-action"].bg-red-700,
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-action"].bg-red-600,
+html.admin-tone-light [role="alertdialog"] [data-slot="alert-dialog-action"].bg-red-700,
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-action"].bg-red-600,
+html.admin-tone-dark [role="alertdialog"] [data-slot="alert-dialog-action"].bg-red-700 {
+  color: #ffffff !important;
 }
 
 html.admin-tone-light .admin-layout-root :is(h1, h2, h3, .font-heading),
@@ -1694,7 +1794,8 @@ html.admin-tone-dark :is(.admin-layout-root, [role="dialog"], [role="alertdialog
   border-color: var(--admin-line);
 }
 
-html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+/* No remappear text-* dentro de alertdialog: tiene reglas propias con contraste fijo */
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"]) :is(
   .text-white,
   .text-zinc-100,
   .text-zinc-200
@@ -1702,14 +1803,14 @@ html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialo
   color: var(--admin-ink);
 }
 
-html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"]) :is(
   .text-zinc-300,
   .text-zinc-400
 ) {
   color: var(--admin-muted);
 }
 
-html.admin-tone-light :is(.admin-layout-root, [role="dialog"], [role="alertdialog"]) :is(
+html.admin-tone-light :is(.admin-layout-root, [role="dialog"]) :is(
   .text-zinc-500,
   .text-zinc-600
 ) {

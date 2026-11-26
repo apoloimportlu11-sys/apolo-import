@@ -341,15 +341,17 @@ export default function LineasPage() {
       </div>
 
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(open) => !open && setPendingDelete(null)}>
-        <AlertDialogContent className="border-white/10 bg-[#141414] text-zinc-100">
+        <AlertDialogContent className="border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Quitar {pendingDelete?.name}</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-300">
+            <AlertDialogTitle className="text-[var(--admin-ink)]">Quitar {pendingDelete?.name}</AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--admin-muted)]">
               Sale del menú y del formulario de producto. Los productos siguen publicados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/15 bg-transparent text-zinc-100">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-[var(--admin-line)] bg-transparent text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)]">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmDelete()} className="bg-red-700 text-white hover:bg-red-600">
               Quitar
             </AlertDialogAction>

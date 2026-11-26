@@ -30,6 +30,7 @@ type CatalogResultsProps = {
   productsGroupedByBrand: BrandGroup[];
   lineGroups: ProductLineGroup<Product>[];
   lineGroupsById?: Map<string, ManagedLineGroup>;
+  catalog?: Product[];
   onOpenQuickView: (product: Product) => void;
   onClearFilters: () => void;
   selectedBrand?: string | null;
@@ -43,6 +44,7 @@ export function CatalogResults({
   productsGroupedByBrand,
   lineGroups,
   lineGroupsById,
+  catalog = [],
   onOpenQuickView,
   onClearFilters,
   selectedBrand,
@@ -175,6 +177,7 @@ export function CatalogResults({
                             key={product.id}
                             product={product}
                             viewMode={viewMode}
+                            catalog={catalog}
                             lineGroupsById={lineGroupsById}
                             onOpenQuickView={onOpenQuickView}
                           />
@@ -248,6 +251,7 @@ export function CatalogResults({
                 key={product.id}
                 product={product}
                 viewMode={viewMode}
+                catalog={catalog}
                 lineGroupsById={lineGroupsById}
                 onOpenQuickView={onOpenQuickView}
               />

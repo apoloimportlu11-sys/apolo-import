@@ -8,6 +8,7 @@
 - **Workaround**: definir `RESEND_API_KEY` y, si aplica, `RESEND_FROM_EMAIL` / `RESEND_CONTACT_TEMPLATE_ID`
 
 ## Fixed
+- Avisos AlertDialog ilegibles en admin: `text-muted-foreground`/remaps ganaban el cascada sobre tokens; tema admin no sincronizaba `.dark`. Fix: clase `admin-alert-dialog` + colores literales `!important` por `admin-tone-*`, `applyAdminTheme` añade `.dark`/`.light`, sin remap de texto en alertdialog (2026-11-25). `components/ui/alert-dialog.tsx`, `lib/admin-theme.ts`, `app/globals.css`, `app/admin/productos/page.tsx`
 - Stock 0 en admin no mostraba «Agotado» en catálogo: el listado suma `product_presentations.stock` y `adjustStock` sin presentación solo tocaba `products.stock`. Ahora sincroniza hijas; quick-stock deja de usar delta desfasado (`lib/inventory.ts`, `app/admin/productos/page.tsx`) (2026-11-22)
 - [BUG-002] `typescript.ignoreBuildErrors` / lint no bloqueante → tipado en build + ESLint CI bloqueante (`eslint.config.mjs`, workflow sin `continue-on-error`) (2026-11-12)
 - [BUG-001] Gate admin solo por cookie → `proxy.ts` valida `getUser` (+ fallback `sb-access-token`/`sb-refresh-token`) y `role === admin` (2026-11-12)

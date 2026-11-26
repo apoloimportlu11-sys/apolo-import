@@ -2,9 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { FileText, Plus, Minus, MessageCircle, Package } from "lucide-react";
+import { FileText, Plus, Minus, MessageCircle, Package, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ProductGallery } from "@/components/ProductGallery";
 import { useQuote } from "@/lib/quote-context";
 import type { Product } from "@/lib/products-data";
@@ -22,6 +30,7 @@ import { productAromas } from "@/lib/catalog/aromas";
 import { presentationsOfProduct } from "@/lib/catalog/presentations";
 import { ProductKnowledge } from "@/components/catalog/product-detail-info";
 import { StockStatusBadge } from "@/components/catalog/stock-status-badge";
+import { ProductUnavailablePanel } from "@/components/catalog/product-unavailable-panel";
 import { stockLabel, stockLevel } from "@/lib/catalog/stock-status";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 
@@ -57,10 +66,12 @@ export function ProductDetailBody({
   const { getLogo } = useHouseBrandLogos();
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
+  const [showOutDialog, setShowOutDialog] = useState(false);
   const options = useMemo(() => presentationsOfProduct(product), [product]);
   const [selectedId, setSelectedId] = useState("");
   useEffect(() => {
     setSelectedId("");
+    setShowOutDialog(false);
   }, [product.id]);
   const selected = options.find((item) => item.id === selectedId) || options.find((item) => item.isActive) || options[0];
   const selectedImage = selected?.imageUrl || product.image;
@@ -84,7 +95,7 @@ export function ProductDetailBody({
   const related = relatedResult.items;
   const relatedMode = relatedResult.mode;
   const replacements = useMemo(
-    () => getStockReplacements(product, catalog, compact ? 4 : 3),
+    () => getStockReplacements(product, catalog, compact ? 8 : 6),
     [product, catalog, compact]
   );
   const aromas = useMemo(() => productAromas(product), [product]);
@@ -93,7 +104,32 @@ export function ProductDetailBody({
     setAroma(product.aroma || aromas[0] || "");
   }, [product.id, product.aroma, aromas]);
 
+  const selectedLevel = stockLevel({
+    stock: selected?.stock ?? product.stock,
+    stockMin: selected?.stockMin ?? product.stockMin,
+  });
+  const productLevel = stockLevel({
+    stock: product.stock,
+    stockMin: product.stockMin,
+  });
+  const selectedOut = selectedLevel === "out";
+  const productFullyOut = useMemo(() => {
+    if (options.length === 0) {
+      return stockLevel({ stock: product.stock, stockMin: product.stockMin }) === "out";
+    }
+    return options.every(
+      (item) => stockLevel({ stock: item.stock, stockMin: item.stockMin }) === "out"
+    );
+  }, [options, product.stock, product.stockMin]);
+  const railItems = selectedOut && replacements.length > 0 ? replacements : related;
+  const railMode =
+    selectedOut && replacements.length > 0 ? "cross-brand" : relatedMode;
+
   const addToQuote = (thenWhatsApp: boolean) => {
+    if (selectedOut) {
+      setShowOutDialog(true);
+      return;
+    }
     const alreadyLabeled = Boolean(product.aroma && product.name.includes(product.aroma));
     addItem(
       {
@@ -128,18 +164,86 @@ export function ProductDetailBody({
     onQuoted?.();
   };
 
-  const selectedLevel = stockLevel({
-    stock: selected?.stock ?? product.stock,
-    stockMin: selected?.stockMin ?? product.stockMin,
-  });
-  const productLevel = stockLevel({
-    stock: product.stock,
-    stockMin: product.stockMin,
-  });
-  const outOfStock = selectedLevel === "out" || productLevel === "out";
-  const railItems = outOfStock && replacements.length > 0 ? replacements : related;
-  const railMode =
-    outOfStock && replacements.length > 0 ? "cross-brand" : relatedMode;
+  const outOfStockDialog = (
+    <Dialog open={showOutDialog} onOpenChange={setShowOutDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-red-500/15 ring-1 ring-red-500/35">
+            <TriangleAlert className="h-5 w-5 text-red-600" />
+          </div>
+          <DialogTitle>Producto agotado</DialogTitle>
+          <DialogDescription>
+            {`${product.name}${selected?.label ? ` · ${selected.label}` : ""} no tiene stock ahora.${
+              replacements.length > 0
+                ? " Elige una alternativa similar; priorizamos Apolo, Overts y Valtrom."
+                : " Puedes revisar otra presentación o volver al catálogo."
+            }`}
+          </DialogDescription>
+        </DialogHeader>
+        {replacements.length > 0 ? (
+          <div className="custom-scrollbar max-h-56 space-y-2 overflow-y-auto pr-1">
+            {replacements.map((item) => {
+              const logo = getLogo(item.brand);
+              const tone = getBrandChipVisual(item.brand);
+              const inStock = Number(item.stock) > 0;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setShowOutDialog(false);
+                    onSelectProduct?.(item);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-2.5 py-2.5 text-left transition-colors hover:border-primary/40"
+                >
+                  <span className="flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white p-1">
+                    {logo ? (
+                      <Image
+                        src={logo}
+                        alt=""
+                        width={56}
+                        height={28}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tone.accent }}
+                      />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-semibold text-foreground">
+                      {item.brand || "Marca"}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                      {item.name}
+                      {item.presentation ? ` · ${item.presentation}` : ""}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                      inStock
+                        ? "bg-emerald-500/15 text-emerald-700"
+                        : "bg-red-500/10 text-red-600"
+                    )}
+                  >
+                    {inStock ? "Disponible" : "Agotado"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setShowOutDialog(false)}>
+            Entendido
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
   const availability = stockLabel(selectedLevel);
   const offerLabel = [availability, selected?.sku ? `SKU ${selected.sku}` : null]
     .filter(Boolean)
@@ -196,6 +300,25 @@ export function ProductDetailBody({
       </div>
     ) : null;
 
+  if (productFullyOut) {
+    return (
+      <div
+        className={cn(
+          "overflow-hidden border border-white/10 bg-[#0c0d12] text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)]",
+          compact ? "flex min-h-0 flex-1 flex-col" : "rounded-2xl"
+        )}
+        style={{ backgroundColor: "#0c0d12" }}
+      >
+        <ProductUnavailablePanel
+          product={product}
+          catalog={catalog}
+          onSelectAlternative={onSelectProduct}
+          onDismiss={onQuoted}
+        />
+      </div>
+    );
+  }
+
   if (compact) {
     const relatedRail =
       railItems.length > 0 ? (
@@ -206,7 +329,7 @@ export function ProductDetailBody({
         >
           <p className="shrink-0 px-2.5 pb-1.5 pt-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground lg:pt-3">
             {railMode === "cross-brand"
-              ? "Reemplazar por"
+              ? "Alternativas"
               : `También de ${product.brand}`}
           </p>
           <div className="custom-scrollbar flex min-h-0 flex-1 flex-row gap-2 overflow-x-auto px-2.5 pb-3 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-3">
@@ -220,26 +343,21 @@ export function ProductDetailBody({
               const isSibling =
                 normalizeProductKey(item.name) ===
                 normalizeProductKey(product.name);
-              const primaryLabel =
-                railMode === "cross-brand"
-                  ? item.brand || item.name
-                  : item.name;
-              const secondaryLabel =
-                item.presentation || item.viscosity || null;
+              const inStock = Number(item.stock) > 0;
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => onSelectProduct?.(item)}
                   className={cn(
-                    "w-[7.25rem] shrink-0 rounded-lg border bg-background p-2 text-left transition-colors duration-200 hover:border-primary/40 lg:w-full",
+                    "w-[8.25rem] shrink-0 rounded-lg border bg-background p-2 text-left transition-colors duration-200 hover:border-primary/40 lg:w-full",
                     railMode === "same-brand" && isSibling
                       ? "border-[color:color-mix(in_oklab,var(--gold)_50%,transparent)]"
                       : "border-border"
                   )}
-                  title={[primaryLabel, secondaryLabel].filter(Boolean).join(" · ")}
+                  title={[item.brand, item.name, item.presentation].filter(Boolean).join(" · ")}
                 >
-                  <div className="relative mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md bg-muted/40 px-1">
+                  <div className="relative mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md bg-white px-1">
                     {railMode === "cross-brand" && logo ? (
                       <Image
                         src={logo}
@@ -259,7 +377,7 @@ export function ProductDetailBody({
                           src={item.image}
                           alt={item.name}
                           fill
-                          sizes="116px"
+                          sizes="132px"
                           className="object-contain object-bottom"
                           unoptimized={item.image.startsWith("data:")}
                         />
@@ -268,14 +386,40 @@ export function ProductDetailBody({
                       <Package className="h-5 w-5 text-muted-foreground/50" />
                     )}
                   </div>
-                  <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-foreground">
-                    {primaryLabel}
-                  </p>
-                  {secondaryLabel ? (
-                    <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
-                      {secondaryLabel}
-                    </p>
-                  ) : null}
+                  {railMode === "cross-brand" ? (
+                    <>
+                      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-[color:var(--gold)]">
+                        {item.brand || "Marca"}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] font-semibold leading-snug text-foreground">
+                        {item.name}
+                      </p>
+                      {item.presentation ? (
+                        <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+                          {item.presentation}
+                        </p>
+                      ) : null}
+                      <p
+                        className={cn(
+                          "mt-1 text-[10px] font-semibold",
+                          inStock ? "text-emerald-600" : "text-red-500"
+                        )}
+                      >
+                        {inStock ? "Disponible" : "Agotado"}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-foreground">
+                        {item.name}
+                      </p>
+                      {item.presentation || item.viscosity ? (
+                        <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+                          {[item.presentation, item.viscosity].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
                 </button>
               );
             })}
@@ -334,51 +478,6 @@ export function ProductDetailBody({
                 {aromaChoices}
                 <p className="mt-2 text-xs font-medium text-foreground">{offerLabel}</p>
                 <StockStatusBadge level={selectedLevel} variant="banner" className="mt-2.5" />
-                {selectedLevel === "out" && replacements.length > 0 ? (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      Misma línea en otra marca
-                    </p>
-                    {replacements.map((item) => {
-                      const logo = getLogo(item.brand);
-                      const tone = getBrandChipVisual(item.brand);
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => onSelectProduct?.(item)}
-                          className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-2.5 py-2 text-left transition-colors hover:border-primary/40"
-                        >
-                          <span className="flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white p-1">
-                            {logo ? (
-                              <Image
-                                src={logo}
-                                alt={item.brand || ""}
-                                width={64}
-                                height={28}
-                                className="h-full w-full object-contain"
-                              />
-                            ) : (
-                              <span
-                                className="h-2.5 w-2.5 rounded-full"
-                                style={{ backgroundColor: tone.accent }}
-                              />
-                            )}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-xs font-semibold text-foreground">
-                              Reemplazar por {item.brand}
-                            </span>
-                            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                              {item.name}
-                              {item.presentation ? ` · ${item.presentation}` : ""}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
@@ -387,44 +486,57 @@ export function ProductDetailBody({
         </div>
 
         <div className="flex items-center gap-2 border-t border-border bg-muted/25 px-4 py-3 sm:px-5">
-          <div className="flex h-10 w-[7.25rem] shrink-0 items-center justify-between rounded-lg border border-border bg-background p-0.5">
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Disminuir cantidad"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className="px-1 text-sm font-semibold tabular-nums">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => q + 1)}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Aumentar cantidad"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          {!selectedOut ? (
+            <div className="flex h-10 w-[7.25rem] shrink-0 items-center justify-between rounded-lg border border-border bg-background p-0.5">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Disminuir cantidad"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="px-1 text-sm font-semibold tabular-nums">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Aumentar cantidad"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : null}
           <Button
             type="button"
-            onClick={() => addToQuote(false)}
+            onClick={() => (selectedOut ? setShowOutDialog(true) : addToQuote(false))}
             className={cn(
               "h-10 flex-1 rounded-lg font-semibold",
-              selectedLevel === "out" ? "bg-zinc-700 text-white hover:bg-zinc-600" : null
+              selectedOut ? "bg-red-600 text-white hover:bg-red-500" : null
             )}
           >
-            {addedAnimation ? "Añadido" : selectedLevel === "out" ? "Consultar" : "Cotizar"}
+            {addedAnimation ? "Añadido" : selectedOut ? "Agotado" : "Cotizar"}
           </Button>
-          <button
-            type="button"
-            onClick={() => addToQuote(true)}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#25D366] px-3 text-sm font-semibold text-white hover:bg-[#20ba59] sm:px-4"
-          >
-            <MessageCircle className="h-4 w-4 fill-white" />
-            <span className="hidden sm:inline">WhatsApp</span>
-          </button>
+          {!selectedOut ? (
+            <button
+              type="button"
+              onClick={() => addToQuote(true)}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#25D366] px-3 text-sm font-semibold text-white hover:bg-[#20ba59] sm:px-4"
+            >
+              <MessageCircle className="h-4 w-4 fill-white" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </button>
+          ) : replacements.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowOutDialog(true)}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-semibold text-foreground hover:border-primary/40 sm:px-4"
+            >
+              Ver opciones
+            </button>
+          ) : null}
         </div>
+        {outOfStockDialog}
       </div>
     );
   }
@@ -477,7 +589,7 @@ export function ProductDetailBody({
           <div
             className={cn(
               "space-y-4 rounded-2xl border p-4 shadow-xs sm:p-5",
-              selectedLevel === "out"
+              selectedOut
                 ? "border-red-500/35 bg-red-500/5"
                 : selectedLevel === "low"
                   ? "border-amber-500/35 bg-amber-500/5"
@@ -486,68 +598,78 @@ export function ProductDetailBody({
           >
             <div>
               <h4 className="flex items-center gap-2 text-base font-bold text-foreground">
-                <FileText className={cn("h-5 w-5", selectedLevel === "out" ? "text-red-500" : "text-emerald-500")} />
-                {selectedLevel === "out" ? "Consultar reposición" : "Cotizar este producto"}
+                {selectedOut ? (
+                  <TriangleAlert className="h-5 w-5 text-red-500" />
+                ) : (
+                  <FileText className="h-5 w-5 text-emerald-500" />
+                )}
+                {selectedOut ? "Producto agotado" : "Cotizar este producto"}
               </h4>
               <p className="mt-1 text-xs text-muted-foreground">
-                {selectedLevel === "out"
-                  ? "Está agotado, pero puedes pedirnos fecha de llegada o una alternativa."
+                {selectedOut
+                  ? replacements.length > 0
+                    ? "No se puede cotizar sin stock. Revisa alternativas similares (Apolo, Overts y Valtrom primero)."
+                    : "No se puede cotizar sin stock. Elige otra presentación si está disponible."
                   : selectedLevel === "low"
                     ? "Quedan pocas unidades. Añádelo a tu lista para asegurar disponibilidad."
                     : "Añádelo a tu lista para consultar disponibilidad y cotización."}
               </p>
             </div>
-            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-              <div className="flex h-11 w-full items-center justify-between rounded-xl border border-border bg-background p-1 sm:w-36 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label="Disminuir cantidad"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="px-2 text-sm font-bold">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label="Aumentar cantidad"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
+            {selectedOut ? (
               <Button
                 type="button"
-                onClick={() => addToQuote(false)}
-                className={cn(
-                  "h-11 flex-1 rounded-xl font-bold text-white",
-                  selectedLevel === "out"
-                    ? "bg-zinc-800 hover:bg-zinc-700"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                )}
+                onClick={() => setShowOutDialog(true)}
+                className="h-11 w-full rounded-xl bg-red-600 font-bold text-white hover:bg-red-500"
               >
-                <FileText className="h-4 w-4" />
-                {addedAnimation
-                  ? "¡Añadido a cotización!"
-                  : selectedLevel === "out"
-                    ? "Consultar reposición"
-                    : "Añadir a cotización"}
+                {replacements.length > 0 ? "Ver alternativas" : "Entendido"}
               </Button>
-            </div>
-            <button
-              type="button"
-              onClick={() => addToQuote(true)}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] text-sm font-bold text-white hover:bg-[#20ba59]"
-            >
-              <MessageCircle className="h-4 w-4 fill-white" />
-              Cotizar directo por WhatsApp
-            </button>
+            ) : (
+              <>
+                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                  <div className="flex h-11 w-full items-center justify-between rounded-xl border border-border bg-background p-1 sm:w-36 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                      aria-label="Disminuir cantidad"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="px-2 text-sm font-bold">{quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => q + 1)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                      aria-label="Aumentar cantidad"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => addToQuote(false)}
+                    className="h-11 flex-1 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+                  >
+                    <FileText className="h-4 w-4" />
+                    {addedAnimation ? "¡Añadido a cotización!" : "Añadir a cotización"}
+                  </Button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addToQuote(true)}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] text-sm font-bold text-white hover:bg-[#20ba59]"
+                >
+                  <MessageCircle className="h-4 w-4 fill-white" />
+                  Cotizar directo por WhatsApp
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       <ProductKnowledge product={product} />
+      {outOfStockDialog}
 
       {related.length > 0 ? (
         <div className="space-y-4" data-catalog-related="true" data-related-mode={relatedMode}>

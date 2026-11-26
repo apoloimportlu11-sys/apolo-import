@@ -181,3 +181,24 @@ export function isCanonicalBrandName(name?: string | null) {
 /** Nombres para selects / heurísticas del admin. */
 export const CANONICAL_BRAND_NAMES = CANONICAL_BRANDS.map((brand) => brand.name);
 
+const HOUSE_BRAND_SLUGS = new Set(["apolo", "overts", "valtrom"]);
+
+export function isHouseBrandName(name?: string | null) {
+  const key = canonicalBrandKey(String(name || ""));
+  return HOUSE_BRAND_SLUGS.has(key);
+}
+
+/** Logo de respaldo del seed canónico cuando Admin aún no tiene logo_url. */
+export function resolveCanonicalBrandLogo(name?: string | null): string | null {
+  const key = canonicalBrandKey(String(name || ""));
+  if (!key) return null;
+  const hit = CANONICAL_BRANDS.find(
+    (brand) =>
+      brand.slug === key ||
+      canonicalBrandKey(brand.name) === key ||
+      (key === "bbsi" && brand.slug === "3bsi") ||
+      (key === "mann filter" && brand.slug === "mann-filter")
+  );
+  return hit?.logo_url?.trim() || null;
+}
+

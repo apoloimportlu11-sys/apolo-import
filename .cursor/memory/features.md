@@ -1,6 +1,8 @@
 # Features
 
 ## Completed
+- Agotado: modal «No disponible por el momento» (estilo catálogo, mejorado) con alternativas; Detalles/Consultar en tarjeta y quick view. No cotiza el agotado. `product-unavailable-panel.tsx`, `catalog-product-card.tsx`, `product-quick-view.tsx` (2026-11-25).
+- Nosotros → Marcas aliadas: muro de logos desde marcas activas de Admin (excluye casa); logo_url con fallback canónico (2026-11-25). `components/about.tsx`, `lib/catalog/canonical-brands.ts`
 - Catálogo vivo 2026-11-22: **172** productos `cat-*` activos; limpieza borró 680 `xlsx-*` + 23 `prod-*` inactivos (`scripts/cleanup_inactive_imports.js`)
 - Import Excel (hist.): ~8482 → curado ~685 xlsx (2026-11-20) → todos `xlsx-*` eliminados al quedar inactivos (2026-11-22); scripts `parse_multimarcas_excel.py` + `import_multimarcas_products.js` siguen disponibles
 - `short_description` / títulos de sección Excel: `getProductLineCategory` en `lib/product-grouping.ts`
