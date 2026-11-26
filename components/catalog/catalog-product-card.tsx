@@ -3,7 +3,13 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { FileText, Package, PackageX } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Product } from "@/lib/products-data";
 import { getSubcategoryById } from "@/lib/products-data";
 import { useQuote } from "@/lib/quote-context";
@@ -147,6 +153,12 @@ function CatalogProductCardInner({
         className="overflow-hidden overscroll-contain border border-white/10 bg-[#0c0d12] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:max-w-md [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/10 [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:opacity-100 hover:[&_[data-slot=dialog-close]]:bg-white/20"
         style={{ backgroundColor: "#0c0d12" }}
       >
+        <DialogHeader className="sr-only">
+          <DialogTitle>No disponible: {product.name}</DialogTitle>
+          <DialogDescription>
+            {product.name} no tiene stock. Elige una alternativa para cotizar.
+          </DialogDescription>
+        </DialogHeader>
         <ProductUnavailablePanel
           product={product}
           catalog={catalog}

@@ -14,6 +14,10 @@ export interface CarouselItemData {
   /** Marca comercial mostrada en la vitrina (Apolo / Overts / Valtrom prioritarias). */
   brand?: string;
   color?: string; // e.g. "220, 38, 38"
+  /** ID del producto en Supabase (vitrina → detalle). */
+  productId?: string;
+  /** Slug del producto para `/productos/[slug]`. */
+  productSlug?: string;
 }
 
 export interface CarouselRowsData {
@@ -92,12 +96,25 @@ export function normalizeCarouselItem(
     (HOUSE_BRANDS.includes(fallbackBrand as HouseBrand) ? (fallbackBrand as HouseBrand) : "Apolo");
 
   const brand = explicit || inferred || fallback;
+  const productId = String(item.productId || "").trim() || undefined;
+  const productSlug = String(item.productSlug || "").trim() || undefined;
 
   return {
     ...item,
     name,
     brand,
+    productId,
+    productSlug,
   };
+}
+
+/** Solo tarjetas de marcas de casa con imagen usable. */
+export function filterHouseCarouselItems(items: CarouselItemData[]): CarouselItemData[] {
+  return items.filter((item) => {
+    if (!String(item.url || "").trim()) return false;
+    const brand = canonicalizeHouseBrand(item.brand) || inferHouseBrand(item.brand, item.name, item.url);
+    return Boolean(brand && HOUSE_BRANDS.includes(brand));
+  });
 }
 
 export function normalizeCarouselRows(

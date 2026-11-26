@@ -4,7 +4,11 @@ import dynamic from "next/dynamic";
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { PromoCarousel } from "./PromoCarousel";
-import { useCarouselItems, type CarouselItemData } from "@/lib/carousel-items";
+import {
+  filterHouseCarouselItems,
+  useCarouselItems,
+  type CarouselItemData,
+} from "@/lib/carousel-items";
 import { useHomeContent } from "@/lib/home-content";
 import { StatsBar } from "@/components/home/stats-bar";
 import { CategoryModels } from "@/components/home/category-models";
@@ -14,8 +18,8 @@ import { BentoStory } from "@/components/home/bento-story";
 import { FinalCta } from "@/components/home/final-cta";
 
 function takeUnique(items: CarouselItemData[], seen: Set<string>) {
-  return items.filter((item) => {
-    const idKey = (item.id || "").trim();
+  return filterHouseCarouselItems(items).filter((item) => {
+    const idKey = String(item.productId || item.id || "").trim();
     const urlKey = (item.url || "").trim();
     if ((idKey && seen.has(idKey)) || (urlKey && seen.has(urlKey))) return false;
     if (idKey) seen.add(idKey);

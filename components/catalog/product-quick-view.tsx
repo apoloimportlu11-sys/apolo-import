@@ -61,12 +61,20 @@ export function ProductQuickView({
         style={fullyOut ? { backgroundColor: "#0c0d12" } : undefined}
       >
         {product && fullyOut ? (
-          <ProductUnavailablePanel
-            product={product}
-            catalog={catalog}
-            onSelectAlternative={onSelectProduct}
-            onDismiss={onClose}
-          />
+          <>
+            <DialogHeader className="sr-only">
+              <DialogTitle>No disponible: {product.name}</DialogTitle>
+              <DialogDescription>
+                {product.name} no tiene stock. Elige una alternativa para cotizar.
+              </DialogDescription>
+            </DialogHeader>
+            <ProductUnavailablePanel
+              product={product}
+              catalog={catalog}
+              onSelectAlternative={onSelectProduct}
+              onDismiss={onClose}
+            />
+          </>
         ) : product ? (
           <>
             <DialogHeader className="sr-only">

@@ -2,10 +2,6 @@
 
 import Image from "next/image";
 import { PackageX } from "lucide-react";
-import {
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { Product } from "@/lib/products-data";
 import { getBrandChipVisual } from "@/lib/catalog/display";
 import { getStockReplacements, getRelatedProductsResult } from "@/lib/product-related";
@@ -104,13 +100,13 @@ export function ProductUnavailablePanel({
         >
           {brandName}
         </p>
-        <DialogTitle className="relative mt-2 text-balance font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-[1.85rem]">
+        <h2 className="relative mt-2 text-balance font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-[1.85rem]">
           No disponible por el momento
-        </DialogTitle>
-        <DialogDescription className="relative mx-auto mt-3 max-w-sm text-sm leading-relaxed text-white/68">
+        </h2>
+        <p className="relative mx-auto mt-3 max-w-sm text-sm leading-relaxed text-white/68">
           <span className="font-medium text-white/90">{product.name}</span>
           {` no tiene stock en ${brandName}. Cotiza otra opción similar; priorizamos Apolo, Overts y Valtrom.`}
-        </DialogDescription>
+        </p>
 
         {alternatives.length > 0 ? (
           <div className="relative mt-5 text-left">

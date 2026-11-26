@@ -186,7 +186,7 @@ export function About() {
                   className="group relative flex flex-col items-center gap-2.5"
                 >
                   <motion.span
-                    className="relative flex h-[4.5rem] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white/[0.06] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-[border-color,background-color,box-shadow] duration-300 group-hover:border-white/28 group-hover:bg-white/[0.1] sm:h-[5.25rem]"
+                    className="relative flex h-[6.5rem] w-full items-center justify-center overflow-visible rounded-2xl border border-white/12 bg-white/[0.06] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-[border-color,background-color,box-shadow] duration-300 group-hover:border-white/28 group-hover:bg-white/[0.1] sm:h-[7.5rem]"
                     style={{
                       boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 ${brand.accent}00`,
                     }}
@@ -229,7 +229,7 @@ export function About() {
                       alt={brand.name}
                       width={140}
                       height={56}
-                      className={cn(OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key], "relative z-[1] max-h-12 sm:max-h-14")}
+                      className={cn(OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key], "relative z-[1] max-h-full")}
                       unoptimized
                     />
                   </motion.span>
@@ -396,12 +396,12 @@ export function About() {
                     }}
                   />
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 sm:p-6">
-                    <span className="inline-flex h-14 w-32 items-center justify-center overflow-hidden rounded-xl bg-black/40 p-2 sm:h-16 sm:w-36">
+                    <span className="inline-flex h-24 w-28 items-center justify-center overflow-visible rounded-xl bg-black/40 p-2 sm:h-28 sm:w-32">
                       <Image
                         src={logo}
                         alt={brand.name}
                         width={160}
-                        height={64}
+                        height={160}
                         className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
                         unoptimized
                       />

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import MediaSelector from "@/components/MediaSelector";
+import { HouseProductPicker, type HouseCatalogProduct } from "@/components/admin/house-product-picker";
 import { useBusinessSettings, type BusinessSettings } from "@/hooks/useBusinessSettings";
 import { useCarouselLogos, type CarouselRowLogos } from "@/lib/carousel-logos";
 import {
@@ -216,6 +217,38 @@ export default function ConfiguracionPage() {
     setEdited(true);
   }
 
+  function linkCatalogProduct(index: number, product: HouseCatalogProduct) {
+    const glow =
+      product.brand === "Apolo"
+        ? "220, 38, 38"
+        : product.brand === "Valtrom"
+          ? "59, 130, 246"
+          : "220, 38, 38";
+    updateItem(index, {
+      productId: product.id,
+      productSlug: product.slug,
+      name: product.name,
+      brand: product.brand,
+      url: product.image,
+      format: detectFormat(product.image),
+      color: glow,
+    });
+  }
+
+  function clearCatalogLink(index: number) {
+    setItems((current) => {
+      const list = [...current[row]];
+      const prev = list[index];
+      if (!prev) return current;
+      const next = { ...prev };
+      delete next.productId;
+      delete next.productSlug;
+      list[index] = next;
+      return { ...current, [row]: list };
+    });
+    setEdited(true);
+  }
+
   function addItem() {
     const created: CarouselItemData = {
       id: `${row}-${Date.now()}`,
@@ -224,6 +257,8 @@ export default function ConfiguracionPage() {
       brand: row === "vendidos" ? "Overts" : row === "recomendados" ? "Overts" : "Apolo",
       format: "png",
       color: "220, 38, 38",
+      productId: undefined,
+      productSlug: undefined,
     };
     setItems((current) => ({ ...current, [row]: [...current[row], created] }));
     setEdited(true);
@@ -256,7 +291,13 @@ export default function ConfiguracionPage() {
     for (const entry of ROWS) {
       if (items[entry.id].length === 0) return `${entry.label} se quedó sin tarjetas.`;
       const missing = items[entry.id].findIndex((item) => !item.name.trim() || !item.url.trim());
-      if (missing >= 0) return `Completa el nombre y el archivo de la tarjeta ${missing + 1} en ${entry.label}.`;
+      if (missing >= 0) {
+        return `Elige un producto del catálogo (o completa nombre e imagen) en la tarjeta ${missing + 1} de ${entry.label}.`;
+      }
+      const unlinked = items[entry.id].findIndex((item) => !String(item.productId || "").trim());
+      if (unlinked >= 0) {
+        return `Vincula un producto real de Apolo, Overts o Valtrom en la tarjeta ${unlinked + 1} de ${entry.label}.`;
+      }
       const badBrand = items[entry.id].findIndex(
         (item) => !HOUSE_BRANDS.includes((item.brand || "") as HouseBrand)
       );
@@ -333,7 +374,7 @@ export default function ConfiguracionPage() {
           [
             ["contacto", "Contacto"],
             ["apariencia", "Apariencia"],
-            ["carruseles", "Carruseles del inicio"],
+            ["carruseles", "Destacados (casa)"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -524,13 +565,15 @@ export default function ConfiguracionPage() {
       )}
 
       {section === "carruseles" && (
-        <section className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-5" aria-label="Carruseles del inicio">
+        <section className="rounded-2xl border border-white/10 bg-[#141414] p-4 sm:p-5" aria-label="Productos destacados de marcas de casa">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="font-heading text-xl text-white">Vitrina del inicio</h2>
+              <h2 className="font-heading text-xl text-white">Productos destacados (marcas de casa)</h2>
               <p className="mt-1 max-w-2xl text-sm text-zinc-300">
-                Cada tarjeta muestra logo y nombre de marca (Apolo, Overts o Valtrom) en la sección de productos destacados.
-                Los cambios se publican al guardar en el mismo contenido que usa el home (`home-carousel-items`).
+                Elige productos reales de <strong className="font-semibold text-white">Apolo</strong>,{" "}
+                <strong className="font-semibold text-white">Overts</strong> y{" "}
+                <strong className="font-semibold text-white">Valtrom</strong> desde el catálogo.
+                Al guardar, el inicio muestra esas tarjetas y “Ver producto” abre el detalle correcto.
               </p>
             </div>
             {edited ? (
@@ -562,7 +605,7 @@ export default function ConfiguracionPage() {
           <div className="mt-4">
             <FileField
               label={`Logo lateral de ${ROWS.find((entry) => entry.id === row)?.label}`}
-              description="Se repite a la izquierda y a la derecha de esa fila."
+              description="Opcional. Se muestra a los lados de esa fila en el inicio."
               value={logos[row]}
               onChange={(url) => {
                 setLogos((current) => ({ ...current, [row]: url }));
@@ -573,15 +616,15 @@ export default function ConfiguracionPage() {
           </div>
           <div className="mt-4 flex flex-col gap-4">
             {items[row].map((item, index) => {
-              const format = item.format === "glb" ? "GLB" : item.format === "gltf" ? "glTF" : "PNG";
               const isImage = item.format === "png" && item.url;
               const brand = (item.brand || "Apolo") as HouseBrand;
               const visual = getBrandChipVisual(brand);
               const brandLogo = getOfficialBrandLogo(brand);
+              const linked = Boolean(item.productId);
               return (
                 <article key={item.id || index} className="rounded-xl border border-white/10 bg-black/30 p-4">
                   <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <div className="min-w-0">
+                    <div className="min-w-0 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="grid size-14 place-items-center overflow-hidden rounded-lg bg-black">
@@ -594,21 +637,40 @@ export default function ConfiguracionPage() {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-white">Tarjeta {index + 1}</p>
-                            <p className="text-xs text-zinc-300">{item.url ? format : "Falta el archivo"}</p>
+                            <p className="text-xs text-zinc-300">
+                              {linked ? "Vinculada al catálogo" : "Sin producto vinculado"}
+                            </p>
                           </div>
                         </div>
-                        <button type="button" onClick={() => removeItem(index)} className="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-3 text-sm text-zinc-100" aria-label={`Quitar tarjeta ${index + 1}`}>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(index)}
+                          className="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-3 text-sm text-zinc-100"
+                          aria-label={`Quitar tarjeta ${index + 1}`}
+                        >
                           <Trash2 className="size-4" />
                           Quitar
                         </button>
                       </div>
 
-                      <label className="mt-3 block text-sm text-zinc-200">
-                        Nombre
-                        <input className={inputClass} value={item.name} placeholder="Grasa de litio" onChange={(event) => updateItem(index, { name: event.target.value })} />
+                      <HouseProductPicker
+                        selectedId={item.productId}
+                        brandFilter="all"
+                        onSelect={(product) => linkCatalogProduct(index, product)}
+                        onClear={() => clearCatalogLink(index)}
+                      />
+
+                      <label className="block text-sm text-zinc-200">
+                        Nombre en la vitrina
+                        <input
+                          className={inputClass}
+                          value={item.name}
+                          placeholder="Se completa al elegir el producto"
+                          onChange={(event) => updateItem(index, { name: event.target.value })}
+                        />
                       </label>
 
-                      <div className="mt-3">
+                      <div>
                         <p className="text-sm text-zinc-200">Marca de casa</p>
                         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={`Marca de la tarjeta ${index + 1}`}>
                           {HOUSE_BRANDS.map((option) => {
@@ -643,25 +705,28 @@ export default function ConfiguracionPage() {
                             );
                           })}
                         </div>
-                        <p className="mt-1.5 text-xs text-zinc-400">
-                          Si el archivo o el nombre contiene la marca, se sugiere sola al subir/cambiar la imagen.
-                        </p>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <div className="flex flex-wrap items-end gap-3">
                         <div className="min-w-0 flex-1">
                           <FileField
-                            label="Archivo"
-                            description="PNG, glTF o GLB."
+                            label="Imagen (opcional override)"
+                            description="Si no eliges producto, o quieres otra foto, súbela aquí."
                             value={item.url}
-                            allowedExtensions={[".png", ".gltf", ".glb"]}
+                            allowedExtensions={[".png", ".jpg", ".jpeg", ".webp", ".gltf", ".glb"]}
                             onChange={(url) => updateItem(index, { url })}
                             categoryFilter="products"
                           />
                         </div>
                         <label className="text-sm text-zinc-200">
                           Resplandor
-                          <input type="color" value={rgbToHex(item.color)} onChange={(event) => updateItem(index, { color: hexToRgb(event.target.value) })} aria-label={`Color de resplandor de la tarjeta ${index + 1}`} className="mt-1.5 block size-10 cursor-pointer rounded bg-transparent" />
+                          <input
+                            type="color"
+                            value={rgbToHex(item.color)}
+                            onChange={(event) => updateItem(index, { color: hexToRgb(event.target.value) })}
+                            aria-label={`Color de resplandor de la tarjeta ${index + 1}`}
+                            className="mt-1.5 block size-10 cursor-pointer rounded bg-transparent"
+                          />
                         </label>
                       </div>
                     </div>
@@ -680,7 +745,9 @@ export default function ConfiguracionPage() {
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={brandLogo} alt="" className="size-full object-contain p-1.5" />
                           ) : (
-                            <span className="text-[10px] font-bold" style={{ color: visual.accent }}>{brand.slice(0, 3)}</span>
+                            <span className="text-[10px] font-bold" style={{ color: visual.accent }}>
+                              {brand.slice(0, 3)}
+                            </span>
                           )}
                         </div>
                         {isImage ? (
@@ -702,18 +769,34 @@ export default function ConfiguracionPage() {
                           {brand}
                         </span>
                       </div>
-                      <p className="mt-3 truncate text-center text-sm font-semibold text-white">{item.name || "Sin nombre"}</p>
-                      <p className="mt-1 text-center text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: visual.accent }}>
+                      <p className="mt-3 truncate text-center text-sm font-semibold text-white">
+                        {item.name || "Sin nombre"}
+                      </p>
+                      <p
+                        className="mt-1 text-center text-[11px] font-bold uppercase tracking-[0.16em]"
+                        style={{ color: visual.accent }}
+                      >
                         {brand}
                       </p>
+                      {linked ? (
+                        <p className="mt-2 text-center text-[10px] text-emerald-300">
+                          → /productos/{item.productSlug || item.productId}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-center text-[10px] text-amber-200">Elige un producto para publicar</p>
+                      )}
                     </aside>
                   </div>
                 </article>
               );
             })}
-            <button type="button" onClick={addItem} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 text-sm text-zinc-100 hover:border-[#C7940A]">
+            <button
+              type="button"
+              onClick={addItem}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 text-sm text-zinc-100 hover:border-[#C7940A]"
+            >
               <Plus className="size-4" />
-              Agregar tarjeta
+              Agregar producto destacado
             </button>
           </div>
         </section>

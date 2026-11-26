@@ -71,9 +71,16 @@ export function AlliedBrandsWall({ brands }: { brands: AlliedBrandTile[] }) {
   }, [count, paused, reduce]);
 
   useEffect(() => {
+    const rail = railRef.current;
     const node = thumbRefs.current[index];
-    if (!node || !railRef.current) return;
-    node.scrollIntoView({ behavior: reduce ? "auto" : "smooth", inline: "center", block: "nearest" });
+    if (!rail || !node) return;
+    // Solo desplazar el rail horizontal; nunca la página (evita saltar a Marcas aliadas al entrar a Nosotros).
+    const target =
+      node.offsetLeft - (rail.clientWidth - node.offsetWidth) / 2;
+    rail.scrollTo({
+      left: Math.max(0, target),
+      behavior: reduce ? "auto" : "smooth",
+    });
   }, [index, reduce]);
 
   if (count === 0) return null;

@@ -14,6 +14,10 @@ import {
   OFFICIAL_BRANDS,
 } from "@/lib/catalog/display";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
+import {
+  resolveShowcaseHref,
+  useShowcaseProductLinks,
+} from "@/hooks/use-showcase-product-links";
 
 export type ShowcaseLane = {
   kicker: string;
@@ -126,12 +130,14 @@ function ShowcaseCard({
   paused,
   reduce,
   getLogo,
+  productLinks,
 }: {
   lane: ShowcaseLane;
   index: number;
   paused: boolean;
   reduce: boolean;
   getLogo: (brand?: string | null) => string | null;
+  productLinks: Map<string, string>;
 }) {
   const list = lane.items.filter((item) => item.url);
   const [active, setActive] = useState(0);
@@ -140,6 +146,9 @@ function ShowcaseCard({
   const official = isOfficialBrand(brand);
   const visual = getBrandChipVisual(brand);
   const brandLogo = getLogo(brand);
+  const href = product
+    ? `/productos/${encodeURIComponent(resolveShowcaseHref(product, productLinks))}`
+    : "/productos";
 
   useEffect(() => {
     if (reduce || paused || list.length < 2) return;
@@ -283,7 +292,7 @@ function ShowcaseCard({
       ) : null}
 
       <Link
-        href="/productos"
+        href={href}
         className="lane-link relative z-10 mt-5 inline-flex h-10 items-center justify-center gap-2 self-center rounded-full border border-white/15 px-4 text-sm font-semibold text-white transition-colors duration-200 hover:border-[color:var(--gold)] hover:text-[color:var(--gold)]"
       >
         Ver producto
@@ -297,6 +306,8 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
   const reduce = useReducedMotion();
   const [paused, setPaused] = useState(false);
   const { logos: houseLogos, getLogo } = useHouseBrandLogos();
+  const allItems = lanes.flatMap((lane) => lane.items);
+  const productLinks = useShowcaseProductLinks(allItems);
 
   return (
     <section
@@ -317,7 +328,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
             Productos <span className="title-heat-on-dark text-[color:var(--gold)]">destacados</span>
           </h2>
           <p className="showcase-lead mt-3 text-sm text-white/60 sm:text-base">
-            Lo más vendido, lo más popular y lo que recomendamos — con énfasis en las marcas de casa.
+            Lo más vendido, lo más popular y lo recomendado — solo productos Apolo, Overts y Valtrom.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             {OFFICIAL_BRANDS.map((key) => {
@@ -355,6 +366,7 @@ export function FeaturedShowcase({ lanes }: { lanes: ShowcaseLane[] }) {
               paused={paused}
               reduce={Boolean(reduce)}
               getLogo={getLogo}
+              productLinks={productLinks}
             />
           ))}
         </div>

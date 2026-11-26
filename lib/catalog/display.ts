@@ -52,22 +52,25 @@ export function sanitizeOfficialBrandLogoUrl(
   return raw;
 }
 
-/** Caja cuadrada idéntica para Apolo / Overts / Valtrom. */
+/**
+ * Contenedor vertical: deja ver escudo + texto completo (p. ej. REPUESTOS).
+ * Sin scale que recorte el logo.
+ */
 export const OFFICIAL_BRAND_LOGO_BOX =
-  "inline-flex aspect-square h-[4.75rem] w-[4.75rem] shrink-0 items-center justify-center overflow-visible sm:h-[5.25rem] sm:w-[5.25rem] lg:h-[5.75rem] lg:w-[5.75rem]";
+  "inline-flex h-[4.5rem] w-[5.25rem] shrink-0 items-center justify-center overflow-visible sm:h-[5rem] sm:w-[5.75rem] lg:h-[5.5rem] lg:w-[6.25rem]";
 
-/** Variante compacta (header al hacer scroll). */
+/** Variante compacta (header). */
 export const OFFICIAL_BRAND_LOGO_BOX_COMPACT =
-  "inline-flex aspect-square h-14 w-14 shrink-0 items-center justify-center overflow-visible sm:h-16 sm:w-16";
+  "inline-flex h-12 w-[4.25rem] shrink-0 items-center justify-center overflow-visible sm:h-14 sm:w-[5rem]";
 
 export const OFFICIAL_BRAND_LOGO_IMG =
-  "h-[98%] w-[98%] object-contain object-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.28)]";
+  "h-full w-full object-contain object-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.28)]";
 
-/** Valtrom es más ancho: escala extra para igualar presencia visual. */
+/** Misma escala para las 3: el PNG completo cabe en la caja. */
 export const OFFICIAL_BRAND_LOGO_IMG_BY_KEY: Record<OfficialBrandKey, string> = {
   apolo: OFFICIAL_BRAND_LOGO_IMG,
   overts: OFFICIAL_BRAND_LOGO_IMG,
-  valtrom: `${OFFICIAL_BRAND_LOGO_IMG} scale-[1.32]`,
+  valtrom: OFFICIAL_BRAND_LOGO_IMG,
 };
 
 /** Fondos de escena (marca de agua + esquinas) para priorizar Apolo / Overts / Valtrom. */

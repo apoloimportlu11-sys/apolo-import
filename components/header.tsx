@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Menu,
-  Search,
   ChevronDown,
   Sun,
   Moon,
@@ -21,7 +20,6 @@ import FestiveTopBanner from "@/components/FestiveTopBanner";
 import { useProductLineGroups } from "@/lib/product-line-groups";
 import { useHouseBrandLogos } from "@/hooks/use-house-brand-logos";
 import {
-  OFFICIAL_BRAND_LOGO_BOX,
   OFFICIAL_BRAND_LOGO_BOX_COMPACT,
   OFFICIAL_BRAND_LOGO_IMG_BY_KEY,
 } from "@/lib/catalog/display";
@@ -103,16 +101,18 @@ export function Header() {
 
   const navLinkClass = (active: boolean) =>
     cn(
-      "relative font-display text-xs font-semibold uppercase tracking-[0.12em] transition-colors duration-300 xl:text-sm xl:tracking-[0.16em]",
+      "relative inline-flex items-center py-1 font-display text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-300 xl:text-xs xl:tracking-[0.16em]",
+      "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-[2px] after:origin-left after:rounded-full after:bg-primary after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)]",
       active
-        ? "text-zinc-950 dark:text-white"
-        : "text-zinc-600 hover:text-zinc-950 dark:text-white/70 dark:hover:text-white"
+        ? "text-zinc-950 after:scale-x-100 dark:text-white"
+        : "text-zinc-500 after:scale-x-0 hover:text-zinc-950 hover:after:scale-x-100 dark:text-white/65 dark:hover:text-white"
     );
 
   const compact = mounted && scrolled;
+  /** Opción 3: logos siempre compactos (barra de comandos). */
   const brandBoxClass = cn(
-    "transition-[height,width,opacity] duration-500 hover:opacity-90",
-    compact ? OFFICIAL_BRAND_LOGO_BOX_COMPACT : OFFICIAL_BRAND_LOGO_BOX
+    OFFICIAL_BRAND_LOGO_BOX_COMPACT,
+    "transition-opacity duration-300 hover:opacity-90"
   );
 
   return (
@@ -131,26 +131,26 @@ export function Header() {
         >
           <div
             className={cn(
-              "grid w-full grid-cols-[1fr_auto] items-center gap-2 px-3 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:gap-3 sm:px-4 md:grid-cols-[auto_1fr_auto] md:px-5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-5 lg:px-6 xl:px-8",
-              compact ? "py-2 lg:py-2.5" : "py-3 lg:py-4"
+              "grid w-full grid-cols-[1fr_auto] items-center gap-2 px-3 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:gap-3 sm:px-4 md:grid-cols-[auto_1fr_auto] md:px-5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-6 lg:px-6 xl:px-8",
+              compact ? "py-1.5 lg:py-2" : "py-2.5 lg:py-3"
             )}
           >
-            {/* Desktop / tablet: logos desde Admin → Marcas, mismo tamaño */}
+            {/* Logos compactos (barra de comandos) */}
             <div
-              className="hidden min-w-0 shrink-0 items-center justify-self-start gap-2 overflow-hidden md:flex lg:gap-3"
+              className="hidden min-w-0 shrink-0 items-center justify-self-start gap-1.5 overflow-visible md:flex lg:gap-2"
               aria-label="Marcas Apolo, Overts y Valtrom"
             >
               {HEADER_BRANDS.map((brand, index) => (
-                <div key={brand.key} className="flex items-center gap-2 lg:gap-3">
+                <div key={brand.key} className="flex items-center gap-1.5 lg:gap-2">
                   {index > 0 ? (
-                    <span className="h-10 w-px shrink-0 bg-zinc-300 dark:bg-white/20" aria-hidden />
+                    <span className="h-7 w-px shrink-0 bg-zinc-300/80 dark:bg-white/15" aria-hidden />
                   ) : null}
                   <Link href={brand.href} className={brandBoxClass} title={brand.name}>
                     <Image
                       src={houseLogos[brand.key]}
                       alt={brand.name}
-                      width={160}
-                      height={160}
+                      width={112}
+                      height={112}
                       priority={brand.key === "apolo"}
                       unoptimized
                       className={OFFICIAL_BRAND_LOGO_IMG_BY_KEY[brand.key]}
@@ -160,7 +160,7 @@ export function Header() {
               ))}
             </div>
 
-            {/* Móvil: Catálogo a la izquierda para dejar sitio a las marcas abajo */}
+            {/* Móvil: acceso rápido al catálogo */}
             <Link
               href="/productos"
               className={cn(
@@ -173,17 +173,14 @@ export function Header() {
               Catálogo
             </Link>
 
-            <nav className="hidden min-w-0 items-center justify-center gap-2 overflow-hidden px-2 lg:flex xl:gap-4 2xl:gap-6">
+            <nav className="hidden min-w-0 items-center justify-center gap-5 overflow-hidden px-2 lg:flex xl:gap-7">
               <Link href="/" className={navLinkClass(isActive("/"))}>
                 Inicio
               </Link>
-              <Link
-                href="/nosotros"
-                className={navLinkClass(isActive("/nosotros"))}
-              >
+              <Link href="/nosotros" className={navLinkClass(isActive("/nosotros"))}>
                 Nosotros
               </Link>
-              <div className="relative flex items-center">
+              <div className="relative flex items-center gap-0.5">
                 <Link
                   href="/productos"
                   className={navLinkClass(pathname.startsWith("/productos"))}
@@ -193,68 +190,42 @@ export function Header() {
                 <button
                   type="button"
                   onClick={() => setShowMegaMenu(!showMegaMenu)}
-                  className="ml-1 cursor-pointer p-1 text-zinc-500 transition-colors hover:text-zinc-950 dark:text-white/70 dark:hover:text-white"
+                  className="cursor-pointer p-1 text-zinc-400 transition-colors hover:text-zinc-950 dark:text-white/50 dark:hover:text-white"
                   aria-label="Abrir menú de productos"
+                  aria-expanded={showMegaMenu}
                 >
                   <ChevronDown
                     className={cn(
-                      "h-4 w-4 transition-transform duration-300",
+                      "h-3.5 w-3.5 transition-transform duration-300",
                       showMegaMenu && "rotate-180"
                     )}
                   />
                 </button>
               </div>
-              <Link
-                href="/contacto"
-                className={navLinkClass(isActive("/contacto"))}
-              >
+              <Link href="/contacto" className={navLinkClass(isActive("/contacto"))}>
                 Contacto
               </Link>
             </nav>
 
-            <div className="hidden shrink-0 items-center justify-end gap-1.5 justify-self-end lg:flex xl:gap-2">
-              <Link
-                href="/productos"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-zinc-600 transition-colors hover:border-primary hover:text-primary dark:border-white/10 dark:text-white/70 dark:hover:border-white/25 dark:hover:text-white"
-                aria-label="Buscar lubricante"
-              >
-                <Search className="h-4 w-4" />
-              </Link>
-              <Button
+            {/* Desktop: solo cotización + CTA */}
+            <div className="hidden shrink-0 items-center justify-end gap-2 justify-self-end lg:flex">
+              <button
                 type="button"
                 onClick={openDrawer}
-                variant="outline"
-                size="sm"
-                className="relative h-10 shrink-0 cursor-pointer rounded-full border-border bg-white/70 px-3 text-zinc-800 hover:border-primary hover:bg-primary hover:text-white dark:border-white/15 dark:bg-white/5 dark:text-white"
+                className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-black/5 hover:text-primary dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
                 title="Ver lista de cotización"
                 aria-label="Cotización"
               >
                 <FileText className="h-4 w-4" />
-                <span className="sr-only">Cotización</span>
                 {mounted && totalItems > 0 && (
-                  <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-bold text-zinc-950">
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
                     {totalItems}
                   </span>
                 )}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                variant="outline"
-                size="icon"
-                suppressHydrationWarning
-                className="h-10 w-10 cursor-pointer rounded-full border-border bg-white/70 text-zinc-800 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-                aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-              >
-                {isDark ? (
-                  <Sun className="h-4 w-4 text-amber-400" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-              </Button>
+              </button>
               <Link
                 href="/contacto"
-                className="header-cta inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white transition-[transform,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-red-500 active:scale-[0.98]"
+                className="header-cta inline-flex h-9 items-center justify-center rounded-full bg-primary px-4 text-xs font-semibold uppercase tracking-[0.08em] text-white transition-[transform,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-red-500 active:scale-[0.98]"
               >
                 Cotizar ahora
               </Link>

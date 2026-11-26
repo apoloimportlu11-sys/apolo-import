@@ -21,6 +21,16 @@ import { useQuote } from "@/lib/quote-context";
 import { useHomeContent } from "@/lib/home-content";
 import { LightAtmosphere } from "@/components/home/light-atmosphere";
 import { defaultCatalogLine } from "@/lib/product-grouping";
+import {
+  canonicalizeHouseBrand,
+  HOUSE_BRANDS,
+  inferHouseBrand,
+} from "@/lib/carousel-items";
+
+function isHouseBrandProduct(brand?: string | null, name?: string | null) {
+  const resolved = canonicalizeHouseBrand(brand) || inferHouseBrand(brand, name);
+  return Boolean(resolved && HOUSE_BRANDS.includes(resolved));
+}
 
 const ADMIN_STORAGE_KEY = "apolo_admin_products_cache_v4";
 const DELETED_KEY = "apolo_admin_deleted_products_ids";
@@ -323,7 +333,12 @@ export function FeaturedProductsCarousel() {
     };
 
     const fromDb = dbFeatured
-      .filter((p) => !isDeleted(p.id, p.slug, p.code) && p.is_active !== false)
+      .filter(
+        (p) =>
+          !isDeleted(p.id, p.slug, p.code) &&
+          p.is_active !== false &&
+          isHouseBrandProduct(p.brand, p.name)
+      )
       .map((p) => ({
         ...p,
         image: p.image_url || p.image || "",
@@ -349,6 +364,10 @@ export function FeaturedProductsCarousel() {
                 (p: Record<string, unknown>) =>
                   Boolean(p?.is_featured) &&
                   p?.is_active !== false &&
+                  isHouseBrandProduct(
+                    p?.brand != null ? String(p.brand) : null,
+                    p?.name != null ? String(p.name) : null
+                  ) &&
                   !isDeleted(
                     p?.id != null ? String(p.id) : null,
                     p?.slug != null ? String(p.slug) : null,
@@ -389,7 +408,12 @@ export function FeaturedProductsCarousel() {
     if (isDbLoaded) return [];
 
     const baseFeatured = BASE_PRODUCTS
-      .filter((p) => !isDeleted(p.id, p.code) && p.is_featured)
+      .filter(
+        (p) =>
+          !isDeleted(p.id, p.code) &&
+          p.is_featured &&
+          isHouseBrandProduct(p.brand, p.name)
+      )
       .map((p, idx) => ({
         id: p.id || `base-${idx + 1}`,
         name: p.name,

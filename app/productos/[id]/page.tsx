@@ -149,6 +149,52 @@ export default async function ProductPage({ params }: ProductPageProps) {
         notFound();
       }
       dbProduct = data as DbProductRow;
+    } else {
+      // Fallback: coincidir por slug/nombre (vitrina destacados → detalle)
+      const needle = id
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const needleTokens = needle.split("-").filter((token) => token.length >= 1);
+      const { data: candidates } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .limit(500);
+
+      let best: DbProductRow | null = null;
+      let bestScore = 0;
+      for (const row of candidates || []) {
+        const nameSlug = String(row.name || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+        const codeSlug = String(row.slug || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+        let score = 0;
+        if (nameSlug === needle || codeSlug === needle) score = 100;
+        else if (nameSlug.includes(needle) || codeSlug.includes(needle)) score = 70;
+        else if (needleTokens.length > 0) {
+          const hay = `${nameSlug}-${codeSlug}`;
+          const hits = needleTokens.filter((token) => hay.includes(token)).length;
+          score = (hits / needleTokens.length) * 55;
+        }
+        const brand = String(row.brand || "").toLowerCase();
+        if (/(apolo|overts|valtrom)/.test(brand)) score += 8;
+        if (score > bestScore) {
+          bestScore = score;
+          best = row as DbProductRow;
+        }
+      }
+      if (best && bestScore >= 45) {
+        dbProduct = best;
+      }
     }
   } catch (err) {
     console.warn("Supabase fetch in ProductPage error:", err);
