@@ -112,6 +112,7 @@ export function Products({
   const [brandFilterSearch, setBrandFilterSearch] = useState("");
   const [page, setPage] = useState(1);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const deepLinkProductHandled = useRef<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -623,6 +624,7 @@ export function Products({
     const subcategoryId = searchParams.get("subcategory");
     const brandParam = searchParams.get("brand");
     const lineParam = searchParams.get("line");
+    const queryParam = searchParams.get("q") || searchParams.get("search");
 
     if (brandParam) {
       setSelectedBrands([brandParam]);
@@ -631,6 +633,10 @@ export function Products({
     if (lineParam) {
       const resolved = resolveLineFilterToken(lineParam, lineGroupsById);
       setSelectedLines([resolved.toUpperCase()]);
+    }
+
+    if (queryParam) {
+      setSearchQuery(queryParam);
     }
 
     const presentationParam = searchParams.get("presentation");
@@ -656,6 +662,28 @@ export function Products({
       }
     }
   }, [searchParams, lineGroupsById]);
+
+  // Deep-link desde vitrina: /productos?brand=X&product=id&q=nombre → catálogo + quick view
+  useEffect(() => {
+    const productParam = String(searchParams.get("product") || "").trim();
+    if (!productParam || allMergedProducts.length === 0) return;
+    if (deepLinkProductHandled.current === productParam) return;
+
+    const needle = normalizeKey(productParam);
+    const match =
+      allMergedProducts.find((item) => normalizeKey(item.id) === needle) ||
+      allMergedProducts.find((item) => normalizeKey(item.code) === needle) ||
+      allMergedProducts.find((item) => normalizeKey(item.slug) === needle) ||
+      allMergedProducts.find((item) => normalizeKey(item.name) === needle) ||
+      allMergedProducts.find((item) => normalizeKey(item.name).includes(needle));
+
+    if (!match) return;
+    deepLinkProductHandled.current = productParam;
+    setQuickViewProduct(match);
+    window.setTimeout(() => {
+      gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  }, [searchParams, allMergedProducts]);
 
   useEffect(() => {
     const url = new URL(window.location.href);

@@ -780,7 +780,7 @@ export default function ConfiguracionPage() {
                       </p>
                       {linked ? (
                         <p className="mt-2 text-center text-[10px] text-emerald-300">
-                          → /productos/{item.productSlug || item.productId}
+                          → /productos?brand={brand}&product={item.productId || item.productSlug}
                         </p>
                       ) : (
                         <p className="mt-2 text-center text-[10px] text-amber-200">Elige un producto para publicar</p>

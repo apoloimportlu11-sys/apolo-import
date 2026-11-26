@@ -146,9 +146,7 @@ function ShowcaseCard({
   const official = isOfficialBrand(brand);
   const visual = getBrandChipVisual(brand);
   const brandLogo = getLogo(brand);
-  const href = product
-    ? `/productos/${encodeURIComponent(resolveShowcaseHref(product, productLinks))}`
-    : "/productos";
+  const href = product ? resolveShowcaseHref(product, productLinks) : "/productos";
 
   useEffect(() => {
     if (reduce || paused || list.length < 2) return;

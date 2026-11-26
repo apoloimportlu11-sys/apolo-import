@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Award, Globe2, ShieldCheck } from "lucide-react";
@@ -72,11 +72,101 @@ const PREAMBLE_PILLARS = [
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+type BrandKey = "apolo" | "overts" | "valtrom";
+
+const BRAND_SIM_SRC: Record<BrandKey, string> = {
+  apolo: "/sims/gearbox-brand.html?v=9",
+  overts: "/sims/v8-brand.html?brand=overts&v=7",
+  valtrom: "/sims/v8-brand.html?brand=valtrom&v=7",
+};
+
+function BrandEngineStage({
+  brand,
+  poster,
+  active,
+  onRatio,
+}: {
+  brand: BrandKey;
+  poster: string;
+  active: boolean;
+  onRatio: (brand: BrandKey, ratio: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => onRatio(brand, entry?.intersectionRatio ?? 0),
+      { threshold: [0, 0.25, 0.4, 0.6, 0.8, 1] }
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      onRatio(brand, 0);
+    };
+  }, [brand, onRatio]);
+
+  useEffect(() => {
+    if (!active) setShown(false);
+  }, [active]);
+
+  return (
+    <div ref={ref} className="absolute inset-0">
+      <Image
+        src={poster}
+        alt=""
+        fill
+        sizes="(max-width: 1024px) 100vw, 50vw"
+        className="object-cover object-center"
+      />
+      {active ? (
+        <iframe
+          title=""
+          tabIndex={-1}
+          aria-hidden
+          src={BRAND_SIM_SRC[brand]}
+          onLoad={(event) => {
+            const win = event.currentTarget.contentWindow as (Window & { SIM_SHOWN?: boolean }) | null;
+            if (!win) return;
+            const reveal = () => setShown(true);
+            if (win.SIM_SHOWN) {
+              reveal();
+              return;
+            }
+            win.addEventListener("simframe", reveal, { once: true });
+          }}
+          className={cn(
+            "pointer-events-none absolute inset-0 h-full w-full border-0 transition-opacity duration-700",
+            shown ? "opacity-100" : "opacity-0"
+          )}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function About() {
   const { logos: houseLogos } = useHouseBrandLogos();
   const { brands: liveBrands, status: brandsStatus } = usePublicBrands();
   const { content } = useNosotrosContent();
   const reduce = useReducedMotion();
+  const brandRatios = useRef<Partial<Record<BrandKey, number>>>({});
+  const [activeBrand, setActiveBrand] = useState<BrandKey | null>(null);
+  const onBrandRatio = useCallback((brand: BrandKey, ratio: number) => {
+    brandRatios.current[brand] = ratio;
+    let best: BrandKey | null = null;
+    let bestRatio = 0.35;
+    (Object.keys(brandRatios.current) as BrandKey[]).forEach((key) => {
+      const value = brandRatios.current[key] ?? 0;
+      if (value > bestRatio) {
+        best = key;
+        bestRatio = value;
+      }
+    });
+    setActiveBrand((prev) => (prev === best ? prev : best));
+  }, []);
 
   const alliedBrands = useMemo(() => {
     return liveBrands
@@ -373,29 +463,38 @@ export function About() {
             const logo = houseLogos[brand.key];
             const reverse = index % 2 === 1;
 
+            const isFeatureSim = brand.key === "apolo" || brand.key === "overts";
+
             return (
               <article
                 key={brand.key}
                 className={cn(
-                  "relative mx-auto grid max-w-[1400px] overflow-hidden border-y border-border/70 bg-card sm:rounded-3xl sm:border lg:min-h-[440px] lg:grid-cols-2",
+                  "relative mx-auto grid max-w-[1400px] overflow-hidden border-y border-border/70 bg-card sm:rounded-3xl sm:border lg:grid-cols-2",
+                  isFeatureSim ? "lg:min-h-[560px]" : "lg:min-h-[440px]",
                   reverse && "lg:[&>*:first-child]:order-2"
                 )}
               >
-                <div className="relative min-h-[280px] sm:min-h-[340px] lg:min-h-full">
-                  <Image
-                    src={stage}
-                    alt=""
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-cover object-center"
+                <div
+                  className={cn(
+                    "relative isolate lg:min-h-full",
+                    isFeatureSim ? "min-h-[360px] sm:min-h-[440px]" : "min-h-[280px] sm:min-h-[340px]"
+                  )}
+                >
+                  <BrandEngineStage
+                    brand={brand.key}
+                    poster={stage}
+                    active={reduce === false && activeBrand === brand.key}
+                    onRatio={onBrandRatio}
                   />
                   <div
-                    className="absolute inset-0"
+                    className="pointer-events-none absolute inset-0 z-10"
                     style={{
-                      background: `linear-gradient(160deg, ${brand.accent}40 0%, transparent 42%, rgba(0,0,0,0.62) 100%)`,
+                      background: isFeatureSim
+                        ? `linear-gradient(160deg, ${brand.accent}18 0%, transparent 52%, rgba(0,0,0,0.28) 100%)`
+                        : `linear-gradient(160deg, ${brand.accent}40 0%, transparent 42%, rgba(0,0,0,0.62) 100%)`,
                     }}
                   />
-                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 sm:p-6">
+                  <div className="absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 sm:p-6">
                     <span className="inline-flex h-24 w-28 items-center justify-center overflow-visible rounded-xl bg-black/40 p-2 sm:h-28 sm:w-32">
                       <Image
                         src={logo}

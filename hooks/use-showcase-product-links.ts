@@ -29,10 +29,6 @@ function normalizeText(value: string) {
     .trim();
 }
 
-function slugify(value: string) {
-  return normalizeText(value).replace(/\s+/g, "-");
-}
-
 function tokenize(value: string) {
   return normalizeText(value)
     .split(" ")
@@ -51,7 +47,6 @@ function scoreMatch(itemName: string, itemBrand: string | undefined, hit: Catalo
   if (needleTokens.length > 0) {
     const overlap = needleTokens.filter((token) => hit.tokens.includes(token)).length;
     score += (overlap / needleTokens.length) * 40;
-    // Prefer hits that contain distinctive tokens like "dot" "4" "15w40"
     const distinctive = needleTokens.filter((token) => /\d/.test(token) || token.length >= 4);
     const distinctiveHits = distinctive.filter((token) => hit.tokens.includes(token)).length;
     score += distinctiveHits * 12;
@@ -66,9 +61,30 @@ function scoreMatch(itemName: string, itemBrand: string | undefined, hit: Catalo
   return score;
 }
 
-function pickHref(item: CarouselItemData, catalog: CatalogHit[]) {
-  const linked = String(item.productSlug || item.productId || "").trim();
-  if (linked) return linked;
+function catalogHref(opts: { brand?: string; product?: string; q?: string }) {
+  const params = new URLSearchParams();
+  if (opts.brand) params.set("brand", opts.brand);
+  if (opts.product) params.set("product", opts.product);
+  if (opts.q) params.set("q", opts.q);
+  const qs = params.toString();
+  return qs ? `/productos?${qs}` : "/productos";
+}
+
+function pickCatalogHref(item: CarouselItemData, catalog: CatalogHit[]) {
+  const linkedId = String(item.productId || "").trim();
+  const linkedSlug = String(item.productSlug || "").trim();
+  const brand =
+    canonicalizeHouseBrand(item.brand) ||
+    inferHouseBrand(item.brand, item.name) ||
+    undefined;
+
+  if (linkedId || linkedSlug) {
+    return catalogHref({
+      brand,
+      product: linkedId || linkedSlug,
+      q: item.name || undefined,
+    });
+  }
 
   if (catalog.length > 0) {
     let best: CatalogHit | null = null;
@@ -81,12 +97,18 @@ function pickHref(item: CarouselItemData, catalog: CatalogHit[]) {
       }
     }
     if (best && bestScore >= 40) {
-      return best.slug || best.id;
+      return catalogHref({
+        brand: best.brand,
+        product: best.id || best.slug,
+        q: item.name || best.name,
+      });
     }
   }
 
-  const fromName = slugify(item.name);
-  return fromName || String(item.id || "producto");
+  return catalogHref({
+    brand,
+    q: item.name || undefined,
+  });
 }
 
 export function useShowcaseProductLinks(items: CarouselItemData[]) {
@@ -135,7 +157,7 @@ export function useShowcaseProductLinks(items: CarouselItemData[]) {
     const map = new Map<string, string>();
     for (const item of items) {
       const key = String(item.productId || item.id || item.name);
-      map.set(key, pickHref(item, catalog));
+      map.set(key, pickCatalogHref(item, catalog));
     }
     return map;
   }, [items, catalog]);
@@ -146,5 +168,5 @@ export function resolveShowcaseHref(
   links: Map<string, string>
 ) {
   const key = String(item.productId || item.id || item.name);
-  return links.get(key) || pickHref(item, []);
+  return links.get(key) || pickCatalogHref(item, []);
 }
