@@ -7,13 +7,14 @@ import {
   HOUSE_BRANDS,
   inferHouseBrand,
   type CarouselItemData,
+  type HouseBrand,
 } from "@/lib/carousel-items";
 
 type CatalogHit = {
   id: string;
   slug: string;
   name: string;
-  brand: string;
+  brand: HouseBrand;
   image: string;
   normName: string;
   tokens: string[];
@@ -60,7 +61,7 @@ function scoreMatch(itemName: string, itemBrand: string | undefined, hit: Catalo
     canonicalizeHouseBrand(itemBrand) ||
     inferHouseBrand(itemBrand, itemName) ||
     null;
-  if (brand && canonicalizeHouseBrand(hit.brand) === brand) score += 18;
+  if (brand && hit.brand === brand) score += 18;
 
   return score;
 }
@@ -102,25 +103,24 @@ export function useShowcaseProductLinks(items: CarouselItemData[]) {
           .eq("is_active", true)
           .limit(800);
         if (cancelled) return;
-        const mapped = (data || [])
-          .map((row) => {
-            const brand =
-              canonicalizeHouseBrand(row.brand) ||
-              inferHouseBrand(row.brand, row.name, row.slug);
-            if (!brand || !HOUSE_BRANDS.includes(brand)) return null;
-            const name = String(row.name || "").trim();
-            if (!name) return null;
-            return {
-              id: String(row.id),
-              slug: String(row.slug || row.id),
-              name,
-              brand,
-              image: String(row.image_url || ""),
-              normName: normalizeText(name),
-              tokens: tokenize(name),
-            } satisfies CatalogHit;
-          })
-          .filter((row): row is CatalogHit => Boolean(row));
+        const mapped: CatalogHit[] = [];
+        for (const row of data || []) {
+          const brand =
+            canonicalizeHouseBrand(row.brand) ||
+            inferHouseBrand(row.brand, row.name, row.slug);
+          if (!brand || !HOUSE_BRANDS.includes(brand)) continue;
+          const name = String(row.name || "").trim();
+          if (!name) continue;
+          mapped.push({
+            id: String(row.id),
+            slug: String(row.slug || row.id),
+            name,
+            brand,
+            image: String(row.image_url || ""),
+            normName: normalizeText(name),
+            tokens: tokenize(name),
+          });
+        }
         setCatalog(mapped);
       } catch {
         if (!cancelled) setCatalog([]);
