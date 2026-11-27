@@ -20,27 +20,28 @@ function isImageName(name: string) {
 }
 
 async function walkLocalImages(dir: string, brandHint: string, acc: GalleryImageItem[]) {
-  let entries: Awaited<ReturnType<typeof fs.readdir>>;
+  let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
   try {
-    entries = await fs.readdir(dir, { withFileTypes: true });
+    entries = await fs.readdir(dir, { withFileTypes: true, encoding: "utf8" });
   } catch {
     return;
   }
 
   for (const entry of entries) {
-    const full = path.join(dir, entry.name);
+    const name = String(entry.name);
+    const full = path.join(dir, name);
     if (entry.isDirectory()) {
-      await walkLocalImages(full, brandFolderKey(entry.name) || brandHint, acc);
+      await walkLocalImages(full, brandFolderKey(name) || brandHint, acc);
       continue;
     }
-    if (!entry.isFile() || !isImageName(entry.name)) continue;
+    if (!entry.isFile() || !isImageName(name)) continue;
 
     const relFromPublic = path
       .relative(path.join(process.cwd(), "public"), full)
       .split(path.sep)
       .join("/");
     const url = `/${relFromPublic.split("/").map(encodeURIComponent).join("/")}`;
-    const stem = stemFromFilename(entry.name);
+    const stem = stemFromFilename(name);
     let size: number | null = null;
     let updatedAt: string | null = null;
     try {
@@ -53,7 +54,7 @@ async function walkLocalImages(dir: string, brandHint: string, acc: GalleryImage
 
     acc.push({
       id: `local:${relFromPublic}`,
-      name: entry.name,
+      name,
       stem,
       matchKey: imageMatchKey(stem),
       brand: brandHint || "general",
