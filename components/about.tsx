@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Award, Globe2, ShieldCheck } from "lucide-react";
@@ -75,7 +75,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 type BrandKey = "apolo" | "overts" | "valtrom";
 
 const BRAND_SIM_SRC: Record<BrandKey, string> = {
-  apolo: "/sims/gearbox-brand.html?v=9",
+  apolo: "/sims/taper-brand.html?v=10",
   overts: "/sims/v8-brand.html?brand=overts&v=7",
   valtrom: "/sims/v8-brand.html?brand=valtrom&v=7",
 };
@@ -83,37 +83,16 @@ const BRAND_SIM_SRC: Record<BrandKey, string> = {
 function BrandEngineStage({
   brand,
   poster,
-  active,
-  onRatio,
+  enabled,
 }: {
   brand: BrandKey;
   poster: string;
-  active: boolean;
-  onRatio: (brand: BrandKey, ratio: number) => void;
+  enabled: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => onRatio(brand, entry?.intersectionRatio ?? 0),
-      { threshold: [0, 0.25, 0.4, 0.6, 0.8, 1] }
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      onRatio(brand, 0);
-    };
-  }, [brand, onRatio]);
-
-  useEffect(() => {
-    if (!active) setShown(false);
-  }, [active]);
-
   return (
-    <div ref={ref} className="absolute inset-0">
+    <div className="absolute inset-0">
       <Image
         src={poster}
         alt=""
@@ -121,7 +100,7 @@ function BrandEngineStage({
         sizes="(max-width: 1024px) 100vw, 50vw"
         className="object-cover object-center"
       />
-      {active ? (
+      {enabled ? (
         <iframe
           title=""
           tabIndex={-1}
@@ -152,21 +131,6 @@ export function About() {
   const { brands: liveBrands, status: brandsStatus } = usePublicBrands();
   const { content } = useNosotrosContent();
   const reduce = useReducedMotion();
-  const brandRatios = useRef<Partial<Record<BrandKey, number>>>({});
-  const [activeBrand, setActiveBrand] = useState<BrandKey | null>(null);
-  const onBrandRatio = useCallback((brand: BrandKey, ratio: number) => {
-    brandRatios.current[brand] = ratio;
-    let best: BrandKey | null = null;
-    let bestRatio = 0.35;
-    (Object.keys(brandRatios.current) as BrandKey[]).forEach((key) => {
-      const value = brandRatios.current[key] ?? 0;
-      if (value > bestRatio) {
-        best = key;
-        bestRatio = value;
-      }
-    });
-    setActiveBrand((prev) => (prev === best ? prev : best));
-  }, []);
 
   const alliedBrands = useMemo(() => {
     return liveBrands
@@ -483,8 +447,7 @@ export function About() {
                   <BrandEngineStage
                     brand={brand.key}
                     poster={stage}
-                    active={reduce === false && activeBrand === brand.key}
-                    onRatio={onBrandRatio}
+                    enabled={reduce !== true}
                   />
                   <div
                     className="pointer-events-none absolute inset-0 z-10"
