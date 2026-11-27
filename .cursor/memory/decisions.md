@@ -33,12 +33,12 @@
 - **Files affected**: `AGENTS.md`, `docs/*`, `.cursor/**`
 
 ## [DEC-006] Códigos de barras sin dependencia npm
-- **Date**: 2026-11-26
-- **Choice**: Generador CODE128B SVG propio + ventana de impresión HTML
-- **Reason**: Imprimir inventario desde admin sin añadir paquetes ni CDN
+- **Date**: 2026-11-26 (ampliado 2026-11-27)
+- **Choice**: Generador CODE128B SVG propio + ventana de impresión HTML + apartado admin con plantillas por marca
+- **Reason**: Imprimir inventario desde admin sin añadir paquetes ni CDN; personalizar Apolo/Overts/Valtrom
 - **Alternatives**: JsBarcode/bwip-js npm, servicio externo
 - **Trade-offs**: Solo CODE128B (ASCII imprimible); valor = slug del producto
-- **Files affected**: `lib/admin/barcode-code128.ts`, `lib/admin/print-inventory-barcodes.ts`, `app/admin/productos/page.tsx`
+- **Files affected**: `lib/admin/barcode-code128.ts`, `lib/admin/print-inventory-barcodes.ts`, `app/admin/codigos-barras/page.tsx`, `components/AdminSidebar.tsx`
 
 ## [DEC-005] Sync 2026-11-09 por fast-forward
 - **Date**: 2026-11-09

@@ -1,7 +1,7 @@
 # Features
 
 ## Completed
-- Admin productos: imprimir inventario completo en códigos de barras CODE128 (slug como SKU) — `Herramientas → Imprimir códigos de barras`. `lib/admin/barcode-code128.ts`, `lib/admin/print-inventory-barcodes.ts`, `app/admin/productos/page.tsx` (2026-11-26).
+- Admin `/admin/codigos-barras`: etiquetas térmicas B/N para impresora portátil (tamaños 40×30–70×50 mm, 1 etiqueta/página, cabecera APOLO/OVERTS/VALTROM). Vista previa modal + impresión por iframe. `print-inventory-barcodes.ts`, `barcode-label-preview.tsx`, `codigos-barras/page.tsx` (2026-11-27).
 - Agotado: modal «No disponible por el momento» (estilo catálogo, mejorado) con alternativas; Detalles/Consultar en tarjeta y quick view. No cotiza el agotado. `product-unavailable-panel.tsx`, `catalog-product-card.tsx`, `product-quick-view.tsx` (2026-11-25).
 - Nosotros → Marcas aliadas: muro de logos desde marcas activas de Admin (excluye casa); logo_url con fallback canónico (2026-11-25). `components/about.tsx`, `lib/catalog/canonical-brands.ts`
 - Catálogo vivo 2026-11-22: **172** productos `cat-*` activos; limpieza borró 680 `xlsx-*` + 23 `prod-*` inactivos (`scripts/cleanup_inactive_imports.js`)

@@ -1,4 +1,5 @@
 import { code128Svg } from "@/lib/admin/barcode-code128";
+import { matchOfficialBrand, type OfficialBrandKey } from "@/lib/catalog/display";
 
 export type InventoryBarcodeItem = {
   id: string;
@@ -12,9 +13,57 @@ export type InventoryBarcodeItem = {
   is_active?: boolean;
 };
 
-function barcodeValue(item: InventoryBarcodeItem): string {
+/** Plantillas de marca en blanco/negro (impresora térmica portátil). */
+export type BarcodeLabelTheme = "auto" | "neutral" | OfficialBrandKey;
+
+export type LabelSizeId = "40x30" | "50x30" | "60x40" | "70x50";
+
+export type LabelSize = {
+  id: LabelSizeId;
+  label: string;
+  widthMm: number;
+  heightMm: number;
+};
+
+export const LABEL_SIZES: LabelSize[] = [
+  { id: "40x30", label: "40 × 30 mm", widthMm: 40, heightMm: 30 },
+  { id: "50x30", label: "50 × 30 mm", widthMm: 50, heightMm: 30 },
+  { id: "60x40", label: "60 × 40 mm", widthMm: 60, heightMm: 40 },
+  { id: "70x50", label: "70 × 50 mm", widthMm: 70, heightMm: 50 },
+];
+
+export type BarcodePrintOptions = {
+  theme?: BarcodeLabelTheme;
+  /** Tamaño del rollo de la impresora portátil. */
+  labelSize?: LabelSizeId;
+  showPrice?: boolean;
+  showStock?: boolean;
+  showSkuText?: boolean;
+  showBrandMark?: boolean;
+  copies?: number;
+};
+
+type BrandMark = {
+  key: string;
+  label: string;
+  /** Prefijo corto B/N para distinguir marca sin color. */
+  mark: string;
+};
+
+const HOUSE_MARKS: Record<OfficialBrandKey, BrandMark> = {
+  apolo: { key: "apolo", label: "Apolo", mark: "APOLO" },
+  overts: { key: "overts", label: "Overts", mark: "OVERTS" },
+  valtrom: { key: "valtrom", label: "Valtrom", mark: "VALTROM" },
+};
+
+const NEUTRAL_MARK: BrandMark = {
+  key: "neutral",
+  label: "Apolo Import",
+  mark: "APOLO IMPORT",
+};
+
+export function barcodeValue(item: InventoryBarcodeItem): string {
   const raw = (item.slug || item.id || "").trim();
-  // CODE128B works with printable ASCII; keep SKU readable for scanners.
   return raw.toUpperCase().replace(/\s+/g, "-").slice(0, 40) || item.id;
 }
 
@@ -39,7 +88,29 @@ function formatPrice(price?: number | null): string {
   }
 }
 
-function sortInventory(items: InventoryBarcodeItem[]): InventoryBarcodeItem[] {
+export function resolveBrandMark(
+  item: InventoryBarcodeItem,
+  theme: BarcodeLabelTheme = "auto"
+): BrandMark {
+  if (theme === "neutral") return NEUTRAL_MARK;
+  if (theme === "apolo" || theme === "overts" || theme === "valtrom") {
+    return HOUSE_MARKS[theme];
+  }
+  const key = matchOfficialBrand(item.brand);
+  if (key) return HOUSE_MARKS[key];
+  const brand = (item.brand || "Apolo Import").trim() || "Apolo Import";
+  return {
+    key: "neutral",
+    label: brand,
+    mark: brand.toUpperCase().slice(0, 18),
+  };
+}
+
+export function getLabelSize(id: LabelSizeId = "50x30"): LabelSize {
+  return LABEL_SIZES.find((s) => s.id === id) || LABEL_SIZES[1];
+}
+
+export function sortInventory(items: InventoryBarcodeItem[]): InventoryBarcodeItem[] {
   return [...items].sort((a, b) => {
     const brand = (a.brand || "").localeCompare(b.brand || "", "es", { sensitivity: "base" });
     if (brand !== 0) return brand;
@@ -51,153 +122,228 @@ function sortInventory(items: InventoryBarcodeItem[]): InventoryBarcodeItem[] {
   });
 }
 
-function buildLabelHtml(item: InventoryBarcodeItem): string {
-  const code = barcodeValue(item);
-  const svg = code128Svg(code, { height: 42, moduleWidth: 1.35, showText: true });
-  const meta = [item.brand, item.presentation, item.viscosity].filter(Boolean).join(" · ");
-  const price = formatPrice(item.price);
-  const stock =
-    item.stock != null && !Number.isNaN(Number(item.stock))
-      ? `Stock: ${Number(item.stock)}`
-      : "";
+function expandCopies(items: InventoryBarcodeItem[], copies: number): InventoryBarcodeItem[] {
+  const n = Math.max(1, Math.min(20, Math.floor(copies) || 1));
+  if (n === 1) return items;
+  const out: InventoryBarcodeItem[] = [];
+  for (const item of items) {
+    for (let i = 0; i < n; i++) out.push(item);
+  }
+  return out;
+}
 
+export type LabelViewModel = {
+  brandMark: string;
+  brandLabel: string;
+  name: string;
+  meta: string;
+  code: string;
+  barcodeSvg: string;
+  footerRight: string;
+  showBrandMark: boolean;
+  showSkuText: boolean;
+};
+
+/** Datos listos para vista previa React o HTML de impresión. */
+export function buildLabelViewModel(
+  item: InventoryBarcodeItem,
+  options: BarcodePrintOptions = {}
+): LabelViewModel {
+  const brand = resolveBrandMark(item, options.theme ?? "auto");
+  const code = barcodeValue(item);
+  const size = getLabelSize(options.labelSize ?? "50x30");
+  const compact = size.heightMm <= 30;
+  const barcodeSvg = code128Svg(code, {
+    height: compact ? 28 : 36,
+    moduleWidth: compact ? 1.1 : 1.25,
+    showText: false,
+  });
+  const meta = [item.presentation, item.viscosity].filter(Boolean).join(" · ");
+  const price = options.showPrice === false ? "" : formatPrice(item.price);
+  const stock =
+    options.showStock === false || item.stock == null || Number.isNaN(Number(item.stock))
+      ? ""
+      : `St:${Number(item.stock)}`;
+
+  return {
+    brandMark: brand.mark,
+    brandLabel: brand.label,
+    name: item.name,
+    meta,
+    code,
+    barcodeSvg,
+    footerRight: [price, stock].filter(Boolean).join(" · "),
+    showBrandMark: options.showBrandMark !== false,
+    showSkuText: options.showSkuText !== false,
+  };
+}
+
+function buildLabelHtml(view: LabelViewModel): string {
   return `
     <article class="label">
-      <div class="brand">${escapeHtml(item.brand || "Apolo Import")}</div>
-      <div class="name">${escapeHtml(item.name)}</div>
-      ${meta ? `<div class="meta">${escapeHtml(meta)}</div>` : ""}
-      <div class="barcode">${svg}</div>
+      ${
+        view.showBrandMark
+          ? `<div class="brand"><span class="mark">${escapeHtml(view.brandMark)}</span></div>`
+          : ""
+      }
+      <div class="name">${escapeHtml(view.name)}</div>
+      ${view.meta ? `<div class="meta">${escapeHtml(view.meta)}</div>` : ""}
+      <div class="barcode">${view.barcodeSvg}</div>
       <div class="footer">
-        <span>${escapeHtml(code)}</span>
-        <span>${escapeHtml([price, stock].filter(Boolean).join(" · "))}</span>
+        ${view.showSkuText ? `<span class="sku">${escapeHtml(view.code)}</span>` : "<span></span>"}
+        <span class="extra">${escapeHtml(view.footerRight)}</span>
       </div>
     </article>
   `;
 }
 
-export function buildInventoryBarcodeDocument(items: InventoryBarcodeItem[]): string {
-  const sorted = sortInventory(items.filter((p) => (p.slug || p.id || "").trim()));
+export function buildInventoryBarcodeDocument(
+  items: InventoryBarcodeItem[],
+  options: BarcodePrintOptions = {}
+): string {
+  const size = getLabelSize(options.labelSize ?? "50x30");
+  const sorted = expandCopies(
+    sortInventory(items.filter((p) => (p.slug || p.id || "").trim())),
+    options.copies ?? 1
+  );
   const generatedAt = new Date().toLocaleString("es-PE");
-  const labels = sorted.map(buildLabelHtml).join("\n");
+  const labels = sorted
+    .map((item) => buildLabelHtml(buildLabelViewModel(item, options)))
+    .join("\n");
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Inventario · códigos de barras (${sorted.length})</title>
+  <title>Etiquetas (${sorted.length})</title>
   <style>
     :root { color-scheme: light; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Segoe UI", system-ui, sans-serif;
-      color: #111;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: ${size.widthMm}mm;
       background: #fff;
+      color: #000;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    .toolbar {
+    .screen-bar {
       position: sticky;
       top: 0;
       z-index: 2;
       display: flex;
-      flex-wrap: wrap;
       gap: 8px;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid #ddd;
-      background: #f7f7f7;
+      padding: 10px 12px;
+      border-bottom: 1px solid #ccc;
+      background: #f3f3f3;
+      width: 100vw;
+      max-width: 100%;
+      font-family: "Segoe UI", system-ui, sans-serif;
     }
-    .toolbar h1 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 700;
-    }
-    .toolbar p {
-      margin: 2px 0 0;
-      font-size: 12px;
-      color: #555;
-    }
-    .toolbar button {
+    .screen-bar h1 { font-size: 14px; }
+    .screen-bar p { font-size: 12px; color: #444; margin-top: 2px; }
+    .screen-bar button {
       border: 0;
       border-radius: 999px;
-      background: #C7940A;
-      color: #111;
+      background: #111;
+      color: #fff;
       font-weight: 700;
       font-size: 13px;
       padding: 10px 16px;
       cursor: pointer;
     }
-    .sheet {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      padding: 12px;
-    }
+    .sheet { padding: 8px; }
     .label {
-      break-inside: avoid;
-      page-break-inside: avoid;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px 10px 8px;
-      min-height: 150px;
+      width: ${size.widthMm}mm;
+      height: ${size.heightMm}mm;
+      padding: 1.6mm 1.8mm 1.4mm;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 0.6mm;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      border: 1px dashed #bbb;
+      background: #fff;
+      color: #000;
+    }
+    .label:last-child {
+      page-break-after: auto;
+      break-after: auto;
     }
     .brand {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
+      border-bottom: 0.35mm solid #000;
+      padding-bottom: 0.4mm;
+      line-height: 1;
+    }
+    .mark {
+      font-size: ${size.heightMm <= 30 ? "7.5pt" : "9pt"};
+      font-weight: 900;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #444;
     }
     .name {
-      font-size: 13px;
+      font-size: ${size.heightMm <= 30 ? "8pt" : "10pt"};
       font-weight: 700;
-      line-height: 1.25;
+      line-height: 1.15;
+      max-height: ${size.heightMm <= 30 ? "2.4em" : "2.6em"};
+      overflow: hidden;
     }
     .meta {
-      font-size: 11px;
-      color: #555;
+      font-size: ${size.heightMm <= 30 ? "6.5pt" : "7.5pt"};
+      color: #000;
+      opacity: 0.85;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .barcode {
-      margin-top: auto;
+      flex: 1;
       display: flex;
+      align-items: center;
       justify-content: center;
-      padding-top: 4px;
+      min-height: 0;
     }
-    .barcode svg { max-width: 100%; height: auto; }
+    .barcode svg {
+      width: 100%;
+      height: auto;
+      max-height: ${size.heightMm <= 30 ? "12mm" : "16mm"};
+    }
     .footer {
       display: flex;
       justify-content: space-between;
-      gap: 8px;
-      font-size: 10px;
-      color: #333;
-      font-family: ui-monospace, Consolas, monospace;
+      gap: 1mm;
+      font-size: ${size.heightMm <= 30 ? "6pt" : "7pt"};
+      font-family: Consolas, "Courier New", monospace;
+      line-height: 1.1;
     }
-    .empty {
-      padding: 40px 16px;
-      text-align: center;
-      color: #666;
-    }
+    .sku { font-weight: 700; word-break: break-all; }
+    .extra { white-space: nowrap; }
+    .empty { padding: 24px; text-align: center; color: #444; width: auto; }
     @media print {
-      .toolbar { display: none !important; }
-      .sheet { padding: 0; gap: 6px; }
-      .label { border-color: #999; border-radius: 0; }
-      @page { margin: 10mm; }
-    }
-    @media (max-width: 900px) {
-      .sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .screen-bar { display: none !important; }
+      .sheet { padding: 0; }
+      .label {
+        border: 0 !important;
+        width: ${size.widthMm}mm;
+        height: ${size.heightMm}mm;
+      }
+      @page {
+        size: ${size.widthMm}mm ${size.heightMm}mm;
+        margin: 0;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="toolbar">
+  <div class="screen-bar">
     <div>
-      <h1>Inventario · códigos de barras</h1>
-      <p>${sorted.length} etiquetas · generado ${escapeHtml(generatedAt)}</p>
+      <h1>Etiquetas térmicas · B/N</h1>
+      <p>${sorted.length} etiqueta(s) · ${size.widthMm}×${size.heightMm} mm · ${escapeHtml(generatedAt)}</p>
     </div>
-    <button type="button" onclick="window.print()">Imprimir</button>
+    <button type="button" id="print-btn">Imprimir</button>
   </div>
   ${
     sorted.length
@@ -205,41 +351,114 @@ export function buildInventoryBarcodeDocument(items: InventoryBarcodeItem[]): st
       : `<p class="empty">No hay productos con código para imprimir.</p>`
   }
   <script>
-    window.addEventListener("load", () => {
-      setTimeout(() => window.print(), 250);
-    });
+    function doPrint() {
+      try { window.focus(); } catch (e) {}
+      window.print();
+    }
+    document.getElementById("print-btn")?.addEventListener("click", doPrint);
+    // Si se abre en ventana emergente (fallback), imprimir solo una vez.
+    if (window.frameElement == null) {
+      window.addEventListener("load", function () {
+        setTimeout(doPrint, 350);
+      });
+    }
   </script>
 </body>
 </html>`;
 }
 
-export function printInventoryBarcodes(items: InventoryBarcodeItem[]): {
+/**
+ * Abre impresión en iframe oculto (más fiable que popup vacío en impresoras de etiquetas).
+ * Si el iframe falla, intenta ventana emergente.
+ */
+export function printInventoryBarcodes(
+  items: InventoryBarcodeItem[],
+  options: BarcodePrintOptions = {}
+): {
   ok: boolean;
   count: number;
   error?: string;
 } {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || typeof document === "undefined") {
     return { ok: false, count: 0, error: "Solo disponible en el navegador." };
   }
 
   const printable = items.filter((p) => (p.slug || p.id || "").trim());
   if (!printable.length) {
-    return { ok: false, count: 0, error: "No hay productos en el inventario para imprimir." };
+    return { ok: false, count: 0, error: "No hay productos para imprimir." };
   }
 
-  const html = buildInventoryBarcodeDocument(printable);
-  const popup = window.open("", "_blank", "noopener,noreferrer,width=1100,height=800");
+  const count = expandCopies(printable, options.copies ?? 1).length;
+  const html = buildInventoryBarcodeDocument(printable, options);
+
+  try {
+    const existing = document.getElementById("apolo-barcode-print-frame");
+    if (existing) existing.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "apolo-barcode-print-frame";
+    iframe.setAttribute("title", "Impresión de etiquetas");
+    iframe.style.cssText =
+      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      iframe.remove();
+      return printViaPopup(html, count);
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const cleanup = () => {
+      setTimeout(() => {
+        try {
+          iframe.remove();
+        } catch {
+          // ignore
+        }
+      }, 1500);
+    };
+
+    const trigger = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        return printViaPopup(html, count);
+      } finally {
+        cleanup();
+      }
+      return { ok: true, count };
+    };
+
+    // Dar tiempo a que el SVG se pinte antes del diálogo.
+    setTimeout(trigger, 400);
+    return { ok: true, count };
+  } catch {
+    return printViaPopup(html, count);
+  }
+}
+
+function printViaPopup(html: string, count: number): {
+  ok: boolean;
+  count: number;
+  error?: string;
+} {
+  const popup = window.open("", "_blank", "noopener,noreferrer,width=520,height=640");
   if (!popup) {
     return {
       ok: false,
-      count: printable.length,
-      error: "El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e inténtalo de nuevo.",
+      count,
+      error:
+        "No se pudo abrir la impresión. Permite ventanas emergentes o vuelve a intentarlo.",
     };
   }
-
   popup.document.open();
   popup.document.write(html);
   popup.document.close();
   popup.focus();
-  return { ok: true, count: printable.length };
+  return { ok: true, count };
 }
