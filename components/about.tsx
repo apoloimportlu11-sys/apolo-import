@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Award, Globe2, ShieldCheck } from "lucide-react";
@@ -89,7 +89,22 @@ function BrandEngineStage({
   poster: string;
   enabled: boolean;
 }) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const frame = frameRef.current;
+    const win = frame?.contentWindow as (Window & { SIM_SHOWN?: boolean }) | null;
+    if (!win) return;
+    const reveal = () => setShown(true);
+    if (win.SIM_SHOWN) {
+      reveal();
+      return;
+    }
+    win.addEventListener("simframe", reveal, { once: true });
+    return () => win.removeEventListener("simframe", reveal);
+  }, [enabled]);
 
   return (
     <div className="absolute inset-0">
@@ -102,6 +117,7 @@ function BrandEngineStage({
       />
       {enabled ? (
         <iframe
+          ref={frameRef}
           title=""
           tabIndex={-1}
           aria-hidden
