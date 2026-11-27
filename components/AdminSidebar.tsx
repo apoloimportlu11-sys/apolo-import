@@ -23,6 +23,7 @@ import {
   PanelLeftOpen,
   X,
   Bot,
+  Images,
 } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import { ADMIN_SIDEBAR_KEY } from "@/lib/admin-theme";
@@ -54,6 +55,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/productos", label: "Productos", icon: Package },
       { href: "/admin/inventario", label: "Inventario", icon: Warehouse },
+      { href: "/admin/galeria", label: "Galería", icon: Images },
       { href: "/admin/marcas", label: "Marcas", icon: Tag },
       { href: "/admin/lineas", label: "Líneas de Catálogo", icon: Layers },
     ],

@@ -9,6 +9,10 @@ import {
   setStockMin,
   type InventoryProduct,
 } from "@/lib/inventory";
+import {
+  resolveProductImageUrl,
+  type GalleryImageItem,
+} from "@/lib/product-image-gallery";
 import { Download, Loader2, Minus, Package, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -106,6 +110,7 @@ export default function InventarioPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [movementsCapped, setMovementsCapped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [galleryImages, setGalleryImages] = useState<GalleryImageItem[]>([]);
   const [situation, setSituation] = useState<Situation>("all");
   const [sortKey, setSortKey] = useState<SortKey>("faltan");
   const [brand, setBrand] = useState("");
@@ -124,14 +129,28 @@ export default function InventarioPage() {
   const latestRef = useRef({ products, drafts, reasons });
   latestRef.current = { products, drafts, reasons };
 
+  const loadGallery = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/gallery");
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      setGalleryImages(Array.isArray(payload.images) ? (payload.images as GalleryImageItem[]) : []);
+    } catch {
+      // El inventario sigue con image_url de la base
+    }
+  }, []);
+
   const load = useCallback(async () => {
     const seq = ++loadSeq.current;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,name,brand,presentation,stock,stock_min,image_url,is_active")
-        .order("name");
+      const [{ data, error }] = await Promise.all([
+        supabase
+          .from("products")
+          .select("id,name,brand,presentation,stock,stock_min,image_url,is_active")
+          .order("name"),
+        loadGallery(),
+      ]);
       if (error) throw error;
       if (seq !== loadSeq.current) return;
       const list = (data || []).map((product) => ({
@@ -159,7 +178,7 @@ export default function InventarioPage() {
     } finally {
       if (seq === loadSeq.current) setLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, loadGallery]);
 
   const loadMovements = useCallback(async () => {
     let query = supabase
@@ -540,6 +559,7 @@ export default function InventarioPage() {
     const gap = preview.stock_min > 0 ? preview.stock - preview.stock_min : null;
     const level = preview.stock_min > 0 ? Math.max(0, Math.min(100, Math.round((preview.stock / Math.max(preview.stock_min, 1)) * 50))) : 100;
     const reason = reasons[product.id]?.value || (stockDirty ? inferReason(product.stock, preview.stock) : "");
+    const displayImage = resolveProductImageUrl(product, galleryImages);
     return (
       <li
         key={product.id}
@@ -547,10 +567,10 @@ export default function InventarioPage() {
       >
         <div className="relative flex h-40 items-center justify-center bg-[var(--admin-subtle)]">
           <Package className="h-10 w-10 text-[var(--admin-faint)]" />
-          {product.image_url && (
+          {displayImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={product.image_url}
+              src={displayImage}
               alt=""
               className="absolute inset-0 h-full w-full object-contain p-5"
               onError={(event) => {

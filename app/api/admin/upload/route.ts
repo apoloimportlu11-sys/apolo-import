@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/require-admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import {
+  brandFolderKey,
+  galleryFilenameFromLabel,
+  imageMatchKey,
+  stemFromFilename,
+} from "@/lib/product-image-gallery";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED = new Set([
@@ -50,6 +56,10 @@ export async function POST(req: Request) {
       );
     }
 
+    const purpose = String(form.get("purpose") || "product").trim().toLowerCase();
+    const brandRaw = String(form.get("brand") || "").trim();
+    const matchNameRaw = String(form.get("matchName") || "").trim();
+
     const extRaw = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
     const ext = extRaw || "png";
     let contentType = file.type || "application/octet-stream";
@@ -65,11 +75,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Tipo de archivo no permitido." }, { status: 400 });
     }
 
-    const cleanName = file.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "_")
-      .slice(0, 24);
-    const filePath = `prod_${Date.now()}_${cleanName}.${ext}`;
+    let filePath: string;
+    let matchKey = "";
+    let stem = "";
+
+    if (purpose === "gallery") {
+      const label = matchNameRaw || stemFromFilename(file.name) || "producto";
+      const filename = galleryFilenameFromLabel(label, ext);
+      const brand = brandFolderKey(brandRaw || "general");
+      filePath = `gallery/${brand}/${filename}`;
+      stem = stemFromFilename(filename);
+      matchKey = imageMatchKey(stem);
+    } else {
+      const cleanName = file.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "_")
+        .slice(0, 24);
+      filePath = `prod_${Date.now()}_${cleanName}.${ext}`;
+    }
 
     const admin = getSupabaseAdmin();
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -96,7 +119,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Subida OK pero sin URL pública." }, { status: 502 });
     }
 
-    return NextResponse.json({ url: pub.publicUrl, path: filePath });
+    return NextResponse.json({
+      url: pub.publicUrl,
+      path: filePath,
+      matchKey: matchKey || undefined,
+      stem: stem || undefined,
+      brand: purpose === "gallery" ? brandFolderKey(brandRaw || "general") : undefined,
+    });
   } catch (e) {
     console.error("admin upload:", e);
     const msg = e instanceof Error ? e.message : "Error al subir";
