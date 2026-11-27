@@ -1,14 +1,11 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/require-admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import {
   brandFolderKey,
+  buildGalleryItem,
   hasUsableProductImage,
-  imageMatchKey,
-  stemFromFilename,
   type GalleryImageItem,
 } from "@/lib/product-image-gallery";
 
@@ -19,59 +16,12 @@ function isImageName(name: string) {
   return IMAGE_EXT.has(ext);
 }
 
-async function walkLocalImages(dir: string, brandHint: string, acc: GalleryImageItem[]) {
-  let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true, encoding: "utf8" });
-  } catch {
-    return;
-  }
-
-  for (const entry of entries) {
-    const name = String(entry.name);
-    const full = path.join(dir, name);
-    if (entry.isDirectory()) {
-      await walkLocalImages(full, brandFolderKey(name) || brandHint, acc);
-      continue;
-    }
-    if (!entry.isFile() || !isImageName(name)) continue;
-
-    const relFromPublic = path
-      .relative(path.join(process.cwd(), "public"), full)
-      .split(path.sep)
-      .join("/");
-    const url = `/${relFromPublic.split("/").map(encodeURIComponent).join("/")}`;
-    const stem = stemFromFilename(name);
-    let size: number | null = null;
-    let updatedAt: string | null = null;
-    try {
-      const stat = await fs.stat(full);
-      size = stat.size;
-      updatedAt = stat.mtime.toISOString();
-    } catch {
-      // ignore
-    }
-
-    acc.push({
-      id: `local:${relFromPublic}`,
-      name,
-      stem,
-      matchKey: imageMatchKey(stem),
-      brand: brandHint || "general",
-      url,
-      path: relFromPublic,
-      source: "local",
-      size,
-      updatedAt,
-    });
-  }
-}
-
 async function listStorageGallery(): Promise<GalleryImageItem[]> {
   const admin = getSupabaseAdmin();
   const items: GalleryImageItem[] = [];
+  const seen = new Set<string>();
 
-  async function listFolder(prefix: string, brand: string) {
+  async function listFolder(prefix: string, brand: string, recurse: boolean) {
     const { data, error } = await admin.storage.from("products").list(prefix, {
       limit: 1000,
       sortBy: { column: "name", order: "asc" },
@@ -79,33 +29,41 @@ async function listStorageGallery(): Promise<GalleryImageItem[]> {
     if (error || !data) return;
 
     for (const entry of data) {
-      const isFolder = entry.id == null && !isImageName(entry.name);
       const nextPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const isFolder = entry.id == null && !isImageName(entry.name);
 
       if (isFolder) {
-        await listFolder(nextPath, brandFolderKey(entry.name));
+        if (!recurse) continue;
+        // Evita re-entrar a gallery cuando listamos la raíz.
+        if (!prefix && entry.name === "gallery") continue;
+        await listFolder(nextPath, brandFolderKey(entry.name), true);
         continue;
       }
       if (!isImageName(entry.name)) continue;
+      if (seen.has(nextPath)) continue;
+      seen.add(nextPath);
 
       const { data: pub } = admin.storage.from("products").getPublicUrl(nextPath);
-      const stem = stemFromFilename(entry.name);
-      items.push({
-        id: `storage:${nextPath}`,
-        name: entry.name,
-        stem,
-        matchKey: imageMatchKey(stem),
-        brand: brand || brandFolderKey(prefix.split("/").pop()),
-        url: pub?.publicUrl || "",
-        path: nextPath,
-        source: "storage",
-        size: typeof entry.metadata?.size === "number" ? entry.metadata.size : null,
-        updatedAt: entry.updated_at || entry.created_at || null,
-      });
+      if (!pub?.publicUrl) continue;
+
+      items.push(
+        buildGalleryItem({
+          name: entry.name,
+          brand: brand || brandFolderKey(prefix.split("/").pop()),
+          url: pub.publicUrl,
+          path: nextPath,
+          size: typeof entry.metadata?.size === "number" ? entry.metadata.size : null,
+          updatedAt: entry.updated_at || entry.created_at || null,
+        })
+      );
     }
   }
 
-  await listFolder("gallery", "general");
+  // Galería organizada por marca
+  await listFolder("gallery", "general", true);
+  // Subidas sueltas en la raíz del bucket (prod_*.png, etc.)
+  await listFolder("", "general", false);
+
   return items;
 }
 
@@ -119,26 +77,19 @@ export async function GET() {
       return NextResponse.json({ message: "Sin permiso para ver la galería." }, { status: 403 });
     }
 
-    const local: GalleryImageItem[] = [];
-    const localRoot = path.join(process.cwd(), "public", "images", "products", "img");
-    await walkLocalImages(localRoot, "general", local);
-
-    let storage: GalleryImageItem[] = [];
+    let images: GalleryImageItem[] = [];
     try {
-      storage = await listStorageGallery();
+      images = await listStorageGallery();
     } catch (err) {
       console.warn("gallery storage list:", err);
+      return NextResponse.json(
+        { message: "No se pudo leer la galería en la nube." },
+        { status: 502 }
+      );
     }
 
-    const byKey = new Map<string, GalleryImageItem>();
-    for (const item of [...local, ...storage]) {
-      if (!item.url) continue;
-      const dedupe = `${item.brand}::${item.matchKey}::${item.source}`;
-      if (!byKey.has(dedupe)) byKey.set(dedupe, item);
-    }
-
-    const images = [...byKey.values()].sort((a, b) =>
-      a.brand.localeCompare(b.brand, "es") || a.stem.localeCompare(b.stem, "es")
+    images.sort(
+      (a, b) => a.brand.localeCompare(b.brand, "es") || a.stem.localeCompare(b.stem, "es")
     );
 
     return NextResponse.json({ images });
@@ -168,16 +119,13 @@ export async function DELETE(req: Request) {
 
     const body = (await req.json().catch(() => ({}))) as { path?: string; source?: string };
     const filePath = String(body.path || "").trim();
-    const source = String(body.source || "").trim();
 
     if (!filePath) {
       return NextResponse.json({ message: "Falta la ruta del archivo." }, { status: 400 });
     }
-    if (source !== "storage" || !filePath.startsWith("gallery/")) {
-      return NextResponse.json(
-        { message: "Solo se pueden borrar imágenes subidas a la galería (nube)." },
-        { status: 400 }
-      );
+    // Solo archivos del bucket products (galería o subidas sueltas)
+    if (filePath.includes("..") || filePath.startsWith("/")) {
+      return NextResponse.json({ message: "Ruta de archivo no válida." }, { status: 400 });
     }
 
     const admin = getSupabaseAdmin();

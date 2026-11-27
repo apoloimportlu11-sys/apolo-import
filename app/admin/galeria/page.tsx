@@ -169,11 +169,7 @@ export default function GaleriaAdminPage() {
   }
 
   async function handleDelete(item: GalleryImageItem) {
-    if (item.source !== "storage") {
-      toast.error("Las fotos locales del sitio no se borran desde aquí.");
-      return;
-    }
-    if (!window.confirm(`¿Borrar "${item.name}" de la galería?`)) return;
+    if (!window.confirm(`¿Borrar "${item.name}" de la galería en la nube?`)) return;
     setDeletingId(item.id);
     try {
       const res = await fetch("/api/admin/gallery", {
@@ -235,8 +231,8 @@ export default function GaleriaAdminPage() {
           </p>
           <h1 className="font-heading text-2xl text-[var(--admin-ink)]">Galería de productos</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--admin-muted)]">
-            Sube fotos con el mismo nombre del producto. El inventario y el catálogo las
-            emparejan automáticamente por nombre (y marca).
+            Solo se usan fotos en la nube. Sube con el nombre del producto (ej. ABRILLANTADOR
+            DE LLANTA). El empareje tolera plural/singular y presentaciones (300ML, 1GL…).
           </p>
         </div>
         <button
@@ -393,7 +389,7 @@ export default function GaleriaAdminPage() {
                       {item.brand}
                     </span>
                     <span className="absolute right-2 top-2 rounded-full bg-[var(--admin-input)] px-2 py-0.5 text-[10px] text-[var(--admin-muted)]">
-                      {item.source === "local" ? "Sitio" : "Nube"}
+                      Nube
                     </span>
                   </div>
                   <div className="space-y-2 p-3">
@@ -407,21 +403,19 @@ export default function GaleriaAdminPage() {
                           ? `Empareja: ${hits[0].name}`
                           : `${hits.length} productos emparejados`}
                     </p>
-                    {item.source === "storage" && (
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(item)}
-                        disabled={deletingId === item.id}
-                        className="inline-flex items-center gap-1 text-xs text-[#B91C1C] hover:underline disabled:opacity-50"
-                      >
-                        {deletingId === item.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-3.5" />
-                        )}
-                        Borrar
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(item)}
+                      disabled={deletingId === item.id}
+                      className="inline-flex items-center gap-1 text-xs text-[#B91C1C] hover:underline disabled:opacity-50"
+                    >
+                      {deletingId === item.id ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                      Borrar
+                    </button>
                   </div>
                 </li>
               );
