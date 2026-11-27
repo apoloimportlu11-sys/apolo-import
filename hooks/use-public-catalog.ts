@@ -15,9 +15,12 @@ import {
 export type CatalogStatus = "loading" | "ready" | "error";
 
 const PRODUCT_SELECT =
-  "id, name, slug, brand, short_description, description, presentation, stock, stock_min, is_featured, is_active, category_id, image_url, viscosity, type, subcategory_id, subcategory, sort_order, line_group_id";
+  "id, name, slug, brand, short_description, description, presentation, stock, stock_min, is_featured, is_active, category_id, image_url, gallery_urls, viscosity, type, subcategory_id, subcategory, sort_order, line_group_id";
 
 const PRODUCT_SELECT_EXTENDED = `${PRODUCT_SELECT}, price, family, attributes, commercial, product_presentations(id, label, quantity, unit, package_type, sku, price, stock, stock_min, image_url, is_active, sort_order)`;
+
+const PRODUCT_SELECT_LEGACY = PRODUCT_SELECT.replace(", gallery_urls", "");
+const PRODUCT_SELECT_EXTENDED_LEGACY = PRODUCT_SELECT_EXTENDED.replace(", gallery_urls", "");
 
 /**
  * Carga el catálogo público desde Supabase + suscripciones realtime/cache.
@@ -59,11 +62,23 @@ export function usePublicCatalog(initialProducts: Product[] = []) {
       let { data, error } = await loadActive(
         extendedSelect ? PRODUCT_SELECT_EXTENDED : PRODUCT_SELECT
       );
+      if (error && /gallery_urls/i.test(error.message || "")) {
+        const legacy = await loadActive(
+          extendedSelect ? PRODUCT_SELECT_EXTENDED_LEGACY : PRODUCT_SELECT_LEGACY
+        );
+        data = legacy.data;
+        error = legacy.error;
+      }
       if (error && extendedSelect) {
         extendedSelect = false;
         const fallback = await loadActive(PRODUCT_SELECT);
         data = fallback.data;
         error = fallback.error;
+        if (error && /gallery_urls/i.test(error.message || "")) {
+          const legacy = await loadActive(PRODUCT_SELECT_LEGACY);
+          data = legacy.data;
+          error = legacy.error;
+        }
       }
       if (error) throw error;
 

@@ -8,8 +8,10 @@ import {
   Info,
   Loader2,
   Box,
+  Images,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LibraryImagePicker } from "@/components/admin/library-image-picker";
 
 interface MediaSelectorProps {
   value: string;
@@ -23,6 +25,10 @@ interface MediaSelectorProps {
   className?: string;
   compact?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
+  /** Marca sugerida al abrir la biblioteca. */
+  brandHint?: string;
+  /** Mostrar acceso a la biblioteca central (por defecto sí). */
+  enableLibrary?: boolean;
 }
 
 export default function MediaSelector({
@@ -35,11 +41,13 @@ export default function MediaSelector({
   className = "",
   compact = false,
   onUploadingChange,
+  brandHint,
+  enableLibrary = true,
 }: MediaSelectorProps) {
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
 
-  const detectMode = (val: string): "external" | "upload" => {
+  const detectMode = (val: string): "external" | "upload" | "library" => {
     if (
       val.includes("supabase.co/storage") ||
       val.startsWith("http://") ||
@@ -50,13 +58,16 @@ export default function MediaSelector({
     return "upload";
   };
 
-  const [storageType, setStorageType] = useState<"external" | "upload">(() => detectMode(value));
+  const [storageType, setStorageType] = useState<"external" | "upload" | "library">(() =>
+    detectMode(value)
+  );
   const [externalUrl, setExternalUrl] = useState(
     value.startsWith("http") || value.includes("supabase.co") ? value : ""
   );
   const [imageError, setImageError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -139,6 +150,12 @@ export default function MediaSelector({
     try {
       const body = new FormData();
       body.append("file", file, file.name);
+      if (enableLibrary) {
+        body.append("purpose", "library");
+        body.append("category", "products");
+        if (brandHint) body.append("brand", brandHint);
+        body.append("matchName", file.name.replace(/\.[^.]+$/, ""));
+      }
       const res = await fetch("/api/admin/upload", { method: "POST", body });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || !payload?.url) {
@@ -263,6 +280,16 @@ export default function MediaSelector({
             </button>
           ) : null}
         </div>
+        {enableLibrary ? (
+          <button
+            type="button"
+            onClick={() => setLibraryOpen(true)}
+            className="mt-2 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-subtle)] text-xs font-medium text-[var(--admin-ink)] hover:border-[var(--admin-accent)]"
+          >
+            <Images className="size-3.5 text-[var(--admin-accent)]" />
+            Elegir de la biblioteca
+          </button>
+        ) : null}
         <label className="mb-1 mt-3 block text-sm text-[var(--admin-muted)]">Enlace de la foto</label>
         <input
           type="url"
@@ -271,6 +298,18 @@ export default function MediaSelector({
           placeholder="https://…/foto.jpg"
           className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-input)] px-3 py-2 text-sm text-[var(--admin-ink)] focus:border-[var(--admin-accent)] focus:outline-none"
         />
+        {enableLibrary ? (
+          <LibraryImagePicker
+            open={libraryOpen}
+            onOpenChange={setLibraryOpen}
+            brandHint={brandHint}
+            onSelect={(url) => {
+              onChangeRef.current(url);
+              setStorageType("library");
+              setImageError(false);
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -286,7 +325,24 @@ export default function MediaSelector({
         {description && <p className="mb-2 text-[11px] text-[var(--admin-faint)]">{description}</p>}
       </div>
 
-      <div className="flex items-center gap-1.5 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-1">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-1">
+        {enableLibrary ? (
+          <button
+            type="button"
+            onClick={() => {
+              setStorageType("library");
+              setLibraryOpen(true);
+            }}
+            className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+              storageType === "library"
+                ? "bg-[var(--admin-accent)] text-white shadow-sm"
+                : "text-[var(--admin-muted)] hover:bg-[var(--admin-surface)] hover:text-[var(--admin-ink)]"
+            }`}
+          >
+            <Images className="w-3.5 h-3.5" />
+            <span>Biblioteca</span>
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setStorageType("upload")}
@@ -313,6 +369,22 @@ export default function MediaSelector({
           <span>Enlace Web (URL)</span>
         </button>
       </div>
+
+      {enableLibrary && storageType === "library" ? (
+        <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3.5">
+          <p className="mb-2 text-[11px] text-[var(--admin-muted)]">
+            Reutiliza fotos ya cargadas en la biblioteca central sin duplicar archivos.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLibraryOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[var(--admin-accent)] px-4 text-xs font-bold text-white"
+          >
+            <Images className="size-3.5" />
+            Abrir biblioteca
+          </button>
+        </div>
+      ) : null}
 
       {storageType === "external" && (
         <div className="space-y-3 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3.5 animate-in fade-in duration-150">
@@ -487,9 +559,23 @@ export default function MediaSelector({
       ) : (
         <div className="flex items-center justify-center gap-2 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3 text-center text-xs text-[var(--admin-muted)]">
           <Info className="h-4 w-4 text-[var(--admin-faint)]" />
-          <span>Sin archivo. Sube una imagen o pega un enlace.</span>
+          <span>Sin archivo. Elige de la biblioteca, sube una imagen o pega un enlace.</span>
         </div>
       )}
+
+      {enableLibrary ? (
+        <LibraryImagePicker
+          open={libraryOpen}
+          onOpenChange={setLibraryOpen}
+          brandHint={brandHint}
+          onSelect={(url) => {
+            onChangeRef.current(url);
+            setStorageType("library");
+            setImageError(false);
+            if (url.startsWith("http")) setExternalUrl(url);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

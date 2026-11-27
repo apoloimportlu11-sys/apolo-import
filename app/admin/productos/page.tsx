@@ -962,6 +962,9 @@ export default function ProductosPage() {
       is_active: currentProduct.is_active !== undefined ? currentProduct.is_active : true,
       category_id: currentProduct.category_id || "automovil",
       image_url: currentProduct.image_url?.trim() || null,
+      gallery_urls: Array.isArray(currentProduct.gallery_urls)
+        ? currentProduct.gallery_urls.map((url) => String(url || "").trim()).filter(Boolean)
+        : [],
       line_group_id: currentProduct.line_group_id || null,
       price: presentationSnapshot.price,
       family: currentProduct.family || null,

@@ -22,6 +22,7 @@ export const productUpsertSchema = z.object({
   is_active: z.boolean().default(true),
   category_id: z.string().trim().min(1).max(80).default("automovil"),
   image_url: z.string().trim().max(2000).nullable().optional(),
+  gallery_urls: z.array(z.string().trim().max(2000)).max(24).optional().nullable(),
   image_is_placeholder: z.boolean().optional(),
   sort_order: z.coerce.number().int().optional().nullable(),
   line_group_id: z.string().trim().max(120).nullable().optional(),
@@ -41,7 +42,7 @@ export const productUpsertSchema = z.object({
   updated_at: z.string().optional(),
 });
 
-const EXTENDED_PRODUCT_KEYS = ["family", "attributes", "commercial"] as const;
+const EXTENDED_PRODUCT_KEYS = ["family", "attributes", "commercial", "gallery_urls"] as const;
 
 export function withoutExtendedProductFields(payload: object) {
   const next: Record<string, unknown> = { ...(payload as Record<string, unknown>) };

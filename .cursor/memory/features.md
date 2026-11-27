@@ -29,6 +29,7 @@
 - Auth login + OAuth callback — `AdminLoginForm`, `app/auth/callback`
 - API quotes / contact / chat / set-cookie — `app/api/**`
 - SQL schema + RLS secure scripts — `supabase_*.sql`
+- Biblioteca multimedia central (`/admin/biblioteca`) — Storage + `media_assets`, selector en productos, `gallery_urls` secundarias; SQL `supabase_media_library.sql`
 - Memoria/docs Cursor — `docs/`, `.cursor/rules/`, `.cursor/memory/` (2026-11-07)
 - Sync local → `origin/main` `4368cc6` (2026-11-09), fast-forward sin conflictos
 - Ops local 2026-11-05 (previo al sync): seed catálogo, 144 imágenes en bucket `products`, RLS secure aplicado, dedupe de 5 productos, 437 placeholders, 23 `image_url` rotas limpiadas

@@ -7,6 +7,7 @@ import {
   resolvePresentations,
 } from "@/lib/catalog/presentations";
 import { defaultCatalogLine } from "@/lib/product-grouping";
+import { normalizeGalleryUrls, productImageList } from "@/lib/media-library";
 
 /** Normaliza una fila de Supabase/`products` al shape del catálogo público. */
 export function mapRowToProduct(item: Record<string, unknown>): Product {
@@ -35,6 +36,8 @@ export function mapRowToProduct(item: Record<string, unknown>): Product {
   const viscosity = normalizeViscosityLabel(
     item.viscosity != null ? String(item.viscosity) : attributes.viscosity || ""
   );
+  const primaryImage = String(item.image_url || "");
+  const galleryUrls = normalizeGalleryUrls(item.gallery_urls);
 
   return {
     id: String(item.id || ""),
@@ -48,8 +51,10 @@ export function mapRowToProduct(item: Record<string, unknown>): Product {
     description: String(
       item.description || item.short_description || "Lubricante de alta calidad"
     ),
-    image: String(item.image_url || ""),
-    image_url: String(item.image_url || ""),
+    image: primaryImage,
+    image_url: primaryImage,
+    images: productImageList(primaryImage, galleryUrls),
+    gallery_urls: galleryUrls,
     categoryId: String(item.category_id || "automovil"),
     subcategoryId: String(item.subcategory_id || ""),
     subcategory: String(item.subcategory || ""),

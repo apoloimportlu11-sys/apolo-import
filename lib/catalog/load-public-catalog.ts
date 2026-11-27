@@ -24,6 +24,7 @@ const PRODUCT_SELECT = [
   "is_active",
   "category_id",
   "image_url",
+  "gallery_urls",
   "viscosity",
   "type",
   "subcategory_id",
@@ -41,6 +42,9 @@ const PRODUCT_SELECT_LITE = PRODUCT_SELECT.replace(
   /,product_presentations\([^)]*\)/,
   ""
 );
+
+const PRODUCT_SELECT_NO_GALLERY = PRODUCT_SELECT.replace(",gallery_urls", "");
+const PRODUCT_SELECT_LITE_NO_GALLERY = PRODUCT_SELECT_LITE.replace(",gallery_urls", "");
 
 async function restGet<T>(path: string): Promise<T[] | null> {
   const base = getSupabaseUrl().replace(/\/$/, "");
@@ -70,7 +74,15 @@ export async function loadPublicCatalog(): Promise<Product[]> {
   });
   let rows = await restGet<Record<string, unknown>>(`products?${params}`);
   if (!rows) {
+    params.set("select", PRODUCT_SELECT_NO_GALLERY);
+    rows = await restGet<Record<string, unknown>>(`products?${params}`);
+  }
+  if (!rows) {
     params.set("select", PRODUCT_SELECT_LITE);
+    rows = await restGet<Record<string, unknown>>(`products?${params}`);
+  }
+  if (!rows) {
+    params.set("select", PRODUCT_SELECT_LITE_NO_GALLERY);
     rows = await restGet<Record<string, unknown>>(`products?${params}`);
   }
   if (!rows) return [];

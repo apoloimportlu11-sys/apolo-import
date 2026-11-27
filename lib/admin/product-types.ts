@@ -19,6 +19,8 @@ export interface ProductItem {
   category_id?: string | null;
   brand_id?: string | null;
   image_url?: string | null;
+  /** URLs adicionales desde la biblioteca multimedia. */
+  gallery_urls?: string[] | null;
   image_is_placeholder?: boolean | null;
   stock_min?: number | null;
   price?: number | null;

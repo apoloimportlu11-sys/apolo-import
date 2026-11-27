@@ -10,6 +10,7 @@ const ROUTE_ROLES: { prefix: string; roles: StaffRole[] }[] = [
   { prefix: "/admin/productos", roles: ["admin", "vendor", "almacen"] },
   { prefix: "/admin/inventario", roles: ["admin", "vendor", "almacen"] },
   { prefix: "/admin/galeria", roles: ["admin", "vendor", "almacen", "editor"] },
+  { prefix: "/admin/biblioteca", roles: ["admin", "vendor", "almacen", "editor"] },
   { prefix: "/admin/marcas", roles: ["admin", "vendor"] },
   { prefix: "/admin/lineas", roles: ["admin", "vendor"] },
   { prefix: "/admin/proveedores", roles: ["admin", "vendor"] },

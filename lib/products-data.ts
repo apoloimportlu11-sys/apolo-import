@@ -17,6 +17,8 @@ export type Product = {
   image: string;
   images?: string[];
   image_url?: string;
+  /** URLs adicionales (galería secundaria) desde la biblioteca. */
+  gallery_urls?: string[];
   categoryId: string;
   subcategoryId: string;
   subcategory_id?: string;

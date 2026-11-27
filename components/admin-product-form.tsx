@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CheckSquare, ChevronDown, ChevronUp, Copy, Loader2, Plus, Trash2, X } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronUp, Copy, Images, Loader2, Plus, Trash2, X } from "lucide-react";
 import MediaSelector from "@/components/MediaSelector";
+import { LibraryImagePicker } from "@/components/admin/library-image-picker";
 import type { ProductItem } from "@/lib/admin/product-types";
+import { normalizeGalleryUrls } from "@/lib/media-library";
 import type { ProductLineGroupItem } from "@/lib/product-line-groups";
 import { categories as CATALOG_CATEGORIES } from "@/lib/products-data";
 import {
@@ -191,7 +193,9 @@ export function ProductForm({
   const [multiSelect, setMultiSelect] = useState(false);
   const [pickedSizes, setPickedSizes] = useState<string[]>([]);
   const [showMoreSizes, setShowMoreSizes] = useState(false);
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
   const detected = useRef({ viscosity: "", presentation: "", line: "", type: "" });
+  const galleryUrls = normalizeGalleryUrls(product.gallery_urls);
 
   if (open && sessionKey !== resetKey) {
     const knownCategory = CATALOG_CATEGORIES.find((category) => category.id === (product.category_id || "automovil"));
@@ -436,14 +440,67 @@ export function ProductForm({
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {section === "general" ? (
             <div className="grid items-start gap-5 lg:grid-cols-[280px_1fr]">
-              <MediaSelector
-                compact
-                label="Imagen principal"
-                categoryFilter="products"
-                value={product.image_url || ""}
-                onUploadingChange={onUploadingChange}
-                onChange={(url) => patch({ image_url: url })}
-              />
+              <div className="space-y-3">
+                <MediaSelector
+                  compact
+                  label="Imagen principal"
+                  categoryFilter="products"
+                  brandHint={product.brand || undefined}
+                  value={product.image_url || ""}
+                  onUploadingChange={onUploadingChange}
+                  onChange={(url) => patch({ image_url: url })}
+                />
+                <div className="rounded-xl border border-[var(--admin-line)] bg-[var(--admin-subtle)] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-[var(--admin-ink)]">Galería secundaria</p>
+                    <button
+                      type="button"
+                      onClick={() => setGalleryPickerOpen(true)}
+                      className="inline-flex items-center gap-1 text-[11px] text-[var(--admin-accent)]"
+                    >
+                      <Images className="size-3.5" />
+                      Añadir
+                    </button>
+                  </div>
+                  {galleryUrls.length === 0 ? (
+                    <p className="text-[11px] text-[var(--admin-faint)]">
+                      Opcional. Fotos extra desde la biblioteca (sin duplicar archivos).
+                    </p>
+                  ) : (
+                    <ul className="grid grid-cols-3 gap-2">
+                      {galleryUrls.map((url) => (
+                        <li key={url} className="relative overflow-hidden rounded-lg border border-[var(--admin-line)] bg-white">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="h-16 w-full object-contain p-1" />
+                          <button
+                            type="button"
+                            aria-label="Quitar de la galería"
+                            onClick={() =>
+                              patch({
+                                gallery_urls: galleryUrls.filter((item) => item !== url),
+                              })
+                            }
+                            className="absolute right-1 top-1 rounded bg-black/70 p-0.5 text-white"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <LibraryImagePicker
+                  open={galleryPickerOpen}
+                  onOpenChange={setGalleryPickerOpen}
+                  brandHint={product.brand || undefined}
+                  title="Añadir a la galería del producto"
+                  onSelect={(url) => {
+                    if (!url || url === product.image_url) return;
+                    if (galleryUrls.includes(url)) return;
+                    patch({ gallery_urls: [...galleryUrls, url] });
+                  }}
+                />
+              </div>
               <div className="space-y-3">
                 <div>
                   <label htmlFor="product-name" className="mb-1 block text-sm text-[var(--admin-muted)]">

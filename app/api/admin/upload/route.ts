@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     const purpose = String(form.get("purpose") || "product").trim().toLowerCase();
     const brandRaw = String(form.get("brand") || "").trim();
     const matchNameRaw = String(form.get("matchName") || "").trim();
+    const categoryRaw = String(form.get("category") || "products").trim().toLowerCase() || "products";
 
     const extRaw = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
     const ext = extRaw || "png";
@@ -78,12 +79,14 @@ export async function POST(req: Request) {
     let filePath: string;
     let matchKey = "";
     let stem = "";
+    let libraryBrand = brandFolderKey(brandRaw || "general");
+    const isLibrary = purpose === "gallery" || purpose === "library";
 
-    if (purpose === "gallery") {
+    if (isLibrary) {
       const label = matchNameRaw || stemFromFilename(file.name) || "producto";
       const filename = galleryFilenameFromLabel(label, ext);
-      const brand = brandFolderKey(brandRaw || "general");
-      filePath = `gallery/${brand}/${filename}`;
+      const category = categoryRaw.replace(/[^a-z0-9_-]/g, "") || "products";
+      filePath = `gallery/${category}/${libraryBrand}/${filename}`;
       stem = stemFromFilename(filename);
       matchKey = imageMatchKey(stem);
     } else {
@@ -119,12 +122,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Subida OK pero sin URL pública." }, { status: 502 });
     }
 
+    let mediaId: string | undefined;
+    if (isLibrary) {
+      const fileName = filePath.split("/").pop() || file.name;
+      const { data: asset, error: assetError } = await admin
+        .from("media_assets")
+        .upsert(
+          {
+            file_name: fileName,
+            storage_path: filePath,
+            public_url: pub.publicUrl,
+            brand: libraryBrand,
+            category: categoryRaw.replace(/[^a-z0-9_-]/g, "") || "products",
+            byte_size: file.size,
+            content_type: contentType,
+            updated_at: new Date().toISOString(),
+            created_by: staff.userId,
+          },
+          { onConflict: "storage_path" }
+        )
+        .select("id")
+        .maybeSingle();
+      if (!assetError && asset?.id) mediaId = String(asset.id);
+    }
+
     return NextResponse.json({
       url: pub.publicUrl,
       path: filePath,
+      mediaId,
       matchKey: matchKey || undefined,
       stem: stem || undefined,
-      brand: purpose === "gallery" ? brandFolderKey(brandRaw || "general") : undefined,
+      brand: isLibrary ? libraryBrand : undefined,
+      category: isLibrary ? categoryRaw : undefined,
     });
   } catch (e) {
     console.error("admin upload:", e);
