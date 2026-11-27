@@ -131,7 +131,7 @@ export default function InventarioPage() {
 
   const loadGallery = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/gallery");
+      const res = await fetch("/api/admin/gallery?onlyMatched=1");
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) return;
       setGalleryImages(Array.isArray(payload.images) ? (payload.images as GalleryImageItem[]) : []);

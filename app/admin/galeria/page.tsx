@@ -23,7 +23,15 @@ type ProductRow = {
   id: string;
   name: string;
   brand: string | null;
+  presentation?: string | null;
   image_url: string | null;
+};
+
+type GalleryStats = {
+  total: number;
+  matched: number;
+  unmatched: number;
+  activeProducts: number;
 };
 
 const BRAND_OPTIONS = [
@@ -40,10 +48,12 @@ export default function GaleriaAdminPage() {
   const supabase = createBrowserSupabase();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [images, setImages] = useState<GalleryImageItem[]>([]);
+  const [stats, setStats] = useState<GalleryStats | null>(null);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [purging, setPurging] = useState(false);
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState("all");
   const [uploadBrand, setUploadBrand] = useState("apolo");
@@ -52,18 +62,20 @@ export default function GaleriaAdminPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadGallery = useCallback(async () => {
-    const res = await fetch("/api/admin/gallery");
+    const res = await fetch("/api/admin/gallery?onlyMatched=1");
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(payload?.message || "No se pudo cargar la galería.");
     }
     setImages(Array.isArray(payload.images) ? (payload.images as GalleryImageItem[]) : []);
+    setStats((payload.stats as GalleryStats) || null);
   }, []);
 
   const loadProducts = useCallback(async () => {
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, brand, image_url")
+      .select("id, name, brand, presentation, image_url")
+      .eq("is_active", true)
       .order("name");
     if (error) throw error;
     setProducts(
@@ -71,6 +83,7 @@ export default function GaleriaAdminPage() {
         id: String(row.id),
         name: String(row.name || ""),
         brand: row.brand != null ? String(row.brand) : null,
+        presentation: row.presentation != null ? String(row.presentation) : null,
         image_url: row.image_url != null ? String(row.image_url) : null,
       }))
     );
@@ -95,10 +108,7 @@ export default function GaleriaAdminPage() {
   const productHitsByImage = useMemo(() => {
     const map = new Map<string, ProductRow[]>();
     for (const image of images) {
-      const hits = products.filter((product) => {
-        const match = findGalleryImageForProduct(product, [image]);
-        return Boolean(match);
-      });
+      const hits = products.filter((product) => Boolean(findGalleryImageForProduct(product, [image])));
       map.set(image.id, hits);
     }
     return map;
@@ -159,7 +169,7 @@ export default function GaleriaAdminPage() {
       if (ok > 0) {
         toast.success(ok === 1 ? "Imagen subida a la galería." : `${ok} imágenes subidas.`);
         setMatchName("");
-        await loadGallery();
+        await reload();
       }
     } finally {
       setUploading(false);
@@ -175,7 +185,7 @@ export default function GaleriaAdminPage() {
       const res = await fetch("/api/admin/gallery", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: item.path, source: item.source }),
+        body: JSON.stringify({ path: item.path }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -200,6 +210,7 @@ export default function GaleriaAdminPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "apply",
           onlyEmpty: true,
           updates: pendingAssignments.map(({ id, image_url }) => ({ id, image_url })),
         }),
@@ -222,28 +233,75 @@ export default function GaleriaAdminPage() {
     }
   }
 
+  async function purgeNonCatalog() {
+    const unmatched = stats?.unmatched ?? 0;
+    const ok = window.confirm(
+      `Esto va a:\n\n1) Borrar ${unmatched} imagen(es) de la nube que NO emparejan con productos activos del catálogo.\n2) Eliminar productos inactivos (los que no se muestran en la tienda).\n\n¿Continuar?`
+    );
+    if (!ok) return;
+
+    setPurging(true);
+    try {
+      const res = await fetch("/api/admin/gallery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "purge_non_catalog" }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error("No se pudo limpiar", { description: payload?.message });
+        return;
+      }
+      toast.success("Limpieza lista", {
+        description: `Imágenes borradas: ${payload.removedImages || 0}. Productos inactivos eliminados: ${payload.removedProducts || 0}.`,
+      });
+      if (realtimeBus) realtimeBus.emit("products_updated", { source: "gallery_purge" });
+      await reload();
+    } finally {
+      setPurging(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-[var(--admin-faint)]">
             Catálogo
           </p>
           <h1 className="font-heading text-2xl text-[var(--admin-ink)]">Galería de productos</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--admin-muted)]">
-            Solo se usan fotos en la nube. Sube con el nombre del producto (ej. ABRILLANTADOR
-            DE LLANTA). El empareje tolera plural/singular y presentaciones (300ML, 1GL…).
+            Solo se muestran fotos de la nube que emparejan con productos activos del catálogo.
+            Logos u otras imágenes no aparecen aquí.
           </p>
+          {stats && (
+            <p className="mt-2 text-xs text-[var(--admin-faint)]">
+              En nube: {stats.matched} de producto · {stats.unmatched} sin catálogo ·{" "}
+              {stats.activeProducts} productos activos
+            </p>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => void applyToInventory()}
-          disabled={applying || !pendingAssignments.length}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-medium text-[#ffffff] disabled:opacity-40"
-        >
-          {applying ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
-          Aplicar a inventario ({pendingAssignments.length})
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void purgeNonCatalog()}
+            disabled={purging}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#B91C1C]/40 px-4 text-sm font-medium text-[#B91C1C] disabled:opacity-40"
+          >
+            {purging ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            Limpiar fuera del catálogo
+            {stats && stats.unmatched > 0 ? ` (${stats.unmatched})` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => void applyToInventory()}
+            disabled={applying || !pendingAssignments.length}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-medium text-[#ffffff] disabled:opacity-40"
+          >
+            {applying ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+            Aplicar a inventario ({pendingAssignments.length})
+          </button>
+        </div>
       </header>
 
       <section className="rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-surface)] p-4 sm:p-5">
@@ -267,7 +325,7 @@ export default function GaleriaAdminPage() {
             <input
               value={matchName}
               onChange={(e) => setMatchName(e.target.value)}
-              placeholder="Ej: SILICONA CRISTAL 300 ML"
+              placeholder="Ej: ABRILLANTADOR DE LLANTAS"
               className={`mt-1.5 ${fieldClass}`}
             />
           </label>
@@ -310,12 +368,9 @@ export default function GaleriaAdminPage() {
           }`}
         >
           <Images className="mb-2 size-8 text-[var(--admin-accent)]" />
-          <p className="text-sm font-medium text-[var(--admin-ink)]">
-            Arrastra varias fotos aquí
-          </p>
+          <p className="text-sm font-medium text-[var(--admin-ink)]">Arrastra fotos de productos</p>
           <p className="mt-1 max-w-md text-xs text-[var(--admin-muted)]">
-            El nombre del archivo debe coincidir con el del producto (ej.{" "}
-            <span className="font-mono">REFRIGERANTE 33 ROJO 1GL.png</span>).
+            Usa el nombre del producto. Si no empareja con el catálogo activo, no se mostrará aquí.
           </p>
           <input
             ref={fileInputRef}
@@ -364,7 +419,9 @@ export default function GaleriaAdminPage() {
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[var(--admin-line)] px-4 py-16 text-center">
             <ImageIcon className="mx-auto mb-2 size-8 text-[var(--admin-faint)]" />
-            <p className="text-sm text-[var(--admin-muted)]">No hay imágenes con ese filtro.</p>
+            <p className="text-sm text-[var(--admin-muted)]">
+              No hay imágenes de producto emparejadas con el catálogo activo.
+            </p>
           </div>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -387,9 +444,6 @@ export default function GaleriaAdminPage() {
                     />
                     <span className="absolute left-2 top-2 rounded-full bg-[var(--admin-input)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--admin-muted)]">
                       {item.brand}
-                    </span>
-                    <span className="absolute right-2 top-2 rounded-full bg-[var(--admin-input)] px-2 py-0.5 text-[10px] text-[var(--admin-muted)]">
-                      Nube
                     </span>
                   </div>
                   <div className="space-y-2 p-3">

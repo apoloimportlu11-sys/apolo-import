@@ -5,6 +5,7 @@ import { clientKey, rateLimit } from "@/lib/rate-limit";
 import {
   brandFolderKey,
   buildGalleryItem,
+  findGalleryImageForProduct,
   hasUsableProductImage,
   type GalleryImageItem,
 } from "@/lib/product-image-gallery";
@@ -16,12 +17,13 @@ function isImageName(name: string) {
   return IMAGE_EXT.has(ext);
 }
 
+/** Solo la carpeta gallery/ del bucket products (nada de logos sueltos ni prod_*). */
 async function listStorageGallery(): Promise<GalleryImageItem[]> {
   const admin = getSupabaseAdmin();
   const items: GalleryImageItem[] = [];
   const seen = new Set<string>();
 
-  async function listFolder(prefix: string, brand: string, recurse: boolean) {
+  async function listFolder(prefix: string, brand: string) {
     const { data, error } = await admin.storage.from("products").list(prefix, {
       limit: 1000,
       sortBy: { column: "name", order: "asc" },
@@ -33,10 +35,7 @@ async function listStorageGallery(): Promise<GalleryImageItem[]> {
       const isFolder = entry.id == null && !isImageName(entry.name);
 
       if (isFolder) {
-        if (!recurse) continue;
-        // Evita re-entrar a gallery cuando listamos la raíz.
-        if (!prefix && entry.name === "gallery") continue;
-        await listFolder(nextPath, brandFolderKey(entry.name), true);
+        await listFolder(nextPath, brandFolderKey(entry.name));
         continue;
       }
       if (!isImageName(entry.name)) continue;
@@ -59,15 +58,48 @@ async function listStorageGallery(): Promise<GalleryImageItem[]> {
     }
   }
 
-  // Galería organizada por marca
-  await listFolder("gallery", "general", true);
-  // Subidas sueltas en la raíz del bucket (prod_*.png, etc.)
-  await listFolder("", "general", false);
-
+  await listFolder("gallery", "general");
   return items;
 }
 
-export async function GET() {
+async function loadActiveProducts() {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("products")
+    .select("id, name, brand, presentation, image_url, is_active")
+    .eq("is_active", true)
+    .order("name");
+  if (error) throw error;
+  return (data || []).map((row) => ({
+    id: String(row.id),
+    name: String(row.name || ""),
+    brand: row.brand != null ? String(row.brand) : null,
+    presentation: row.presentation != null ? String(row.presentation) : null,
+    image_url: row.image_url != null ? String(row.image_url) : null,
+    is_active: row.is_active !== false,
+  }));
+}
+
+function partitionByCatalogMatch(
+  images: GalleryImageItem[],
+  products: Array<{
+    id: string;
+    name: string;
+    brand: string | null;
+    presentation: string | null;
+  }>
+) {
+  const matched: GalleryImageItem[] = [];
+  const unmatched: GalleryImageItem[] = [];
+  for (const image of images) {
+    const hits = products.some((product) => Boolean(findGalleryImageForProduct(product, [image])));
+    if (hits) matched.push(image);
+    else unmatched.push(image);
+  }
+  return { matched, unmatched };
+}
+
+export async function GET(req: Request) {
   try {
     const staff = await requireStaff();
     if (!staff.ok) {
@@ -76,6 +108,9 @@ export async function GET() {
     if (!staff.role || !["admin", "vendor", "almacen", "editor"].includes(staff.role)) {
       return NextResponse.json({ message: "Sin permiso para ver la galería." }, { status: 403 });
     }
+
+    const url = new URL(req.url);
+    const onlyMatched = url.searchParams.get("onlyMatched") !== "0";
 
     let images: GalleryImageItem[] = [];
     try {
@@ -88,11 +123,23 @@ export async function GET() {
       );
     }
 
-    images.sort(
+    const products = await loadActiveProducts();
+    const { matched, unmatched } = partitionByCatalogMatch(images, products);
+    const visible = onlyMatched ? matched : images;
+
+    visible.sort(
       (a, b) => a.brand.localeCompare(b.brand, "es") || a.stem.localeCompare(b.stem, "es")
     );
 
-    return NextResponse.json({ images });
+    return NextResponse.json({
+      images: visible,
+      stats: {
+        total: images.length,
+        matched: matched.length,
+        unmatched: unmatched.length,
+        activeProducts: products.length,
+      },
+    });
   } catch (err) {
     console.error("gallery GET:", err);
     return NextResponse.json({ message: "No se pudo leer la galería." }, { status: 500 });
@@ -117,15 +164,14 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const body = (await req.json().catch(() => ({}))) as { path?: string; source?: string };
+    const body = (await req.json().catch(() => ({}))) as { path?: string };
     const filePath = String(body.path || "").trim();
 
-    if (!filePath) {
-      return NextResponse.json({ message: "Falta la ruta del archivo." }, { status: 400 });
-    }
-    // Solo archivos del bucket products (galería o subidas sueltas)
-    if (filePath.includes("..") || filePath.startsWith("/")) {
-      return NextResponse.json({ message: "Ruta de archivo no válida." }, { status: 400 });
+    if (!filePath || !filePath.startsWith("gallery/") || filePath.includes("..")) {
+      return NextResponse.json(
+        { message: "Solo se pueden borrar archivos de gallery/." },
+        { status: 400 }
+      );
     }
 
     const admin = getSupabaseAdmin();
@@ -148,13 +194,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: staff.message }, { status: staff.status });
     }
     if (!staff.role || !["admin", "vendor", "almacen"].includes(staff.role)) {
-      return NextResponse.json(
-        { message: "Tu rol no puede aplicar imágenes al inventario." },
-        { status: 403 }
-      );
+      return NextResponse.json({ message: "Tu rol no puede gestionar la galería." }, { status: 403 });
     }
 
-    const limited = rateLimit(clientKey(req, `admin-gallery-apply:${staff.userId}`), 20, 60_000);
+    const limited = rateLimit(clientKey(req, `admin-gallery-post:${staff.userId}`), 20, 60_000);
     if (!limited.ok) {
       return NextResponse.json(
         { message: "Demasiados intentos. Espera un momento." },
@@ -163,10 +206,78 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json().catch(() => ({}))) as {
+      action?: string;
       onlyEmpty?: boolean;
       updates?: Array<{ id: string; image_url: string }>;
     };
 
+    const action = String(body.action || "apply").trim();
+    const admin = getSupabaseAdmin();
+
+    if (action === "purge_non_catalog") {
+      // 1) Borrar imágenes de gallery/ que no emparejan con productos activos
+      const images = await listStorageGallery();
+      const activeProducts = await loadActiveProducts();
+      const { unmatched } = partitionByCatalogMatch(images, activeProducts);
+      const paths = unmatched.map((item) => item.path).filter((path) => path.startsWith("gallery/"));
+
+      let removedImages = 0;
+      for (let i = 0; i < paths.length; i += 50) {
+        const chunk = paths.slice(i, i + 50);
+        if (!chunk.length) continue;
+        const { error } = await admin.storage.from("products").remove(chunk);
+        if (error) {
+          return NextResponse.json(
+            { message: `No se pudieron borrar imágenes: ${error.message}`, removedImages },
+            { status: 502 }
+          );
+        }
+        removedImages += chunk.length;
+      }
+
+      // 2) Eliminar productos inactivos (no están en el catálogo público)
+      const { data: inactive, error: inactiveError } = await admin
+        .from("products")
+        .select("id")
+        .eq("is_active", false);
+      if (inactiveError) {
+        return NextResponse.json(
+          { message: inactiveError.message, removedImages },
+          { status: 500 }
+        );
+      }
+
+      const inactiveIds = (inactive || []).map((row) => String(row.id));
+      let removedProducts = 0;
+      for (const id of inactiveIds) {
+        await admin.from("product_presentations").delete().eq("product_id", id);
+        const { error, count } = await admin
+          .from("products")
+          .delete({ count: "exact" })
+          .eq("id", id);
+        if (error) {
+          return NextResponse.json(
+            {
+              message: `Imágenes OK, pero falló borrar producto ${id}: ${error.message}`,
+              removedImages,
+              removedProducts,
+            },
+            { status: 500 }
+          );
+        }
+        if (count) removedProducts += count;
+      }
+
+      return NextResponse.json({
+        ok: true,
+        removedImages,
+        removedProducts,
+        keptImages: images.length - removedImages,
+        activeProducts: activeProducts.length,
+      });
+    }
+
+    // apply image_url to products
     const updates = Array.isArray(body.updates) ? body.updates : [];
     if (!updates.length) {
       return NextResponse.json({ message: "No hay actualizaciones." }, { status: 400 });
@@ -175,7 +286,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Demasiados productos en un solo lote." }, { status: 400 });
     }
 
-    const admin = getSupabaseAdmin();
     let applied = 0;
     const errors: string[] = [];
 
@@ -212,7 +322,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, applied, errors: errors.slice(0, 8) });
   } catch (err) {
-    console.error("gallery POST apply:", err);
-    return NextResponse.json({ message: "No se pudieron aplicar las imágenes." }, { status: 500 });
+    console.error("gallery POST:", err);
+    return NextResponse.json({ message: "No se pudo completar la acción." }, { status: 500 });
   }
 }
