@@ -12,6 +12,10 @@ import {
   type MediaAsset,
   normalizeGalleryUrls,
 } from "@/lib/media-library";
+import {
+  autoAssignProductImages,
+  type AutoAssignMode,
+} from "@/lib/auto-assign-product-images";
 
 const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif", "svg"]);
 
@@ -230,10 +234,18 @@ export async function POST(req: Request) {
       byte_size?: number;
       content_type?: string;
       id?: string;
+      mode?: AutoAssignMode;
+      autoAssign?: boolean;
     };
 
     const action = String(body.action || "register").trim();
     const admin = getSupabaseAdmin();
+
+    if (action === "auto_assign") {
+      const mode = (body.mode || "placeholders") as AutoAssignMode;
+      const result = await autoAssignProductImages(admin, { mode });
+      return NextResponse.json({ ok: true, ...result });
+    }
 
     if (action === "register" || action === "upsert") {
       const storage_path = String(body.storage_path || "").trim();
@@ -325,7 +337,8 @@ export async function POST(req: Request) {
         );
         if (!error) upserted += 1;
       }
-      return NextResponse.json({ ok: true, upserted });
+      const assigned = await autoAssignProductImages(admin, { mode: "placeholders" });
+      return NextResponse.json({ ok: true, upserted, assign: assigned });
     }
 
     return NextResponse.json({ message: "Acción no reconocida." }, { status: 400 });

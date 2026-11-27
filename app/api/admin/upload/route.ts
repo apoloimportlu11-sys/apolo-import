@@ -8,6 +8,7 @@ import {
   imageMatchKey,
   stemFromFilename,
 } from "@/lib/product-image-gallery";
+import { autoAssignProductImages } from "@/lib/auto-assign-product-images";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED = new Set([
@@ -123,6 +124,7 @@ export async function POST(req: Request) {
     }
 
     let mediaId: string | undefined;
+    let assigned = 0;
     if (isLibrary) {
       const fileName = filePath.split("/").pop() || file.name;
       const { data: asset, error: assetError } = await admin
@@ -144,12 +146,21 @@ export async function POST(req: Request) {
         .select("id")
         .maybeSingle();
       if (!assetError && asset?.id) mediaId = String(asset.id);
+
+      // Tras cada subida a biblioteca, intenta enlazar productos sin foto / placeholder.
+      try {
+        const result = await autoAssignProductImages(admin, { mode: "placeholders" });
+        assigned = result.applied;
+      } catch (assignErr) {
+        console.warn("auto-assign after upload:", assignErr);
+      }
     }
 
     return NextResponse.json({
       url: pub.publicUrl,
       path: filePath,
       mediaId,
+      assigned,
       matchKey: matchKey || undefined,
       stem: stem || undefined,
       brand: isLibrary ? libraryBrand : undefined,

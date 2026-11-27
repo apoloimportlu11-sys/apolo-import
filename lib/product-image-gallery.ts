@@ -25,6 +25,15 @@ const FILLER_WORDS = new Set([
   "un",
   "una",
   "tipo",
+  "apolo",
+  "overts",
+  "valtrom",
+  "lubricantes",
+  "producto",
+  "productos",
+  "img",
+  "image",
+  "foto",
 ]);
 
 function stripPackaging(value: string) {

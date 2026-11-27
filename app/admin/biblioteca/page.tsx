@@ -170,6 +170,8 @@ export default function BibliotecaPage() {
         toast.success(ok === 1 ? "Imagen añadida a la biblioteca." : `${ok} imágenes añadidas.`);
         setMatchName("");
         await loadLibrary();
+        // Empareja automáticamente productos sin foto / placeholder
+        await autoAssign("placeholders");
       }
     } finally {
       setUploading(false);
@@ -216,32 +218,52 @@ export default function BibliotecaPage() {
         toast.error("No se pudo sincronizar", { description: payload?.message });
         return;
       }
-      toast.success(`Sincronizadas ${payload.upserted || 0} imágenes.`);
+      toast.success(`Sincronizadas ${payload.upserted || 0} imágenes.`, {
+        description: payload.assign?.applied
+          ? `${payload.assign.applied} productos actualizados automáticamente.`
+          : undefined,
+      });
+      if (realtimeBus && payload.assign?.applied) {
+        realtimeBus.emit("products_updated", { source: "media_sync_assign" });
+      }
       await loadLibrary();
+      await loadProducts();
     } finally {
       setSyncing(false);
     }
   }
 
-  async function applyToProducts() {
-    if (!pendingAssignments.length) {
-      toast("No hay productos activos sin foto que coincidan.");
-      return;
-    }
+  async function autoAssign(mode: "placeholders" | "replace_matched" = "placeholders") {
     setApplying(true);
     try {
-      const res = await fetch("/api/admin/gallery", {
+      const res = await fetch("/api/admin/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "apply", onlyEmpty: true, updates: pendingAssignments }),
+        body: JSON.stringify({ action: "auto_assign", mode }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error("No se pudo aplicar", { description: payload?.message });
+        toast.error("No se pudo asignar", { description: payload?.message });
         return;
       }
-      toast.success(`${payload.applied || 0} productos actualizados.`);
-      if (realtimeBus) realtimeBus.emit("products_updated", { source: "media_library" });
+      const applied = Number(payload.applied) || 0;
+      toast.success(
+        applied === 0
+          ? "No hubo productos nuevos por actualizar."
+          : applied === 1
+            ? "1 producto recibió su imagen."
+            : `${applied} productos recibieron su imagen.`,
+        {
+          description:
+            payload.samples?.length
+              ? payload.samples
+                  .slice(0, 3)
+                  .map((s: { name: string }) => s.name)
+                  .join(" · ")
+              : `Revisados ${payload.scannedProducts || 0} productos y ${payload.scannedImages || 0} fotos.`,
+        }
+      );
+      if (realtimeBus) realtimeBus.emit("products_updated", { source: "media_auto_assign" });
       await loadProducts();
       await loadLibrary();
     } finally {
@@ -278,12 +300,30 @@ export default function BibliotecaPage() {
           </button>
           <button
             type="button"
-            onClick={() => void applyToProducts()}
-            disabled={applying || !pendingAssignments.length}
+            onClick={() => void autoAssign("placeholders")}
+            disabled={applying}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm disabled:opacity-40"
+          >
+            {applying ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+            Auto-asignar sin foto
+            {pendingAssignments.length ? ` (${pendingAssignments.length})` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Esto reemplazará la imagen de todos los productos activos que coincidan por nombre con una foto de la biblioteca. ¿Continuar?"
+                )
+              ) {
+                void autoAssign("replace_matched");
+              }
+            }}
+            disabled={applying}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-medium text-white disabled:opacity-40"
           >
             {applying ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
-            Asignar a productos ({pendingAssignments.length})
+            Forzar empareje por nombre
           </button>
         </div>
       </header>
