@@ -4,23 +4,34 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Barcode,
   CheckSquare,
+  Download,
+  FileImage,
+  FolderOpen,
   Loader2,
   Printer,
+  Save,
   Search,
   Square,
   Eye,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createBrowserSupabase } from "@/lib/supabase-client";
 import {
   barcodeValue,
+  deleteSavedBarcodeBatch,
+  downloadBarcodeLabelsHtml,
+  downloadBarcodeLabelsPng,
   LABEL_SIZES,
+  listSavedBarcodeBatches,
   printInventoryBarcodes,
+  saveBarcodeBatch,
   type BarcodeLabelTheme,
   type BarcodePrintOptions,
   type InventoryBarcodeItem,
   type LabelSizeId,
+  type SavedBarcodeBatch,
 } from "@/lib/admin/print-inventory-barcodes";
 import { BarcodeLabelPreview } from "@/components/admin/barcode-label-preview";
 import { matchOfficialBrand } from "@/lib/catalog/display";
@@ -69,6 +80,9 @@ export default function CodigosBarrasPage() {
   const [showSkuText, setShowSkuText] = useState(true);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [batches, setBatches] = useState<SavedBarcodeBatch[]>([]);
+  const [batchName, setBatchName] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,6 +124,10 @@ export default function CodigosBarrasPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setBatches(listSavedBarcodeBatches());
+  }, []);
 
   useEffect(() => {
     if (!previewOpen) return;
@@ -208,16 +226,22 @@ export default function CodigosBarrasPage() {
     setTheme(brand);
   }
 
-  function handlePrint(scope: "selected" | "visible") {
+  function resolveScope(scope: "selected" | "visible") {
     const items = scope === "selected" ? selectedItems : filtered;
     if (!items.length) {
       toast.error(
         scope === "selected"
           ? "Selecciona al menos un producto."
-          : "No hay productos visibles para imprimir."
+          : "No hay productos visibles."
       );
-      return;
+      return null;
     }
+    return items;
+  }
+
+  function handlePrint(scope: "selected" | "visible") {
+    const items = resolveScope(scope);
+    if (!items) return;
 
     setPrinting(true);
     const result = printInventoryBarcodes(items, printOptions);
@@ -231,6 +255,80 @@ export default function CodigosBarrasPage() {
     toast.success(`Diálogo de impresión listo (${result.count} etiqueta${result.count === 1 ? "" : "s"}).`, {
       description: `Elige tu impresora portátil y el tamaño ${labelSize.replace("x", " × ")} mm.`,
     });
+  }
+
+  function handleDownloadHtml(scope: "selected" | "visible") {
+    const items = resolveScope(scope);
+    if (!items) return;
+    const result = downloadBarcodeLabelsHtml(items, printOptions);
+    if (!result.ok) {
+      toast.error(result.error || "No se pudo descargar el HTML.");
+      return;
+    }
+    toast.success(`HTML guardado (${result.count} etiqueta${result.count === 1 ? "" : "s"}).`, {
+      description: result.filename
+        ? `${result.filename} — ábrelo después y pulsa Imprimir.`
+        : "Ábrelo después y pulsa Imprimir.",
+    });
+  }
+
+  async function handleDownloadPng(scope: "selected" | "visible") {
+    const items = resolveScope(scope);
+    if (!items) return;
+    setSaving(true);
+    try {
+      const result = await downloadBarcodeLabelsPng(items, printOptions);
+      if (!result.ok) {
+        toast.error(result.error || "No se pudieron generar los PNG.");
+        return;
+      }
+      toast.success(`${result.count} PNG descargado${result.count === 1 ? "" : "s"}.`, {
+        description: "Guárdalos y ábrelos desde la app de tu impresora cuando quieras.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleSaveBatch() {
+    const items = resolveScope("selected");
+    if (!items) return;
+    const result = saveBarcodeBatch(batchName, items, printOptions);
+    if (!result.ok || !result.batch) {
+      toast.error(result.error || "No se pudo guardar el lote.");
+      return;
+    }
+    setBatches(listSavedBarcodeBatches());
+    setBatchName("");
+    toast.success(`Lote guardado: ${result.batch.name}`, {
+      description: `${result.batch.items.length} producto(s). Puedes imprimirlo más tarde desde esta página.`,
+    });
+  }
+
+  function handlePrintBatch(batch: SavedBarcodeBatch) {
+    setPrinting(true);
+    const result = printInventoryBarcodes(batch.items, batch.options || printOptions);
+    setPrinting(false);
+    if (!result.ok) {
+      toast.error(result.error || "No se pudo imprimir el lote.");
+      return;
+    }
+    toast.success(`Imprimiendo lote «${batch.name}» (${result.count}).`);
+  }
+
+  function handleDownloadBatchHtml(batch: SavedBarcodeBatch) {
+    const result = downloadBarcodeLabelsHtml(batch.items, batch.options || printOptions);
+    if (!result.ok) {
+      toast.error(result.error || "No se pudo descargar el lote.");
+      return;
+    }
+    toast.success(`HTML del lote descargado (${result.count}).`);
+  }
+
+  function handleDeleteBatch(id: string) {
+    deleteSavedBarcodeBatch(id);
+    setBatches(listSavedBarcodeBatches());
+    toast.success("Lote eliminado.");
   }
 
   return (
@@ -255,15 +353,27 @@ export default function CodigosBarrasPage() {
             className="inline-flex h-10 items-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-medium text-[#111] disabled:opacity-50"
           >
             {printing ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />}
-            Imprimir seleccionados ({counts.selected})
+            Imprimir ({counts.selected})
           </button>
           <button
             type="button"
-            onClick={() => handlePrint("visible")}
-            disabled={loading || printing || filtered.length === 0}
+            onClick={() => handleDownloadHtml("selected")}
+            disabled={loading || saving || selectedItems.length === 0}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)] disabled:opacity-50"
+            title="Descarga un HTML para abrir e imprimir después"
           >
-            Imprimir visibles ({filtered.length})
+            <Download className="size-4" />
+            Guardar HTML
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDownloadPng("selected")}
+            disabled={loading || saving || selectedItems.length === 0}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)] disabled:opacity-50"
+            title="Descarga imágenes PNG para imprimir después"
+          >
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <FileImage className="size-4" />}
+            Guardar PNG
           </button>
         </div>
       </div>
@@ -530,8 +640,113 @@ export default function CodigosBarrasPage() {
               En el diálogo de Windows elige tu impresora de etiquetas y desactiva «Ajustar a la página» si aparece.
             </p>
           </div>
+
+          <div className="rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-panel)] p-4">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--admin-ink)]">
+              <Save className="size-4 text-[var(--admin-accent)]" />
+              Guardar lote para después
+            </h2>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Guarda la selección en este navegador y imprímela más tarde sin volver a elegir productos.
+            </p>
+            <label className="mt-3 block text-xs font-medium text-[var(--admin-muted)]">
+              Nombre del lote
+              <input
+                value={batchName}
+                onChange={(e) => setBatchName(e.target.value)}
+                placeholder={`Lote ${new Date().toLocaleDateString("es-PE")}`}
+                className={`${fieldClass} mt-1.5`}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleSaveBatch}
+              disabled={selectedItems.length === 0}
+              className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-medium text-[#111] disabled:opacity-50"
+            >
+              <Save className="size-4" />
+              Guardar selección ({counts.selected})
+            </button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleDownloadHtml("visible")}
+                disabled={filtered.length === 0}
+                className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--admin-line)] px-3 text-xs text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)] disabled:opacity-50"
+              >
+                <Download className="size-3.5" />
+                HTML visibles
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrint("visible")}
+                disabled={filtered.length === 0 || printing}
+                className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--admin-line)] px-3 text-xs text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)] disabled:opacity-50"
+              >
+                <Printer className="size-3.5" />
+                Imprimir visibles
+              </button>
+            </div>
+          </div>
         </aside>
       </div>
+
+      <section className="rounded-2xl border border-[var(--admin-line)] bg-[var(--admin-panel)] p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <FolderOpen className="size-4 text-[var(--admin-accent)]" />
+          <h2 className="text-sm font-semibold text-[var(--admin-ink)]">Lotes guardados</h2>
+          <span className="text-xs text-[var(--admin-faint)]">({batches.length})</span>
+        </div>
+        {batches.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[var(--admin-muted)]">
+            Aún no hay lotes. Selecciona productos y pulsa «Guardar selección».
+          </p>
+        ) : (
+          <ul className="divide-y divide-[var(--admin-line)]">
+            {batches.map((batch) => (
+              <li
+                key={batch.id}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-[var(--admin-ink)]">{batch.name}</p>
+                  <p className="text-xs text-[var(--admin-muted)]">
+                    {batch.items.length} producto(s) · {batch.options?.labelSize || "50x30"} mm ·{" "}
+                    {new Date(batch.createdAt).toLocaleString("es-PE")}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePrintBatch(batch)}
+                    disabled={printing}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--admin-accent)] px-3 text-xs font-medium text-[#111] disabled:opacity-50"
+                  >
+                    <Printer className="size-3.5" />
+                    Imprimir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadBatchHtml(batch)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--admin-line)] px-3 text-xs text-[var(--admin-ink)] hover:bg-[var(--admin-subtle)]"
+                  >
+                    <Download className="size-3.5" />
+                    HTML
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBatch(batch.id)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--admin-line)] px-3 text-xs text-red-400 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Borrar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {previewOpen && previewItem && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
@@ -586,14 +801,42 @@ export default function CodigosBarrasPage() {
                 className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-[var(--admin-accent)] px-4 text-sm font-medium text-[#111]"
               >
                 <Printer className="size-4" />
-                Imprimir esta etiqueta
+                Imprimir
               </button>
               <button
                 type="button"
-                onClick={() => setPreviewOpen(false)}
-                className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)]"
+                onClick={() => {
+                  const result = downloadBarcodeLabelsHtml([previewItem], printOptions);
+                  if (!result.ok) {
+                    toast.error(result.error || "No se pudo guardar.");
+                    return;
+                  }
+                  toast.success("HTML guardado. Ábrelo después para imprimir.");
+                }}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)]"
               >
-                Cerrar
+                <Download className="size-4" />
+                HTML
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void (async () => {
+                    setSaving(true);
+                    const result = await downloadBarcodeLabelsPng([previewItem], printOptions);
+                    setSaving(false);
+                    if (!result.ok) {
+                      toast.error(result.error || "No se pudo guardar el PNG.");
+                      return;
+                    }
+                    toast.success("PNG guardado.");
+                  })();
+                }}
+                disabled={saving}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--admin-line)] px-4 text-sm text-[var(--admin-ink)] disabled:opacity-50"
+              >
+                <FileImage className="size-4" />
+                PNG
               </button>
             </div>
           </div>

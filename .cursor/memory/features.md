@@ -1,7 +1,8 @@
 # Features
 
 ## Completed
-- Admin `/admin/codigos-barras`: etiquetas térmicas B/N para impresora portátil (tamaños 40×30–70×50 mm, 1 etiqueta/página, cabecera APOLO/OVERTS/VALTROM). Vista previa modal + impresión por iframe. `print-inventory-barcodes.ts`, `barcode-label-preview.tsx`, `codigos-barras/page.tsx` (2026-11-27).
+- Overts catálogo completo: 74 productos / 138 presentaciones; al filtrar Overts las 23 secciones salen en orden del JSON (`catalog_category`). `overts-catalog-order.ts` + sync `scripts/sync-overts-catalog.js` (2026-11-28).
+- Admin `/admin/codigos-barras`: etiquetas térmicas B/N (40×30–70×50 mm). Imprimir ya, guardar HTML/PNG, o lotes en localStorage para imprimir después. `print-inventory-barcodes.ts`, `barcode-label-preview.tsx`, `codigos-barras/page.tsx` (2026-11-27).
 - Agotado: modal «No disponible por el momento» (estilo catálogo, mejorado) con alternativas; Detalles/Consultar en tarjeta y quick view. No cotiza el agotado. `product-unavailable-panel.tsx`, `catalog-product-card.tsx`, `product-quick-view.tsx` (2026-11-25).
 - Nosotros → Marcas aliadas: muro de logos desde marcas activas de Admin (excluye casa); logo_url con fallback canónico (2026-11-25). `components/about.tsx`, `lib/catalog/canonical-brands.ts`
 - Catálogo vivo 2026-11-22: **172** productos `cat-*` activos; limpieza borró 680 `xlsx-*` + 23 `prod-*` inactivos (`scripts/cleanup_inactive_imports.js`)

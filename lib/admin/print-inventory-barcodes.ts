@@ -199,7 +199,8 @@ function buildLabelHtml(view: LabelViewModel): string {
 
 export function buildInventoryBarcodeDocument(
   items: InventoryBarcodeItem[],
-  options: BarcodePrintOptions = {}
+  options: BarcodePrintOptions = {},
+  docOptions: { autoPrint?: boolean; title?: string } = {}
 ): string {
   const size = getLabelSize(options.labelSize ?? "50x30");
   const sorted = expandCopies(
@@ -210,12 +211,14 @@ export function buildInventoryBarcodeDocument(
   const labels = sorted
     .map((item) => buildLabelHtml(buildLabelViewModel(item, options)))
     .join("\n");
+  const autoPrint = docOptions.autoPrint !== false;
+  const title = docOptions.title || `Etiquetas (${sorted.length})`;
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Etiquetas (${sorted.length})</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -356,8 +359,8 @@ export function buildInventoryBarcodeDocument(
       window.print();
     }
     document.getElementById("print-btn")?.addEventListener("click", doPrint);
-    // Si se abre en ventana emergente (fallback), imprimir solo una vez.
-    if (window.frameElement == null) {
+    // Autoprint solo en impresión directa (iframe/popup), no en archivos guardados.
+    if (${autoPrint ? "true" : "false"} && window.frameElement == null) {
       window.addEventListener("load", function () {
         setTimeout(doPrint, 350);
       });
@@ -365,6 +368,293 @@ export function buildInventoryBarcodeDocument(
   </script>
 </body>
 </html>`;
+}
+
+function stampFilename(prefix: string, ext: string): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${prefix}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function safeFilePart(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40)
+    .toLowerCase() || "etiqueta";
+}
+
+/** Descarga un HTML listo para guardar y abrir después (botón Imprimir, sin autoprint). */
+export function downloadBarcodeLabelsHtml(
+  items: InventoryBarcodeItem[],
+  options: BarcodePrintOptions = {}
+): { ok: boolean; count: number; filename?: string; error?: string } {
+  if (typeof window === "undefined") {
+    return { ok: false, count: 0, error: "Solo disponible en el navegador." };
+  }
+  const printable = items.filter((p) => (p.slug || p.id || "").trim());
+  if (!printable.length) {
+    return { ok: false, count: 0, error: "No hay productos para generar." };
+  }
+  const count = expandCopies(printable, options.copies ?? 1).length;
+  const size = getLabelSize(options.labelSize ?? "50x30");
+  const html = buildInventoryBarcodeDocument(printable, options, {
+    autoPrint: false,
+    title: `Etiquetas Apolo ${size.widthMm}x${size.heightMm}mm`,
+  });
+  const filename = stampFilename(`etiquetas-${size.id}`, "html");
+  triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), filename);
+  return { ok: true, count, filename };
+}
+
+function loadSvgImage(svg: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo renderizar el código de barras."));
+    };
+    img.src = url;
+  });
+}
+
+/** Renderiza una etiqueta a PNG (203 dpi, típico de impresoras térmicas). */
+export async function renderLabelPngBlob(
+  item: InventoryBarcodeItem,
+  options: BarcodePrintOptions = {},
+  dpi = 203
+): Promise<Blob> {
+  const size = getLabelSize(options.labelSize ?? "50x30");
+  const view = buildLabelViewModel(item, options);
+  const width = Math.max(1, Math.round((size.widthMm / 25.4) * dpi));
+  const height = Math.max(1, Math.round((size.heightMm / 25.4) * dpi));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible.");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#000000";
+  ctx.textBaseline = "top";
+
+  const padX = Math.round(width * 0.05);
+  const padY = Math.round(height * 0.06);
+  let y = padY;
+  const contentW = width - padX * 2;
+
+  if (view.showBrandMark) {
+    const brandSize = Math.max(10, Math.round(height * 0.11));
+    ctx.font = `900 ${brandSize}px Arial, Helvetica, sans-serif`;
+    ctx.fillText(view.brandMark, padX, y, contentW);
+    y += brandSize + Math.round(height * 0.02);
+    ctx.fillRect(padX, y, contentW, Math.max(1, Math.round(height * 0.012)));
+    y += Math.round(height * 0.035);
+  }
+
+  const nameSize = Math.max(11, Math.round(height * 0.12));
+  ctx.font = `700 ${nameSize}px Arial, Helvetica, sans-serif`;
+  const nameLines = wrapCanvasText(ctx, view.name, contentW, 2);
+  for (const line of nameLines) {
+    ctx.fillText(line, padX, y, contentW);
+    y += nameSize + 2;
+  }
+
+  if (view.meta) {
+    const metaSize = Math.max(9, Math.round(height * 0.08));
+    ctx.font = `400 ${metaSize}px Arial, Helvetica, sans-serif`;
+    ctx.fillText(view.meta, padX, y, contentW);
+    y += metaSize + Math.round(height * 0.02);
+  }
+
+  const footerH = Math.round(height * 0.12);
+  const barcodeTop = y;
+  const barcodeBottom = height - padY - footerH;
+  const barcodeAreaH = Math.max(20, barcodeBottom - barcodeTop);
+  const barcodeImg = await loadSvgImage(view.barcodeSvg);
+  const barcodeMaxW = contentW;
+  const scale = Math.min(barcodeMaxW / barcodeImg.width, barcodeAreaH / barcodeImg.height);
+  const bw = Math.max(1, Math.round(barcodeImg.width * scale));
+  const bh = Math.max(1, Math.round(barcodeImg.height * scale));
+  const bx = padX + Math.round((contentW - bw) / 2);
+  const by = barcodeTop + Math.round((barcodeAreaH - bh) / 2);
+  ctx.drawImage(barcodeImg, bx, by, bw, bh);
+
+  const footerSize = Math.max(8, Math.round(height * 0.075));
+  ctx.font = `700 ${footerSize}px Consolas, "Courier New", monospace`;
+  const footerY = height - padY - footerSize;
+  if (view.showSkuText) ctx.fillText(view.code, padX, footerY, contentW * 0.65);
+  if (view.footerRight) {
+    const tw = ctx.measureText(view.footerRight).width;
+    ctx.font = `400 ${footerSize}px Consolas, "Courier New", monospace`;
+    ctx.fillText(view.footerRight, Math.max(padX, width - padX - tw), footerY);
+  }
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/png")
+  );
+  if (!blob) throw new Error("No se pudo generar el PNG.");
+  return blob;
+}
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number
+): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return [""];
+  const lines: string[] = [];
+  let current = words[0];
+  for (let i = 1; i < words.length; i++) {
+    const trial = `${current} ${words[i]}`;
+    if (ctx.measureText(trial).width <= maxWidth) {
+      current = trial;
+    } else {
+      lines.push(current);
+      current = words[i];
+      if (lines.length >= maxLines - 1) {
+        // resto en la última línea truncada
+        const rest = [current, ...words.slice(i + 1)].join(" ");
+        let clipped = rest;
+        while (clipped.length > 1 && ctx.measureText(`${clipped}…`).width > maxWidth) {
+          clipped = clipped.slice(0, -1);
+        }
+        lines.push(ctx.measureText(rest).width > maxWidth ? `${clipped}…` : rest);
+        return lines;
+      }
+    }
+  }
+  lines.push(current);
+  return lines.slice(0, maxLines);
+}
+
+/** Descarga PNG(s) de etiquetas para guardar e imprimir después desde la app de la impresora. */
+export async function downloadBarcodeLabelsPng(
+  items: InventoryBarcodeItem[],
+  options: BarcodePrintOptions = {}
+): Promise<{ ok: boolean; count: number; error?: string }> {
+  if (typeof window === "undefined") {
+    return { ok: false, count: 0, error: "Solo disponible en el navegador." };
+  }
+  const printable = expandCopies(
+    sortInventory(items.filter((p) => (p.slug || p.id || "").trim())),
+    options.copies ?? 1
+  );
+  if (!printable.length) {
+    return { ok: false, count: 0, error: "No hay productos para generar." };
+  }
+  if (printable.length > 40) {
+    return {
+      ok: false,
+      count: printable.length,
+      error: "Máximo 40 PNG por vez. Usa «Descargar HTML» para lotes grandes.",
+    };
+  }
+
+  try {
+    for (let i = 0; i < printable.length; i++) {
+      const item = printable[i];
+      const blob = await renderLabelPngBlob(item, options);
+      const base = safeFilePart(barcodeValue(item) || item.name);
+      const filename =
+        printable.length === 1
+          ? stampFilename(`etiqueta-${base}`, "png")
+          : `etiqueta-${String(i + 1).padStart(2, "0")}-${base}.png`;
+      triggerDownload(blob, filename);
+      // Evita que el navegador bloquee descargas en ráfaga.
+      if (i < printable.length - 1) {
+        await new Promise((r) => setTimeout(r, 280));
+      }
+    }
+    return { ok: true, count: printable.length };
+  } catch (error) {
+    return {
+      ok: false,
+      count: 0,
+      error: error instanceof Error ? error.message : "No se pudieron generar las imágenes.",
+    };
+  }
+}
+
+/* ——— Lotes guardados en el navegador (imprimir después) ——— */
+
+export const BARCODE_BATCHES_KEY = "apolo_admin_barcode_batches_v1";
+
+export type SavedBarcodeBatch = {
+  id: string;
+  name: string;
+  createdAt: string;
+  options: BarcodePrintOptions;
+  items: InventoryBarcodeItem[];
+};
+
+export function listSavedBarcodeBatches(): SavedBarcodeBatch[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(BARCODE_BATCHES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SavedBarcodeBatch[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSavedBarcodeBatches(batches: SavedBarcodeBatch[]) {
+  localStorage.setItem(BARCODE_BATCHES_KEY, JSON.stringify(batches.slice(0, 30)));
+}
+
+export function saveBarcodeBatch(
+  name: string,
+  items: InventoryBarcodeItem[],
+  options: BarcodePrintOptions = {}
+): { ok: boolean; batch?: SavedBarcodeBatch; error?: string } {
+  if (typeof window === "undefined") {
+    return { ok: false, error: "Solo disponible en el navegador." };
+  }
+  const printable = sortInventory(items.filter((p) => (p.slug || p.id || "").trim()));
+  if (!printable.length) {
+    return { ok: false, error: "No hay productos para guardar." };
+  }
+  const batch: SavedBarcodeBatch = {
+    id: `batch-${Date.now()}`,
+    name: name.trim() || `Lote ${new Date().toLocaleString("es-PE")}`,
+    createdAt: new Date().toISOString(),
+    options: { ...options },
+    items: printable,
+  };
+  const next = [batch, ...listSavedBarcodeBatches().filter((b) => b.id !== batch.id)];
+  writeSavedBarcodeBatches(next);
+  return { ok: true, batch };
+}
+
+export function deleteSavedBarcodeBatch(id: string): void {
+  if (typeof window === "undefined") return;
+  writeSavedBarcodeBatches(listSavedBarcodeBatches().filter((b) => b.id !== id));
 }
 
 /**

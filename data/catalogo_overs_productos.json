@@ -1,0 +1,734 @@
+{
+  "archivo_origen": "OVERS1.xlsx",
+  "hoja_origen": "Hoja1",
+  "descripcion_campos": {
+    "categoria": "Categoría del catálogo según el encabezado del Excel.",
+    "nombre": "Nombre del producto tomado de la columna DESCRIPCION.",
+    "presentacion": "Presentación tomada de la columna PACK.",
+    "observaciones": "Textos explicativos y encabezados intermedios conservados del Excel."
+  },
+  "total_categorias": 23,
+  "total_productos_presentacion": 139,
+  "categorias": [
+    {
+      "categoria": "REFRIGERANTES AUTOMOTRICES (TODO TIPO DE ESTABLECIMIENTOS)",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "LIQUIDO RADIADOR ROJO",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "LIQUIDO RADIADOR ROJO",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "LIQUIDO RADIADOR VERDE",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "LIQUIDO RADIADOR VERDE",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL  33 %  ROJO",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL  33 %  ROJO",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL  33 %  VERDE",
+          "presentacion": "CAJA 15  X 1/4"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL  33 %  VERDE",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL  33 %  VERDE",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL 50 %  ROJO",
+          "presentacion": "CAJA 15  X 1/4"
+        },
+        {
+          "nombre": "REFRIGERANTE  AL 50 %  ROJO",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "REFRIGERANTES AL 50 %  ROJO",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "SILICONA PARA TABLERO (TODO TIPO DE ESTABLECIMIENTOS)",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "CHICLE",
+          "presentacion": "CAJA 24 X 125 ML"
+        },
+        {
+          "nombre": "CHICLE",
+          "presentacion": "CAJA 12 X 300 ML"
+        },
+        {
+          "nombre": "CHICLE",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "CHICLE",
+          "presentacion": "BIDON 5 GALONES"
+        },
+        {
+          "nombre": "FRESA",
+          "presentacion": "CAJA 24 X 125 ML"
+        },
+        {
+          "nombre": "FRESA",
+          "presentacion": "CAJA 12 X 300 ML"
+        },
+        {
+          "nombre": "FRESA",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "FRESA",
+          "presentacion": "BIDON 5 GALONES"
+        },
+        {
+          "nombre": "DOLCE HABANNA",
+          "presentacion": "CAJA 24 X 125 ML"
+        },
+        {
+          "nombre": "DOLCE HABANNA",
+          "presentacion": "CAJA 12 X 300 ML"
+        },
+        {
+          "nombre": "DOLCE HABANNA",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "NEW CAR",
+          "presentacion": "CAJA 24 X 125 ML"
+        },
+        {
+          "nombre": "NEW CAR",
+          "presentacion": "CAJA 12 X 300 ML"
+        },
+        {
+          "nombre": "NEW CAR",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "SILICONA CRISTAL ( mayor concentracion color transparente  )",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "SILICONA CRISTAL ( mayor concentracion color transparente  )",
+          "presentacion": "BIDON 5 GALONES"
+        }
+      ]
+    },
+    {
+      "categoria": "ABRILLANTADOR DE LLANTAS  (LAVADEROS Y CAR WASH )",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "ABRILLANTADOR DE LLANTAS",
+          "presentacion": "CAJA 12 X 300 ML"
+        },
+        {
+          "nombre": "ABRILLANTADOR DE LLANTAS",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "ABRILLANTADOR DE LLANTAS",
+          "presentacion": "BIDON 5 GALONES"
+        }
+      ]
+    },
+    {
+      "categoria": "SHAMPOO PARA CARROS (LAVADEROS Y CAR WASH )",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "SHAMPO ECONOMICO - VERDE",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "SHAMPO ECONOMICO - VERDE",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "SHAMPO ECONOMICO - VERDE",
+          "presentacion": "BIDON 5 GALONES"
+        }
+      ]
+    },
+    {
+      "categoria": "LIMPIA PARABRISAS  (LAVADEROS ,CAR WASH VIDRIERIAS Y PARABRISAS )",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "LIMPIA PARABRISAS CELESTE",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "LIMPIA PARABRISAS CELESTE",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "AGUA DESTILADA",
+          "presentacion": "CAJA 6 X 1 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "AMBIENTADOR LIQUIDO",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "AMBIENTADOR",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "DESENGRASANTE DE MANO",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "DESENGRASANTE DE MANO",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "DESENGRASANTE DE MANO",
+          "presentacion": "BIDON 5 GALONES"
+        }
+      ]
+    },
+    {
+      "categoria": "DESENGRASANTE DE MOTOR",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "DESENGRASANTE DE MOTOR",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "DESENGRASANTE DE MOTOR",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "DESENGRASANTE DE MOTOR",
+          "presentacion": "BIDON 5 GALONES"
+        }
+      ]
+    },
+    {
+      "categoria": "LIQUIDO DE FRENO (MOTOS, MOTOCARGA, AUTOS, CAMIONETAS, MAQUINARIAS )",
+      "observaciones": [
+        "DOT 3 / AZUL",
+        "DOT 4 / ROJO"
+      ],
+      "productos": [
+        {
+          "nombre": "DOT 3 (4 ONZAS)",
+          "presentacion": "CAJA X 24"
+        },
+        {
+          "nombre": "DOT 3 (8 ONZAS)",
+          "presentacion": "CAJA X 24"
+        },
+        {
+          "nombre": "DOT 3 (12 ONZAS)",
+          "presentacion": "CAJA X 24"
+        },
+        {
+          "nombre": "DOT 3 (X BIDON)",
+          "presentacion": "5 GALONES"
+        },
+        {
+          "nombre": "DOT 4 (4 ONZAS)",
+          "presentacion": "CAJA X 24"
+        },
+        {
+          "nombre": "DOT 4 (8 ONZAS)",
+          "presentacion": "CAJA X 24"
+        },
+        {
+          "nombre": "DOT 4 (12 ONZAS)",
+          "presentacion": "CAJA X 24"
+        },
+        {
+          "nombre": "DOT 4 (X BIDON)",
+          "presentacion": "5 GALONES"
+        },
+        {
+          "nombre": "DOT 5 (12 ONZAS )",
+          "presentacion": "CAJA X 24"
+        }
+      ]
+    },
+    {
+      "categoria": "ACEITE COMPRENSOIL (VENTA Y TALLERES DE MAQUINARIAS ESTACIONARIAS )",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "ACEITE PARA COMPRENSORAS",
+          "presentacion": "CAJA 24 X 1/4 GL"
+        },
+        {
+          "nombre": "ACEITE PARA COMPRENSORAS",
+          "presentacion": "CAJA 24 X 1/8"
+        }
+      ]
+    },
+    {
+      "categoria": "TRANSMICIONES AUTOMATICA (PARA TODOS LOS ESTABLECIMIENTOS )",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "HIDROLINA ATF",
+          "presentacion": "CAJA 24 X 1/8 GL"
+        },
+        {
+          "nombre": "HIDROLINA ATF",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HIDROLINA ATF",
+          "presentacion": "CAJA 6 X GL"
+        },
+        {
+          "nombre": "HIDROLINA ATF",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTE PARA MOTORES A GASOLINA (MECANICA DE AUTOS ,AUTOS, SAPITOS,LUBRICENTROS,ETC )",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "GASOLINERO FULL SINTHETIC 5W30",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO FULL  SINTHETIC 5W30",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO full sinthetic 10W30",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO full sinthetic 10W30",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO full sintethic 10W40",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO full sinthetic 10W40",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO full sinthetic 20W50",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO full sinthetic 20W50",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO 20W50",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO 20W50",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO 20W50",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "GASOLINERO 25W50",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO 25W50",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO 25W50",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "GASOLINERO 25W60",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "GASOLINERO 25W60",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "GASOLINERO 25W60",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTE PARA MOTORES A GASOLINA ( MONOGRADOS )",
+      "observaciones": [
+        "(ALTO KM ,MOTOKARCA ,MOTOS LINEALES ,MAQUINARIAS ESTACIONARIAS, AUTOS,SAPITO )"
+      ],
+      "productos": [
+        {
+          "nombre": "HD - 30",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HD - 30",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HD - 40",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HD - 40",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "HD - 40",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HD - 50",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HD - 50",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HD - 90 CAJA",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HD - 90  CAJA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HD - 140  CORONA",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HD - 140  CORONA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HD - 250 CORONA",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "HD - 250 CORONA",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTE PARA MOTORES A DIESEL O PETROLERO",
+      "observaciones": [
+        "(CAMIONETAS, FURGONETAS,MINIVAS, CAMIONES ,BUSES, TRAILERS, MAQUINARIAS, ETC )"
+      ],
+      "productos": [
+        {
+          "nombre": "DIESEL O PETROLERO  5W40 FULL SINTHETIC",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "DIESEL O PETROLERO  5W40 FULL SINTHETIC",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "DIESEL 15W40 O PETROLERO",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "DIESEL 15W40 O PETROLERO",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "DIESEL 15W40 O PETROLERO",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "25W50 DIESEL O PETROLERO",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "25W60 DIESEL O PETROLERO",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "25W60 DIESEL O PETROLERO",
+          "presentacion": "CAJA 4 X 1 GL"
+        },
+        {
+          "nombre": "25W60 DIESEL O PETROLERO",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTE PARA MOTORES A DIESEL O PETROLERO (MONOGRADO)",
+      "observaciones": [
+        "(ALTO KM, CAMIONETAS, FURGONETAS,MINIVAS,BUSES, TRAILERS, MAQUINARIAS, ETC )"
+      ],
+      "productos": [
+        {
+          "nombre": "50 - CD",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "50 - CD",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "40 - CD",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "40 - CD",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTE PARA MOTOS 4T (MOTO LINEAL, MOTOCARD, TORITOS, CARGUEROS)",
+      "observaciones": [],
+      "productos": [
+        {
+          "nombre": "MOTO 4T 10W30 FULL SINTHETIC",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "MOTO 4T 10W40 FULL SINTHETIC",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "MOTO 4T 15W50 FULL SINTHETIC",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "MOTO 4T 20W50 FULL SINTHETIC",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "MOTO 4T 20W50 MOTORES MINERAL (YARIS , TAXIS)",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "MOTO 4T 20W50 MOTORES MINERAL (YARIS , TAXIS)",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "MOTO 4T 25W50 MOTORES MINERAL (YARIS , TAXIS)",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "MOTO 4T 25W50 MOTORES MINERAL (YARIS , TAXIS)",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "MOTO 4T 25W60 MOTORES MINERAL (YARIS , TAXIS)",
+          "presentacion": "CAJA 15 X 1/4 GL"
+        },
+        {
+          "nombre": "MOTO 4T 25W60 MOTORES MINERAL (YARIS , TAXIS)",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTE PARA TRANSMISIONES MECANICAS",
+      "observaciones": [
+        "MULTIGRADO GL-5 PARA CAJA (CAMIONETAS, FURGONETAS,MINIVAS,BUSES, TRAILERS, MAQUINARIAS, ETC)",
+        "MONOGRADO GL-4 PARA CAJA (CAMIONETAS, FURGONETAS,MINIVAS,BUSES, TRAILERS, MAQUINARIAS, ETC)",
+        "MULTIGRADO GL-5 PARA CORONA (TORITO BAJAT, MOTO GUADAÑAS (CORTADORAS AGRICOLAS ,CARGUEROS,AUTOS , CAMIONETAS, FURGONETAS,MINIVAS,BUSES, TRAILERS)",
+        "MONOGRADO GL-4 PARA CORONA( TORITO BAJAT, MOTO GUADAÑAS (CORTADORAS AGRICOLAS ,CARGUEROS,AUTOS , CAMIONETAS, FURGONETAS,MINIVAS,BUSES, TRAILERS)"
+      ],
+      "productos": [
+        {
+          "nombre": "80W90 GL-5   CAJA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "80W90 GL-5   CAJA",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "80W90 GL-5   CAJA",
+          "presentacion": "CAJA 12 X 1/4 GL"
+        },
+        {
+          "nombre": "TRANSMISION GL-4 MONOGRADO 90 CAJA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "TRANSMISION GL-4 MONOGRADO 90 CAJA",
+          "presentacion": "CAJA 12 X 1/4 GL"
+        },
+        {
+          "nombre": "85W140 GL-5  CORONA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "85W140 GL-5  CORONA",
+          "presentacion": "CAJA 6 X 1 GL"
+        },
+        {
+          "nombre": "85W140 GL-5  CORONA",
+          "presentacion": "CAJA 12 X 1/4 GL"
+        },
+        {
+          "nombre": "TRANSMISION GL-4 MONOGRADO 140 CORONA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "TRANSMISION GL-4 MONOGRADO 140 CORONA",
+          "presentacion": "CAJA 12 X 1/4 GL"
+        },
+        {
+          "nombre": "TRANSMISION GL-4 MONOGRADO 250 CORONA",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "TRANSMISION GL-4 MONOGRADO 250 CORONA",
+          "presentacion": "CAJA 12 X 1/4 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTES PARA TRANSMISIONES HIDRAULICAS",
+      "observaciones": [
+        "(MAQUINARIAS PESADAS , MECANICAS DE MOTO C/ SUSPENSION, MECANICA DE CARROS C/ SUSPENSION (AUTOS, CAMIONETAS, CAMIONES, BUSES, )"
+      ],
+      "productos": [
+        {
+          "nombre": "HIDRAULICO 68 BLANCO",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HIDRAULICO 68 AMBAR",
+          "presentacion": "BALDE X 5 GL"
+        },
+        {
+          "nombre": "HIDRAULICO 68 ROJO",
+          "presentacion": "BALDE X 5 GL"
+        }
+      ]
+    },
+    {
+      "categoria": "GRASAS AUTOMOTRICES MULTIPROPOSITO EP-2  (USO-RESISTENTE AL AGUA )",
+      "observaciones": [
+        "ROTULAS, COINETES PALIERES, CADENAS, SEMI TRAILER, TRAILERS ;TRACTORES, LAVADEROS, MECANICA DE MOTOS, TALLERES DE CARROS AUTOS, CAMIONES, BUSES MAQUINARIAS, ETC )"
+      ],
+      "productos": [
+        {
+          "nombre": "GRASA EP-2 MULTIPROPOSITO AMARILLO",
+          "presentacion": "BALDE X 35 LBS"
+        }
+      ]
+    },
+    {
+      "categoria": "GRASA AUTOMOTRIZ COMPLEJO LITHIUM AZUL",
+      "observaciones": [
+        "(USO- MUTIPROPOSITO ALTA RESISTENCIA A TEMPERATURA Y AGUA )RODAJES, SEMI TRAILER, TRAILERS ;TRACTORES, LAVADEROS , MECANICA DE MOTOS,TALLERES DE CARROS AUTOS, CAMIONES, BUSES"
+      ],
+      "productos": [
+        {
+          "nombre": "GRASA LITHIUM H-2 AZUL POTE",
+          "presentacion": "POTE 24  X 453g"
+        },
+        {
+          "nombre": "GRASA LITHIUM H-2 AZUL",
+          "presentacion": "BALDE X 35 LBS"
+        },
+        {
+          "nombre": "GRASA LITHIUM H-2 AZUL",
+          "presentacion": "CAJA 20 X 453g"
+        },
+        {
+          "nombre": "GRASA LITHIUM H-2 ROJO",
+          "presentacion": "BALDE X 35 LBS"
+        }
+      ]
+    },
+    {
+      "categoria": "GRASAS AUTOMOTRICES CHASIS (USO-RESISTENTE AL AGUA )",
+      "observaciones": [
+        "ROTULAS, COINETES PALIERES, CADENAS, SEMI TRAILER, TRAILERS ;TRACTORES, LAVADEROS, MECANICA DE MOTOS, TALLERES DE CARROS AUTOS, CAMIONES, BUSES MAQUINARIAS, ETC )"
+      ],
+      "productos": [
+        {
+          "nombre": "GRASA PARA CHASIS H-2 ROJO",
+          "presentacion": "BALDE X 35 LBS"
+        },
+        {
+          "nombre": "GRASA PARA CHASIS H-2 NEGRO",
+          "presentacion": "BALDE X 35 LBS"
+        },
+        {
+          "nombre": "GRASA PARA CHASIS H-2 AZUL",
+          "presentacion": "BALDE X 35 LBS"
+        }
+      ]
+    },
+    {
+      "categoria": "GRASAS AUTOMOTRICES RODAMIENTO (USO-ALTAMENTE RESISTENTE AL AGUA",
+      "observaciones": [
+        "COPAS MOTOS TORITO, CARROS DE CARGA  PALIERES Y COPAS , TRACTORES,  SEMI TRAILERS ,TRAILERS, MAQUINARIAS AGRICOLAS TODO EN COPAS Y PALIERES Y LAVADEROS"
+      ],
+      "productos": [
+        {
+          "nombre": "GRASA DE RODAMIENTO H-3 NEGRO VERDE OSCURO CASI NEGRO",
+          "presentacion": "BALDE X 35 LBS"
+        },
+        {
+          "nombre": "GRASA DE RODAMIENTO H-3 POTE VERDE OSCURO CASI NEGRO",
+          "presentacion": "CAJA 24 X 453g"
+        }
+      ]
+    },
+    {
+      "categoria": "GRASAS AUTOMOTRICES NACIONAL ECONOMICO",
+      "observaciones": [
+        "ROTULAS, COINETES PALIERES, CADENAS, SEMI TRAILER, TRAILERS ;TRACTORES, LAVADEROS, MECANICA DE MOTOS, TALLERES DE CARROS AUTOS, CAMIONES, BUSES MAQUINARIAS, ETC )"
+      ],
+      "productos": [
+        {
+          "nombre": "GRASA  H-2 ROJO (BALDES EN ACEITE DE COMER )",
+          "presentacion": "BALDE X 35 LBS"
+        },
+        {
+          "nombre": "GRASA  H-3 NEGRO (BALDES EN ACEITE DE COMER )",
+          "presentacion": "BALDE X 35 LBS"
+        },
+        {
+          "nombre": "GRASA  H-3 AZUL (BALDES EN ACEITE DE COMER )",
+          "presentacion": "BALDE X 35 LBS"
+        }
+      ]
+    }
+  ]
+}

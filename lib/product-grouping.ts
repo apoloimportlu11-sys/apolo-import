@@ -4,6 +4,11 @@
 // misma definición de "línea de producto".
 
 import { officialBrandRank } from "@/lib/catalog/display";
+import {
+  isOvertsBrand,
+  overtsCategoryDisplayName,
+  overtsCategoryOrderIndex,
+} from "@/lib/catalog/overts-catalog-order";
 
 export interface LineCategorizable {
   name?: string | null;
@@ -16,6 +21,7 @@ export interface LineCategorizable {
   presentation?: string | null;
   sort_order?: number | null;
   line_group_id?: string | null;
+  attributes?: Record<string, string> | null;
 }
 
 /** Placeholder de línea por marca oficial; no es sección real del Excel. */
@@ -83,6 +89,10 @@ export function getLineSortPriority(
   lineName: string,
   lineGroupsById?: Map<string, ManagedLineGroup>
 ): number {
+  // Categorías del Excel Overts: mismo orden que catalogo_overs_productos.json.
+  const overtsIdx = overtsCategoryOrderIndex(lineName);
+  if (overtsIdx >= 0) return overtsIdx;
+
   if (lineGroupsById) {
     const byName = lineGroupsById.get(lineName);
     if (byName) return byName.sort_order;
@@ -329,6 +339,22 @@ export function getProductLineCategory(
   p: LineCategorizable,
   lineGroupsById?: Map<string, ManagedLineGroup>
 ): string {
+  // 0. Overts: categoría literal del Excel/JSON (orden de catalogo_overs_productos.json).
+  if (isOvertsBrand(p.brand)) {
+    const fromAttr = overtsCategoryDisplayName(p.attributes?.catalog_category);
+    if (fromAttr) return fromAttr;
+    const fromShort = overtsCategoryDisplayName(p.short_description || p.line);
+    if (fromShort) return fromShort;
+    // Si short_description es el título largo del Excel, úsalo aunque no esté en la lista fija.
+    const rawSection = String(p.short_description || p.attributes?.catalog_category || "").trim();
+    if (rawSection && overtsCategoryOrderIndex(rawSection) >= 0) {
+      return rawSection.replace(/\s+/g, " ");
+    }
+    if (rawSection.length >= 12 && !looksLikePackLabel(rawSection)) {
+      return rawSection.replace(/\s+/g, " ");
+    }
+  }
+
   // 1. Asignación manual explícita desde el panel admin: siempre tiene máxima prioridad.
   if (p.line_group_id) {
     const resolved = resolveManagedLineName(p.line_group_id, lineGroupsById);

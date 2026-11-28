@@ -1,4 +1,5 @@
 import type { CatalogPresentation, CommercialInfo } from "@/lib/catalog/presentations";
+import { OVERTS_CATALOG_PRODUCTS } from "@/lib/overts-catalog-seed";
 
 export type Product = {
   id: string;
@@ -14,6 +15,8 @@ export type Product = {
   aroma?: string;
   presentation: string;
   description: string;
+  /** Título de sección / categoría de catálogo (p. ej. Overts Excel). */
+  short_description?: string | null;
   image: string;
   images?: string[];
   image_url?: string;
@@ -187,7 +190,7 @@ export const categories: Category[] = [
   },
 ];
 
-export const products: Product[] = [
+const _BASE_PRODUCTS: Product[] = [
   {
     id: "prod-1788752167059-fcj1",
     name: "ALCOHOL ISOPROPILICO",
@@ -1268,6 +1271,12 @@ export const products: Product[] = [
     is_featured: false,
     is_active: true,
   },
+
+];
+
+export const products: Product[] = [
+  ..._BASE_PRODUCTS,
+  ...(OVERTS_CATALOG_PRODUCTS as unknown as Product[]),
 ];
 
 export const viscosities = [

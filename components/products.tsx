@@ -335,6 +335,11 @@ export function Products({
           ? (preferred.line_group_id as string | null)
           : baseP.line_group_id ?? null;
 
+      const preferredAttrs =
+        preferred && typeof preferred === "object" && "attributes" in preferred
+          ? (preferred as { attributes?: Record<string, string> | null }).attributes
+          : undefined;
+
       return {
         ...baseP,
         name: finalName,
@@ -349,6 +354,11 @@ export function Products({
         subcategory: finalSubcategory,
         sort_order: finalSortOrder,
         line_group_id: finalLineGroupId,
+        attributes: preferredAttrs ?? baseP.attributes,
+        short_description:
+          preferred && "short_description" in preferred
+            ? (preferred as LocalAdminProduct).short_description
+            : baseP.short_description,
       };
     });
 
