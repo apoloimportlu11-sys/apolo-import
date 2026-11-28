@@ -89,11 +89,44 @@ function BrandEngineStage({
   poster: string;
   enabled: boolean;
 }) {
+  const hostRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const [desktop, setDesktop] = useState(false);
+  const [inView, setInView] = useState(false);
   const [shown, setShown] = useState(false);
+  // Solo WebGL en desktop y mientras la tarjeta está cerca del viewport.
+  const shouldLoad = enabled && desktop && inView;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [enabled]);
+
+  useEffect(() => {
+    const node = hostRef.current;
+    if (!node || !enabled || !desktop) {
+      setInView(false);
+      setShown(false);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const visible = Boolean(entry?.isIntersecting);
+        setInView(visible);
+        if (!visible) setShown(false);
+      },
+      { rootMargin: "80px 0px", threshold: 0.18 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [enabled, desktop]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
     const frame = frameRef.current;
     const win = frame?.contentWindow as (Window & { SIM_SHOWN?: boolean }) | null;
     if (!win) return;
@@ -104,26 +137,30 @@ function BrandEngineStage({
     }
     win.addEventListener("simframe", reveal, { once: true });
     return () => win.removeEventListener("simframe", reveal);
-  }, [enabled]);
+  }, [shouldLoad]);
 
   return (
-    <div className="absolute inset-0">
+    <div ref={hostRef} className="absolute inset-0 [contain:paint]">
       <Image
         src={poster}
         alt=""
         fill
         sizes="(max-width: 1024px) 100vw, 50vw"
         className="object-cover object-center"
+        loading="lazy"
       />
-      {enabled ? (
+      {shouldLoad ? (
         <iframe
           ref={frameRef}
           title=""
           tabIndex={-1}
           aria-hidden
+          loading="lazy"
           src={BRAND_SIM_SRC[brand]}
           onLoad={(event) => {
-            const win = event.currentTarget.contentWindow as (Window & { SIM_SHOWN?: boolean }) | null;
+            const win = event.currentTarget.contentWindow as
+              | (Window & { SIM_SHOWN?: boolean })
+              | null;
             if (!win) return;
             const reveal = () => setShown(true);
             if (win.SIM_SHOWN) {
@@ -249,7 +286,7 @@ export function About() {
               Marcas de casa
             </p>
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              {HOUSE_BRANDS.map((brand, index) => (
+              {HOUSE_BRANDS.map((brand) => (
                 <Link
                   key={brand.key}
                   href="#marcas"
@@ -268,25 +305,7 @@ export function About() {
                             boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 28px -12px ${brand.accent}66`,
                           }
                     }
-                    animate={
-                      reduce
-                        ? undefined
-                        : {
-                            y: [0, -3, 0],
-                          }
-                    }
-                    transition={
-                      reduce
-                        ? undefined
-                        : {
-                            y: {
-                              duration: 4.2 + index * 0.55,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: index * 0.35,
-                            },
-                          }
-                    }
+                    transition={{ duration: 0.25, ease: EASE }}
                   >
                     <span
                       className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-70"
@@ -350,7 +369,7 @@ export function About() {
       </div>
 
       {/* CIFRAS — efecto de atención */}
-      <div className="relative overflow-hidden border-y border-border/70 bg-[#0c0d12]">
+      <div className="relative overflow-hidden border-y border-border/70 bg-[#0c0d12] [content-visibility:auto] [contain-intrinsic-size:auto_280px]">
         <div
           className="pointer-events-none absolute inset-0 opacity-40"
           style={{
@@ -368,60 +387,35 @@ export function About() {
                 index === 2 && "border-t border-white/10 sm:border-t-0",
                 index === 3 && "border-t border-white/10 sm:border-t-0"
               )}
-              initial={reduce ? false : { opacity: 0, y: 36, scale: 0.88 }}
-              whileInView={
-                reduce
-                  ? undefined
-                  : {
-                      opacity: 1,
-                      y: [36, -14, 0],
-                      scale: [0.88, 1.08, 1],
-                    }
-              }
-              viewport={{ once: true, amount: 0.4 }}
+              initial={reduce ? false : { opacity: 0, y: 24 }}
+              whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.35 }}
               transition={{
-                duration: 0.95,
-                delay: 0.12 * index,
+                duration: 0.45,
+                delay: 0.06 * index,
                 ease: EASE,
               }}
             >
-              <motion.div
-                className="relative"
-                animate={
-                  reduce
-                    ? undefined
-                    : {
-                        y: [0, -5, 0],
-                      }
-                }
-                transition={
-                  reduce
-                    ? undefined
-                    : {
-                        duration: 3.4 + index * 0.4,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: 1.1 + index * 0.2,
-                      }
-                }
-                whileHover={reduce ? undefined : { scale: 1.06, y: -4 }}
-              >
+              <div className="relative transition-transform duration-300 group-hover:-translate-y-1">
                 <span
-                  className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-2xl transition-opacity duration-300 group-hover:opacity-100 sm:h-20 sm:w-20"
+                  className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-2xl opacity-70 transition-opacity duration-300 group-hover:opacity-100 sm:h-20 sm:w-20"
                   aria-hidden
                 />
                 <p className="relative font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl lg:text-5xl">
                   {stat.value}
                 </p>
                 <p className="relative mt-2 text-xs text-white/60 sm:text-sm">{stat.label}</p>
-              </motion.div>
+              </div>
             </motion.div>
           ))}
         </div>
       </div>
 
       {/* MARCAS PRINCIPALES — detalle por marca */}
-      <div id="marcas" className="relative border-t border-border/60 bg-background">
+      <div
+        id="marcas"
+        className="relative border-t border-border/60 bg-background [content-visibility:auto] [contain-intrinsic-size:auto_1200px]"
+      >
         <div className="site-container pb-8 pt-14 sm:pb-10 sm:pt-16 lg:pt-20">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--gold)]">
@@ -519,31 +513,24 @@ export function About() {
       </div>
 
       {/* HISTORIA — auto de fondo */}
-      <div className="relative isolate min-h-[520px] overflow-hidden border-y border-white/5 bg-[#07080b]">
-        <motion.img
+      <div className="relative isolate min-h-[520px] overflow-hidden border-y border-white/5 bg-[#07080b] [content-visibility:auto] [contain-intrinsic-size:auto_520px]">
+        {/* Imagen estática: evita JS continuo de Framer en scroll */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/images/about/historia-auto.jpg"
           alt=""
           aria-hidden
           width={1600}
           height={900}
-          className="pointer-events-none absolute right-[-18%] top-1/2 h-auto w-[140%] max-w-none select-none object-contain sm:right-[-6%] sm:w-[108%] lg:right-[-2%] lg:w-[78%]"
+          decoding="async"
+          loading="lazy"
+          className="pointer-events-none absolute right-[-18%] top-1/2 h-auto w-[140%] max-w-none -translate-y-1/2 select-none object-contain sm:right-[-6%] sm:w-[108%] lg:right-[-2%] lg:w-[78%]"
           style={{
             maskImage:
               "linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%)",
             WebkitMaskImage:
               "linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%)",
           }}
-          initial={false}
-          animate={
-            reduce
-              ? { x: 0, y: "-50%" }
-              : { x: [12, -8, 12], y: ["-50%", "-51.5%", "-50%"] }
-          }
-          transition={
-            reduce
-              ? undefined
-              : { duration: 18, repeat: Infinity, ease: "easeInOut" }
-          }
         />
 
         {/* El texto de la izquierda se lee sobre un velo; el auto queda al descubierto a la derecha */}

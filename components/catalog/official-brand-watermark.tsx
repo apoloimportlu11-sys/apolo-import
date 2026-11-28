@@ -44,7 +44,7 @@ export function OfficialBrandWatermark({
         style={
           intensity === "gallery"
             ? { objectFit: "cover", objectPosition: "right bottom" }
-            : { objectFit: "cover", objectPosition: "center center" }
+            : { objectFit: "cover", objectPosition: "center bottom" }
         }
         priority={intensity === "gallery"}
       />

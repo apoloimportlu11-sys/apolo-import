@@ -18,9 +18,9 @@ import {
   type ManagedLineGroup,
 } from "@/lib/product-grouping";
 import {
-  cardImageScale,
   formatViscosityBadge,
   getBrandChipVisual,
+  getOfficialBrandStage,
   getPresentationVisual,
 } from "@/lib/catalog/display";
 import {
@@ -89,7 +89,9 @@ function CatalogProductCardInner({
   const primaryPack = activePresentations(packOptions)[0];
   const packRange = presentationRangeLabel(packOptions, product.presentation);
   const packVisual = getPresentationVisual(primaryPack?.label || product.presentation);
-  const imageScale = cardImageScale(product.presentation);
+  const hasBrandStage = Boolean(getOfficialBrandStage(product.brand));
+  // Escala fija: todas las tarjetas lucen el mismo tamaño.
+  const imageScale = 0.9;
   const tone = getBrandChipVisual(product.brand);
   const brandLogo = getLogo(product.brand);
   const brandName = product.brand || "Apolo";
@@ -173,22 +175,35 @@ function CatalogProductCardInner({
     <>
       <OfficialBrandWatermark brand={product.brand} />
       {validImage ? (
-        <Image
-          src={product.image}
-          alt={`${product.name || "Producto"} · ${packVisual.label}`}
-          fill
-          unoptimized={Boolean(product.image?.startsWith("data:"))}
-          sizes={
-            viewMode === "list"
-              ? "(max-width: 640px) 100vw, 176px"
-              : "(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw"
-          }
+        <span
           className={cn(
-            "z-[1] object-contain object-center p-2 sm:p-3",
-            outOfStock ? "grayscale contrast-75 opacity-80" : null
+            "absolute z-[1] overflow-hidden",
+            // Marco simétrico L/R; abajo un poco más para no tapar el logo de marca.
+            hasBrandStage
+              ? "inset-x-[10%] top-[8%] bottom-[20%]"
+              : "inset-[10%]"
           )}
-          style={{ transform: `scale(${imageScale})` }}
-        />
+        >
+          <Image
+            src={product.image}
+            alt={`${product.name || "Producto"} · ${packVisual.label}`}
+            fill
+            unoptimized={Boolean(product.image?.startsWith("data:"))}
+            sizes={
+              viewMode === "list"
+                ? "(max-width: 640px) 100vw, 176px"
+                : "(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw"
+            }
+            className={cn(
+              "object-contain object-center",
+              outOfStock ? "grayscale contrast-75 opacity-80" : null
+            )}
+            style={{
+              transform: `scale(${imageScale})`,
+              transformOrigin: "center center",
+            }}
+          />
+        </span>
       ) : (
         <div className="relative z-[1] flex h-full w-full flex-col items-center justify-center gap-1 bg-zinc-50 text-zinc-400 dark:bg-zinc-900/40">
           <Package className="h-7 w-7 opacity-60 sm:h-8 sm:w-8" />
@@ -359,10 +374,10 @@ function CatalogProductCardInner({
             }}
           />
 
-        <div className="@container flex h-full min-w-0 flex-col p-2 sm:p-3">
-          <div className="mb-2 flex min-w-0 items-center justify-between gap-1.5">
+        <div className="@container flex h-full min-w-0 flex-col p-2.5 sm:p-3">
+          <div className="mb-2 flex h-6 min-w-0 items-center justify-between gap-1.5">
             <span
-              className="max-w-[60%] truncate rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+              className="max-w-[58%] truncate rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
               style={{
                 backgroundColor: tone.soft,
                 borderColor: `${tone.accent}55`,
@@ -381,13 +396,15 @@ function CatalogProductCardInner({
               <span className="max-w-[40%] truncate text-[10px] font-medium text-muted-foreground">
                 {subcategoryText}
               </span>
-            ) : null}
+            ) : (
+              <span className="h-4 w-4 shrink-0" aria-hidden />
+            )}
           </div>
 
           <button
             type="button"
             onClick={openDetails}
-            className="group/photo relative mb-2 aspect-[4/5] w-full overflow-hidden rounded-xl border border-border/40 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:mb-2.5"
+            className="group/photo relative mb-2.5 aspect-[4/5] w-full shrink-0 overflow-hidden rounded-xl border border-border/40 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={`Ver ficha de ${product.name}`}
           >
             {imageBlock}
@@ -396,22 +413,20 @@ function CatalogProductCardInner({
           <button
             type="button"
             onClick={openDetails}
-            className="block min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="block min-h-[4.75rem] min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <h3 className="line-clamp-2 min-h-9 text-[13px] font-bold leading-snug text-foreground sm:min-h-10 sm:text-sm">
+            <h3 className="line-clamp-2 min-h-[2.5rem] text-[13px] font-bold leading-snug text-foreground sm:text-sm">
               {product.name}
             </h3>
-            {packRange ? (
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{packRange}</p>
-            ) : null}
-            {product.type ? (
-              <p className="mt-1 line-clamp-1 text-xs leading-snug text-muted-foreground">
-                {product.type}
-              </p>
-            ) : null}
+            <p className="mt-0.5 min-h-[1rem] truncate text-[11px] text-muted-foreground">
+              {packRange || "\u00A0"}
+            </p>
+            <p className="mt-0.5 min-h-[1rem] truncate text-xs leading-snug text-muted-foreground">
+              {product.type || "\u00A0"}
+            </p>
           </button>
 
-          <div className="mt-auto grid min-w-0 grid-cols-1 gap-1.5 border-t border-border/50 pt-2 @[13.5rem]:grid-cols-[minmax(0,auto)_minmax(0,1fr)] @[13.5rem]:items-center">
+          <div className="mt-auto grid min-h-10 min-w-0 grid-cols-1 gap-1.5 border-t border-border/50 pt-2 @[13.5rem]:grid-cols-[minmax(0,auto)_minmax(0,1fr)] @[13.5rem]:items-center">
             <button
               type="button"
               onClick={openDetails}
