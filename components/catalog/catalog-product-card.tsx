@@ -198,7 +198,7 @@ function CatalogProductCardInner({
         </div>
       )}
       {product.presentation ? (
-        <span className="absolute left-2 top-2 z-[2] max-w-[72%] truncate rounded-md bg-zinc-950/85 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+        <span className="absolute left-1.5 top-1.5 z-[2] max-w-[min(100%-0.75rem,11rem)] truncate rounded-md bg-zinc-950/85 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-white sm:left-2 sm:top-2 sm:max-w-[72%] sm:text-[10px]">
           {packVisual.label}
         </span>
       ) : null}
@@ -296,11 +296,11 @@ function CatalogProductCardInner({
                 ) : null}
               </button>
 
-              <div className="flex items-center gap-2 border-t border-border/50 pt-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-border/50 pt-3">
                 <button
                   type="button"
                   onClick={openDetails}
-                  className="inline-flex min-h-10 shrink-0 items-center whitespace-nowrap text-sm font-bold text-primary"
+                  className="inline-flex min-h-10 min-w-0 items-center text-sm font-bold text-primary"
                 >
                   Ver ficha
                 </button>
@@ -308,7 +308,7 @@ function CatalogProductCardInner({
                   type="button"
                   onClick={handleQuoteClick}
                   className={cn(
-                    "ml-auto inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 text-xs font-semibold text-white transition-opacity hover:opacity-90",
+                    "ml-auto inline-flex min-h-10 min-w-0 max-w-full items-center gap-1.5 rounded-xl px-3.5 text-xs font-semibold text-white transition-opacity hover:opacity-90",
                     outOfStock ? "bg-zinc-700" : "bg-emerald-600"
                   )}
                   title={
@@ -317,8 +317,8 @@ function CatalogProductCardInner({
                       : "Añadir a la lista de cotización"
                   }
                 >
-                  <FileText className="h-3.5 w-3.5" />
-                  <span>
+                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
                     {isInQuote ? "Cotizado (+1)" : outOfStock ? "Consultar" : "Cotizar"}
                   </span>
                 </button>
@@ -332,16 +332,18 @@ function CatalogProductCardInner({
     );
   }
 
+  const quoteLabel = isInQuote ? "+1" : outOfStock ? "Consultar" : "Cotizar";
+
   return (
     <>
     <article
       data-catalog-card
-      className="group h-full"
+      className="group h-full min-w-0"
       style={{ contentVisibility: "auto", containIntrinsicSize: "0 420px" }}
     >
       <div
         className={cn(
-          "card-surface card-surface-interactive flex h-full flex-col overflow-hidden",
+          "card-surface card-surface-interactive flex h-full min-w-0 flex-col overflow-hidden",
             outOfStock ? "border-zinc-500/45" : "border-border",
             level === "low" ? "border-amber-500/40" : null
           )}
@@ -357,8 +359,8 @@ function CatalogProductCardInner({
             }}
           />
 
-        <div className="flex h-full flex-col p-2.5 sm:p-3.5">
-          <div className="mb-2 flex items-center justify-between gap-1.5">
+        <div className="@container flex h-full min-w-0 flex-col p-2 sm:p-3">
+          <div className="mb-2 flex min-w-0 items-center justify-between gap-1.5">
             <span
               className="max-w-[60%] truncate rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
               style={{
@@ -385,7 +387,7 @@ function CatalogProductCardInner({
           <button
             type="button"
             onClick={openDetails}
-            className="group/photo relative mb-2.5 aspect-[4/5] w-full overflow-hidden rounded-xl border border-border/40 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:mb-3"
+            className="group/photo relative mb-2 aspect-[4/5] w-full overflow-hidden rounded-xl border border-border/40 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:mb-2.5"
             aria-label={`Ver ficha de ${product.name}`}
           >
             {imageBlock}
@@ -396,29 +398,24 @@ function CatalogProductCardInner({
             onClick={openDetails}
             className="block min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            {lineLabel ? (
-              <span className="block truncate text-[10px] font-semibold uppercase tracking-wide text-primary sm:text-[11px]">
-                {lineLabel}
-              </span>
-            ) : null}
-            <h3 className="mt-0.5 line-clamp-2 min-h-10 text-sm font-bold leading-snug text-foreground sm:min-h-11 sm:text-[15px]">
+            <h3 className="line-clamp-2 min-h-9 text-[13px] font-bold leading-snug text-foreground sm:min-h-10 sm:text-sm">
               {product.name}
             </h3>
             {packRange ? (
               <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{packRange}</p>
             ) : null}
-            {(product.type || product.description) ? (
-              <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
-                {product.type || product.description}
+            {product.type ? (
+              <p className="mt-1 line-clamp-1 text-xs leading-snug text-muted-foreground">
+                {product.type}
               </p>
             ) : null}
           </button>
 
-          <div className="mt-2 flex items-center justify-between gap-1.5 border-t border-border/50 pt-2">
+          <div className="mt-auto grid min-w-0 grid-cols-1 gap-1.5 border-t border-border/50 pt-2 @[13.5rem]:grid-cols-[minmax(0,auto)_minmax(0,1fr)] @[13.5rem]:items-center">
             <button
               type="button"
               onClick={openDetails}
-              className="inline-flex min-h-10 shrink-0 items-center whitespace-nowrap text-xs font-bold text-primary sm:text-sm"
+              className="inline-flex min-h-9 min-w-0 items-center justify-center rounded-lg px-1 text-xs font-bold text-primary @[13.5rem]:justify-start sm:text-sm"
             >
               Detalles
             </button>
@@ -426,7 +423,7 @@ function CatalogProductCardInner({
               type="button"
               onClick={handleQuoteClick}
               className={cn(
-                "inline-flex min-h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90",
+                "inline-flex min-h-9 min-w-0 max-w-full items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-white transition-opacity hover:opacity-90 sm:text-xs",
                 outOfStock ? "bg-zinc-700" : "bg-emerald-600"
               )}
               title={
@@ -435,8 +432,8 @@ function CatalogProductCardInner({
                   : "Añadir este producto a la cotización"
               }
             >
-              <FileText className="h-3.5 w-3.5" />
-              <span>{isInQuote ? "+1" : outOfStock ? "Consultar" : "Cotizar"}</span>
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{quoteLabel}</span>
             </button>
           </div>
         </div>

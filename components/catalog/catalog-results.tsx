@@ -54,7 +54,7 @@ export function CatalogResults({
     return (
       <div
         data-catalog-grid
-        className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5"
+        className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] sm:gap-3.5 lg:gap-4"
       >
         {Array.from({ length: 8 }).map((_, i) => (
           <div

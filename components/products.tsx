@@ -1564,10 +1564,10 @@ export function Products({
 
   const catalogGridClass =
     viewMode === "list"
-      ? "grid gap-3 sm:gap-5"
+      ? "grid gap-3 sm:gap-4"
       : viewMode === "grid5"
-        ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
-        : "grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 2xl:grid-cols-5";
+        ? "grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(10.75rem,1fr))] sm:gap-3 lg:grid-cols-[repeat(auto-fill,minmax(11.25rem,1fr))]"
+        : "grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] lg:gap-4 lg:grid-cols-[repeat(auto-fill,minmax(14.5rem,1fr))]";
 
   const catalogHeading = (() => {
     if (searchQuery.trim()) return `Resultados para "${searchQuery.trim()}"`;
@@ -1585,14 +1585,14 @@ export function Products({
       : null;
 
   return (
-    <section ref={sectionRef} className="relative min-h-screen bg-transparent py-4 md:py-6">
-      <div className="site-container relative z-10">
+    <section ref={sectionRef} className="relative min-h-screen bg-transparent py-3 sm:py-4 md:py-6">
+      <div className="site-container relative z-10 !max-w-[min(100%,100rem)] !px-3 sm:!px-5 lg:!px-6 xl:!px-8">
         {renderBreadcrumb()}
 
-        <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <header className="mb-3 flex flex-wrap items-end justify-between gap-3 sm:mb-4">
           <div className="min-w-0 space-y-1">
             {officialHeadingLogo ? (
-              <h1 className="flex flex-wrap items-center gap-3">
+              <h1 className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <Image
                   src={officialHeadingLogo}
                   alt=""
@@ -1601,16 +1601,16 @@ export function Products({
                   className="h-7 w-auto object-contain sm:h-8"
                   priority
                 />
-                <span className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+                <span className="text-lg font-extrabold tracking-tight text-foreground sm:text-xl md:text-2xl">
                   {catalogHeading}
                 </span>
               </h1>
             ) : (
-              <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+              <h1 className="text-lg font-extrabold tracking-tight text-foreground sm:text-xl md:text-2xl">
                 {catalogHeading}
               </h1>
             )}
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground sm:text-sm">
               {catalogStatus === "loading" && dbProducts.length === 0
                 ? "Sincronizando catálogo…"
                 : `${filteredProducts.length} producto${filteredProducts.length !== 1 ? "s" : ""} encontrado${filteredProducts.length !== 1 ? "s" : ""}.`}
@@ -1618,9 +1618,9 @@ export function Products({
           </div>
         </header>
 
-        <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-6 lg:items-stretch">
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:gap-5 xl:gap-6">
           {/* SIDEBAR DESKTOP: sticky dentro de la columna (no invade el footer) */}
-          <aside className="relative hidden w-72 min-w-72 max-w-72 flex-shrink-0 self-start lg:block">
+          <aside className="relative hidden w-64 min-w-64 max-w-64 flex-shrink-0 self-start xl:w-72 xl:min-w-72 xl:max-w-72 lg:block">
             <div
               ref={sidebarSlotRef}
               className="w-full"
@@ -1632,8 +1632,8 @@ export function Products({
               data-catalog-filters="true"
               className={
                 sidebarDock.active
-                  ? "custom-scrollbar fixed z-20 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-sm"
-                  : "custom-scrollbar max-h-[calc(100vh-var(--site-header-height,6rem)-1.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-sm"
+                  ? "custom-scrollbar fixed z-20 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4"
+                  : "custom-scrollbar max-h-[calc(100dvh-var(--site-header-height,6rem)-1.25rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4"
               }
               style={
                 sidebarDock.active
@@ -1651,7 +1651,7 @@ export function Products({
           </aside>
 
           {/* MAIN CONTENT: búsqueda/marcas solo aquí para no tapar filtros */}
-          <div className="flex-1 min-w-0 w-full">
+          <div className="w-full min-w-0 flex-1">
             <CatalogToolbar
               toolbarRef={toolbarRef}
               searchQuery={searchQuery}
@@ -1659,7 +1659,7 @@ export function Products({
               onClearSearch={() => setSearchQuery("")}
               brandChips={
                 <div
-                  className="custom-scrollbar flex max-w-full snap-x snap-mandatory items-center gap-1.5 overflow-x-auto rounded-2xl border border-border bg-card p-1.5"
+                  className="custom-scrollbar -mx-0.5 flex max-w-full snap-x snap-mandatory items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-2xl border border-border bg-card p-1.5 [scrollbar-width:thin]"
                   data-catalog-brand-chips="true"
                   aria-label="Atajos de marca"
                 >
