@@ -1,5 +1,7 @@
 import type { CatalogPresentation, CommercialInfo } from "@/lib/catalog/presentations";
 import { OVERTS_CATALOG_PRODUCTS } from "@/lib/overts-catalog-seed";
+import { AMALIE_CATALOG_PRODUCTS } from "@/lib/amalie-catalog-seed";
+import { BSI_CATALOG_PRODUCTS } from "@/lib/bsi-catalog-seed";
 
 export type Product = {
   id: string;
@@ -1275,8 +1277,11 @@ const _BASE_PRODUCTS: Product[] = [
 ];
 
 export const products: Product[] = [
-  ..._BASE_PRODUCTS,
+  // El catálogo base deja de incluir 3BSI legacy: se reemplaza por el JSON oficial.
+  ..._BASE_PRODUCTS.filter((p) => !/^3bsi$/i.test(String(p.brand || "").trim())),
   ...(OVERTS_CATALOG_PRODUCTS as unknown as Product[]),
+  ...(AMALIE_CATALOG_PRODUCTS as unknown as Product[]),
+  ...(BSI_CATALOG_PRODUCTS as unknown as Product[]),
 ];
 
 export const viscosities = [

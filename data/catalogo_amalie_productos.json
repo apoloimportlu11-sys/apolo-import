@@ -1,0 +1,129 @@
+{
+  "marca": "amalie",
+  "archivo_origen": "amalie.xlsx",
+  "hoja_origen": "Hoja1",
+  "descripcion_campos": {
+    "categoria": "Encabezado de categoría tal como aparece en el Excel.",
+    "nombre": "Nombre del producto tomado de la columna A.",
+    "cantidad": "Cantidad numérica tomada de la columna B.",
+    "pack": "Texto de presentación tomado de la columna C.",
+    "presentacion": "Combinación de cantidad y pack para facilitar la lectura."
+  },
+  "total_categorias": 7,
+  "total_productos": 13,
+  "categorias": [
+    {
+      "categoria": "LUBRICANTES PARA MOTORES PETROLEROS O DIESEL  FULL SINTHETIC",
+      "productos": [
+        {
+          "nombre": "XLO 5W-40 BALDE x 5 GLNS",
+          "cantidad": 1,
+          "pack": "x bld",
+          "presentacion": "1 x bld"
+        },
+        {
+          "nombre": "XLO H.D. FLEET 15W-40",
+          "cantidad": 12,
+          "pack": "x 1/4 gln",
+          "presentacion": "12 x 1/4 gln"
+        },
+        {
+          "nombre": "XLO H.D. FLEET 15W-40",
+          "cantidad": 4,
+          "pack": "x gln",
+          "presentacion": "4 x gln"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTES PARA MOTORES A GASOLINA MULTIGRADOS FULL SINTETICOS",
+      "productos": [
+        {
+          "nombre": "ELIXIR FULL SYN 5W-30",
+          "cantidad": 4,
+          "pack": "x 1 gln",
+          "presentacion": "4 x 1 gln"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTES PARA MOTORES A GASOLINA MULTIGRADOS SEMI SINTETICOS",
+      "productos": [
+        {
+          "nombre": "PRO HP SINTHETIC BLEND 10W30",
+          "cantidad": 4,
+          "pack": "x gln",
+          "presentacion": "4 x gln"
+        },
+        {
+          "nombre": "PRO HP SINTHETIC BLEND 10W30",
+          "cantidad": 12,
+          "pack": "x 1/4 gln",
+          "presentacion": "12 x 1/4 gln"
+        }
+      ]
+    },
+    {
+      "categoria": "LUBRICANTES PARA MOTORES A GASOLINA MULTIGRADOS MINERALES",
+      "productos": [
+        {
+          "nombre": "IMPERIAL TURBO 10W-30",
+          "cantidad": 4,
+          "pack": "X gln",
+          "presentacion": "4 X gln"
+        },
+        {
+          "nombre": "IMPERIAL TURBO 10W-30",
+          "cantidad": 12,
+          "pack": "x gln",
+          "presentacion": "12 x gln"
+        }
+      ]
+    },
+    {
+      "categoria": "TRANSMISIONES AUTOMATICAS",
+      "productos": [
+        {
+          "nombre": "ATF SINTHETIC   CVT",
+          "cantidad": 12,
+          "pack": "x 1/4 gln",
+          "presentacion": "12 x 1/4 gln"
+        },
+        {
+          "nombre": "ATF DEXRON    III",
+          "cantidad": 12,
+          "pack": "x 1/4 gln",
+          "presentacion": "12 x 1/4 gln"
+        }
+      ]
+    },
+    {
+      "categoria": "GRASAS AUTOMOTRICES",
+      "productos": [
+        {
+          "nombre": "HD WHEEL BEARING (POTE) AMARILLO",
+          "cantidad": 12,
+          "pack": "x 423g",
+          "presentacion": "12 x 423g"
+        }
+      ]
+    },
+    {
+      "categoria": "LIQUIDO DE FRENO AMALIE  DOT 4",
+      "productos": [
+        {
+          "nombre": "LIQUIDO DE FRENO DOT 4 X 12 OZ",
+          "cantidad": 12,
+          "pack": "UND",
+          "presentacion": "12 UND"
+        },
+        {
+          "nombre": "POWER STEERING FLUID 12x12 OZ",
+          "cantidad": 12,
+          "pack": "UND",
+          "presentacion": "12 UND"
+        }
+      ]
+    }
+  ]
+}

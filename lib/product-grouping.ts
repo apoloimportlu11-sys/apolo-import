@@ -9,6 +9,16 @@ import {
   overtsCategoryDisplayName,
   overtsCategoryOrderIndex,
 } from "@/lib/catalog/overts-catalog-order";
+import {
+  amalieCategoryDisplayName,
+  amalieCategoryOrderIndex,
+  isAmalieBrand,
+} from "@/lib/catalog/amalie-catalog-order";
+import {
+  bsiCategoryDisplayName,
+  bsiCategoryOrderIndex,
+  isBsiBrand,
+} from "@/lib/catalog/bsi-catalog-order";
 
 export interface LineCategorizable {
   name?: string | null;
@@ -89,9 +99,13 @@ export function getLineSortPriority(
   lineName: string,
   lineGroupsById?: Map<string, ManagedLineGroup>
 ): number {
-  // Categorías del Excel Overts: mismo orden que catalogo_overs_productos.json.
+  // Categorías Excel Overts / Amalie: mismo orden que sus JSON de catálogo.
   const overtsIdx = overtsCategoryOrderIndex(lineName);
   if (overtsIdx >= 0) return overtsIdx;
+  const amalieIdx = amalieCategoryOrderIndex(lineName);
+  if (amalieIdx >= 0) return 100 + amalieIdx;
+  const bsiIdx = bsiCategoryOrderIndex(lineName);
+  if (bsiIdx >= 0) return 200 + bsiIdx;
 
   if (lineGroupsById) {
     const byName = lineGroupsById.get(lineName);
@@ -339,18 +353,43 @@ export function getProductLineCategory(
   p: LineCategorizable,
   lineGroupsById?: Map<string, ManagedLineGroup>
 ): string {
-  // 0. Overts: categoría literal del Excel/JSON (orden de catalogo_overs_productos.json).
+  // 0. Overts / Amalie: categoría literal del Excel/JSON.
   if (isOvertsBrand(p.brand)) {
     const fromAttr = overtsCategoryDisplayName(p.attributes?.catalog_category);
     if (fromAttr) return fromAttr;
     const fromShort = overtsCategoryDisplayName(p.short_description || p.line);
     if (fromShort) return fromShort;
-    // Si short_description es el título largo del Excel, úsalo aunque no esté en la lista fija.
     const rawSection = String(p.short_description || p.attributes?.catalog_category || "").trim();
     if (rawSection && overtsCategoryOrderIndex(rawSection) >= 0) {
       return rawSection.replace(/\s+/g, " ");
     }
     if (rawSection.length >= 12 && !looksLikePackLabel(rawSection)) {
+      return rawSection.replace(/\s+/g, " ");
+    }
+  }
+  if (isAmalieBrand(p.brand)) {
+    const fromAttr = amalieCategoryDisplayName(p.attributes?.catalog_category);
+    if (fromAttr) return fromAttr;
+    const fromShort = amalieCategoryDisplayName(p.short_description || p.line);
+    if (fromShort) return fromShort;
+    const rawSection = String(p.short_description || p.attributes?.catalog_category || "").trim();
+    if (rawSection && amalieCategoryOrderIndex(rawSection) >= 0) {
+      return rawSection.replace(/\s+/g, " ");
+    }
+    if (rawSection.length >= 12 && !looksLikePackLabel(rawSection)) {
+      return rawSection.replace(/\s+/g, " ");
+    }
+  }
+  if (isBsiBrand(p.brand)) {
+    const fromAttr = bsiCategoryDisplayName(p.attributes?.catalog_category);
+    if (fromAttr) return fromAttr;
+    const fromShort = bsiCategoryDisplayName(p.short_description || p.line);
+    if (fromShort) return fromShort;
+    const rawSection = String(p.short_description || p.attributes?.catalog_category || "").trim();
+    if (rawSection && bsiCategoryOrderIndex(rawSection) >= 0) {
+      return rawSection.replace(/\s+/g, " ");
+    }
+    if (rawSection.length >= 8 && !looksLikePackLabel(rawSection)) {
       return rawSection.replace(/\s+/g, " ");
     }
   }

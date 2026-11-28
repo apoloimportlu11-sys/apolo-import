@@ -239,14 +239,16 @@ function buildCommercial({ name, lineGroup, color, aroma, viscosity, categoria, 
   const colorBit = color ? ` En presentación tinte ${color.toLowerCase()}, fácil de identificar en taller.` : "";
   const aromaBit = aroma ? ` Aroma ${aroma}.` : "";
   const viscBit = viscosity ? ` Grado/especificación ${viscosity}.` : "";
+  const qp =
+    " Overts destaca por la mejor relación calidad-precio: desempeño de taller a un costo accesible para reventa.";
 
   const templates = {
     "refrigerantes-y-coolant": {
-      purpose: `El ${name} de Overts mantiene la temperatura del motor bajo control y protege el circuito de enfriamiento contra corrosión y sobrecalentamiento.`,
+      purpose: `El ${name} de Overts mantiene la temperatura del motor bajo control y protege el circuito de enfriamiento contra corrosión y sobrecalentamiento.${qp}`,
       applications:
         appsHint ||
-        "Radiadores, vasos de expansión y sistemas de refrigeración en autos, camionetas y flotas.",
-      benefits: `Respaldo Overts para talleres y puntos de venta: protección anticorrosiva, estabilidad térmica y recambio práctico.${colorBit}`,
+        "Radiadores, vasos de expansión y sistemas de refrigeración en autos, camionetas, flotas y todo tipo de establecimiento automotriz.",
+      benefits: `Protección anticorrosiva, estabilidad térmica y recambio práctico. Ideal para talleres y puntos de venta que buscan rotación rápida con respaldo Overts.${colorBit}`,
       features: `Formulación Overts para servicio automotriz continuo.${viscBit}${colorBit} Presentaciones de catálogo listas para distribución.`,
       usage:
         "Verificar el nivel en frío, usar solo la concentración indicada en el envase y no mezclar con refrigerantes de tecnología incompatible.",
@@ -254,89 +256,89 @@ function buildCommercial({ name, lineGroup, color, aroma, viscosity, categoria, 
         "No abrir el radiador en caliente. Mantener fuera del alcance de niños. Datos orientativos de catálogo Overts.",
     },
     "siliconas-y-formadores-de-juntas": {
-      purpose: `Silicona Overts para revitalizar tableros y plásticos interiores, aportando brillo controlado y protección superficial.${aromaBit}`,
+      purpose: `Silicona Overts para revitalizar tableros y plásticos interiores, aportando brillo controlado y protección superficial.${aromaBit}${qp}`,
       applications:
         appsHint ||
         "Tableros, paneles, vinilos y plásticos interiores en lavaderos, car wash y detailing.",
-      benefits: `Acabado profesional Overts, fácil aplicación y aroma agradable para el cliente final.${aromaBit}`,
+      benefits: `Acabado profesional, fácil aplicación y aroma agradable para el cliente final. Overts entrega resultado de detailing a precio competitivo.${aromaBit}`,
       features: `Concentración orientada a uso en talleres y lavaderos. ${color ? `Acabado ${color.toLowerCase()}.` : "Acabado según línea (incluye cristal/transparente)."}`,
       usage: "Aplicar sobre superficie limpia y seca, extender con paño y retirar el exceso para evitar brillado excesivo en zonas críticas.",
-      precautions: "Evitar contacto con pisos pedales o volantes si genera resbalosidad. Probar en zona discreta.",
+      precautions: "Evitar contacto con pisos, pedales o volantes si genera resbalosidad. Probar en zona discreta.",
     },
     "liquidos-de-freno-y-direccion": {
-      purpose: `Líquido de frenos Overts para el circuito hidráulico, con respuesta firme del pedal y protección de componentes.${viscBit}`,
+      purpose: `Líquido de frenos Overts para el circuito hidráulico, con respuesta firme del pedal y protección de componentes.${viscBit}${qp}`,
       applications:
         appsHint ||
         "Motos, motocarga, autos, camionetas y maquinaria con sistema hidráulico compatible.",
-      benefits: `Calidad Overts para puntos de venta y talleres: punto de ebullición adecuado y estabilidad en servicio.${colorBit}`,
+      benefits: `Punto de ebullición adecuado y estabilidad en servicio. Opción Overts de calidad-precio para puntos de venta y talleres.${colorBit}`,
       features: `Especificación orientativa ${viscosity || "según envase"}.${colorBit}`,
       usage: "Purgar el sistema al cambiar. Usar envase cerrado y evitar contaminación con humedad.",
       precautions: "Corrosivo para pintura. No reutilizar líquido usado. Verificar DOT compatible con el vehículo.",
     },
     "fluidos-hidraulicos": {
-      purpose: `Fluido hidráulico Overts para transmitir potencia con estabilidad térmica en sistemas de maquinaria y suspensión.`,
+      purpose: `Fluido hidráulico Overts para transmitir potencia con estabilidad térmica en sistemas de maquinaria y suspensión.${qp}`,
       applications:
         appsHint ||
         "Maquinaria pesada, mecánicas de moto/carro con suspensión y equipos hidráulicos compatibles.",
-      benefits: `Protección antiwear Overts, respuesta uniforme de bomba y fácil identificación por color.${colorBit}`,
+      benefits: `Protección antiwear, respuesta uniforme de bomba y fácil identificación por color. Overts: rendimiento profesional sin sobrecosto.${colorBit}`,
       features: `Grado orientativo ${viscosity || "ISO 68"}.${colorBit}`,
       usage: "Confirmar el grado ISO del equipo y mantener el aceite limpio, sin agua ni partículas.",
       precautions: "No mezclar con fluidos incompatibles. Cambiar ante contaminación o degradación.",
     },
     "transmision-y-diferencial": {
-      purpose: `Lubricante Overts para transmisiones y diferenciales que exigen protección extremo-presión y cambios suaves.${viscBit}`,
+      purpose: `Lubricante Overts para transmisiones y diferenciales que exigen protección extremo-presión y cambios suaves.${viscBit}${qp}`,
       applications:
         appsHint ||
         "Cajas, coronas y transmisiones de autos, camionetas, buses, trailers y maquinaria.",
-      benefits: "Respaldo Overts en lubricación de engranajes, menor desgaste y operación más silenciosa.",
+      benefits: "Menor desgaste, operación más silenciosa y respaldo Overts en lubricación de engranajes con excelente relación calidad-precio.",
       features: `Especificación orientativa ${viscosity || "según línea GL/ATF"}.`,
       usage: "Respetar el nivel y el intervalo de cambio del fabricante del vehículo o equipo.",
       precautions: "Usar solo la especificación GL/ATF indicada. Un grado incorrecto puede dañar la transmisión.",
     },
     "motos-4t-2t": {
-      purpose: `Aceite Overts para motores de moto 4T que trabajan a altas revoluciones y necesitan película lubricante estable.${viscBit}`,
+      purpose: `Aceite Overts para motores de moto 4T que trabajan a altas revoluciones y necesitan película lubricante estable.${viscBit}${qp}`,
       applications:
         appsHint ||
         "Moto lineal, motocar, toritos, cargueros y flotas de taxi/moto según formulación.",
-      benefits: "Protección Overts al arranque, control de depósitos y rendimiento en uso urbano o carga.",
+      benefits: "Protección al arranque, control de depósitos y rendimiento en uso urbano o carga. Overts es la elección inteligente para rotación en puntos de moto.",
       features: `Viscosidad orientativa ${viscosity || "según envase"}. Líneas full synthetic y mineral según producto.`,
       usage: "Cambiar según intervalo del fabricante y verificar nivel antes de cada jornada exigente.",
       precautions: "Confirmar si el embrague es bañado en aceite y la viscosidad recomendada.",
     },
     "aceites-para-motores-gasolineros": {
-      purpose: `Aceite Overts para motores a gasolina que requieren lubricación confiable, limpieza interna y protección ante desgaste.${viscBit}`,
+      purpose: `Aceite Overts para motores a gasolina que requieren lubricación confiable, limpieza interna y protección ante desgaste.${viscBit}${qp}`,
       applications:
         appsHint ||
         "Autos, sapitos, lubricentros, motokar y maquinaria estacionaria según grado.",
-      benefits: "Línea Overts pensada para talleres y puntos de venta: arranque protegido y película estable.",
+      benefits: "Arranque protegido, película estable y presentaciones listas para reventa. Overts destaca frente a marcas más caras con desempeño comparable en taller.",
       features: `Viscosidad orientativa ${viscosity || "según envase"}. Disponibilidad en presentaciones de catálogo.`,
       usage: "Usar el grado SAE del manual del vehículo y respetar el intervalo de cambio.",
       precautions: "Datos orientativos de catálogo Overts. Verificar compatibilidad API/ACEA del motor.",
     },
     "aceites-diesel-petroleros": {
-      purpose: `Aceite Overts para motores diésel/petroleros de trabajo continuo en flota y maquinaria.${viscBit}`,
+      purpose: `Aceite Overts para motores diésel/petroleros de trabajo continuo en flota y maquinaria.${viscBit}${qp}`,
       applications:
         appsHint ||
         "Camionetas, furgonetas, minivans, camiones, buses, trailers y maquinaria.",
-      benefits: "Resistencia Overts al trabajo severo, control de hollín y protección de piezas críticas.",
+      benefits: "Resistencia al trabajo severo, control de hollín y protección de piezas críticas con el mejor equilibrio calidad-precio Overts.",
       features: `Viscosidad orientativa ${viscosity || "según envase"}.`,
       usage: "Ajustar el intervalo de cambio al servicio (ciudad, carretera o carga pesada).",
       precautions: "No mezclar con aceites de especificación incompatible. Controlar nivel con frecuencia.",
     },
     "lubricantes-especializados": {
-      purpose: `Aceite Overts para compresoras y equipos estacionarios que necesitan lubricación estable bajo trabajo continuo.`,
+      purpose: `Aceite Overts para compresoras y equipos estacionarios que necesitan lubricación estable bajo trabajo continuo.${qp}`,
       applications: appsHint || "Venta y talleres de maquinarias estacionarias y compresores compatibles.",
-      benefits: "Protección Overts contra desgaste y oxidación en servicio de taller.",
+      benefits: "Protección contra desgaste y oxidación con la ventaja competitiva Overts: calidad de taller a precio accesible.",
       features: "Formulación orientada a compresoras según línea de catálogo.",
       usage: "Mantener el nivel recomendado y sustituir según horas de operación del equipo.",
       precautions: "Verificar compatibilidad con el tipo de compresor antes de usar.",
     },
     "limpieza-y-cuidado-automotriz": {
-      purpose: `Producto Overts de limpieza y cuidado automotriz para lavaderos, car wash y mantenimiento diario.`,
+      purpose: `Producto Overts de limpieza y cuidado automotriz para lavaderos, car wash y mantenimiento diario.${qp}`,
       applications:
         appsHint ||
         "Lavaderos, car wash, vidrierías, talleres y puntos de venta.",
-      benefits: `Resultado profesional con la marca Overts: limpieza efectiva y presentación del vehículo.${aromaBit}${colorBit}`,
+      benefits: `Limpieza efectiva y presentación del vehículo con costo por servicio más competitivo. Overts es la marca preferida para rotación en establecimientos.${aromaBit}${colorBit}`,
       features: "Formulación para uso intensivo en establecimientos. Presentaciones de catálogo para reventa.",
       usage: "Diluir solo si el envase lo indica. Aplicar, dejar actuar según instrucción y enjuagar o retirar el exceso.",
       precautions: "Usar guantes si hay contacto prolongado. Probar en superficies delicadas.",
@@ -345,11 +347,11 @@ function buildCommercial({ name, lineGroup, color, aroma, viscosity, categoria, 
 
   if (lineGroup === "grasas-pote" || lineGroup === "grasas-y-lubricantes-de-chasis") {
     return {
-      purpose: `Grasa Overts para lubricar puntos de fricción, chasis y rodamientos con adherencia y resistencia al agua.${colorBit}`,
+      purpose: `Grasa Overts para lubricar puntos de fricción, chasis y rodamientos con adherencia y resistencia al agua.${colorBit}${qp}`,
       applications:
         appsHint ||
         "Rótulas, cojinetes, palieres, cadenas, trailers, tractores, lavaderos y talleres.",
-      benefits: `Alta adherencia Overts, protección anticorrosiva y desempeño en trabajo húmedo o exigente.${colorBit}`,
+      benefits: `Alta adherencia, protección anticorrosiva y desempeño en trabajo húmedo. Overts ofrece grasas de taller con la mejor relación calidad-precio.${colorBit}`,
       features: `Grado orientativo ${viscosity || "NLGI H-2/H-3 / EP-2"}.${colorBit}`,
       usage: "Limpiar el punto de engrase, aplicar la cantidad adecuada y no mezclar con grasas de base incompatible.",
       precautions: "Evitar contaminación con polvo o agua. Datos orientativos de catálogo Overts.",
@@ -358,9 +360,9 @@ function buildCommercial({ name, lineGroup, color, aroma, viscosity, categoria, 
 
   return (
     templates[lineGroup] || {
-      purpose: `${name} de la línea Overts para uso automotriz, talleres y puntos de venta.`,
+      purpose: `${name} de la línea Overts para uso automotriz, talleres y puntos de venta.${qp}`,
       applications: appsHint || "Talleres, flotas y establecimientos que requieren productos Overts.",
-      benefits: "Marca Overts con respaldo Apolo Import: disponibilidad, presentaciones comerciales y asesoría.",
+      benefits: "Marca Overts con respaldo Apolo Import: disponibilidad, presentaciones comerciales, asesoría y la mejor relación calidad-precio del catálogo.",
       features: `Clasificación de catálogo Overts.${viscBit}${colorBit}${aromaBit}`,
       usage: "Seguir las indicaciones del envase y del equipo o vehículo.",
       precautions: "Datos orientativos. Confirmar compatibilidad antes de usar.",

@@ -1,0 +1,171 @@
+{
+  "categorias": [
+    {
+      "nombre": "DESENGRASANTES",
+      "productos": [
+        {
+          "nombre": "BASE ACUOSA",
+          "presentaciones": [
+            {
+              "cantidad": 1,
+              "pack": "balde x5glns"
+            },
+            {
+              "cantidad": 6,
+              "pack": "x gln"
+            },
+            {
+              "cantidad": 1,
+              "pack": "x 55 gln"
+            }
+          ]
+        },
+        {
+          "nombre": "EMULSIONABLE NG-30",
+          "presentaciones": [
+            {
+              "cantidad": 1,
+              "pack": "balde x5glns"
+            },
+            {
+              "cantidad": 4,
+              "pack": "x gln"
+            }
+          ]
+        }
+      ],
+      "subcategorias": [
+        {
+          "nombre": "LIMPIADOR DE CARBURADORES",
+          "productos": [
+            {
+              "nombre": "CARBURADOR CLEANER SPRAY",
+              "presentaciones": [
+                {
+                  "cantidad": 24,
+                  "pack": "x 280 ml"
+                },
+                {
+                  "cantidad": 24,
+                  "pack": "x 440 ml"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "LIMPIA CONTACTOS",
+          "productos": [
+            {
+              "nombre": "LIMPIA CONTACTOS SPRAY",
+              "presentaciones": [
+                {
+                  "cantidad": 24,
+                  "pack": "x 280 ml"
+                },
+                {
+                  "cantidad": 24,
+                  "pack": "x 440 ml"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "DESENGRASANTE DE CADENA",
+          "productos": [
+            {
+              "nombre": "DESENGRASANTE DE CADENA",
+              "presentaciones": [
+                {
+                  "cantidad": 24,
+                  "pack": "x 280 ml"
+                },
+                {
+                  "cantidad": 24,
+                  "pack": "x 440 ml"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "AFLOJATODO",
+          "productos": [
+            {
+              "nombre": "AFLOJATODO LUBRICANTE PENETRANTE",
+              "presentaciones": [
+                {
+                  "cantidad": 24,
+                  "pack": "x 280 ml"
+                },
+                {
+                  "cantidad": 24,
+                  "pack": "x 440 ml"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "LUBRICANTES",
+          "productos": [
+            {
+              "nombre": "LUBRICANTE DE CADENAS SPRAY",
+              "presentaciones": [
+                {
+                  "cantidad": 24,
+                  "pack": "x 280 ml"
+                },
+                {
+                  "cantidad": 24,
+                  "pack": "x 440 ml"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "FRENOS",
+          "productos": [
+            {
+              "nombre": "LIMPIADOR DE FRENOS, DISCOS Y ZAPATAS",
+              "presentaciones": [
+                {
+                  "cantidad": 24,
+                  "pack": "x 280 ml"
+                },
+                {
+                  "cantidad": 24,
+                  "pack": "x 440 ml"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "REMOVEDOR DE OXIDO",
+          "productos": [
+            {
+              "nombre": "REMOVEDOR DE OXIDO",
+              "presentaciones": [
+                {
+                  "cantidad": 12,
+                  "pack": "litro"
+                },
+                {
+                  "cantidad": 4,
+                  "pack": "x gln"
+                },
+                {
+                  "cantidad": 5,
+                  "pack": "glns x bidon"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
